@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/meili/(.*)",
+      "source": "/meili/:path*",
       "destination": "http://f4b486a9.natappfree.cc*"
     }
   ]
