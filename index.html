@@ -1,5 +1,6 @@
+
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,11 +18,39 @@
             --text-primary: #0f172a;
             --text-secondary: #64748b;
             --border-color: #e2e8f0;
+            --app-gradient: linear-gradient(180deg, #f8fafc 0%, #eef2f7 55%, #f8fafc 100%);
+            --overlay: rgba(255, 255, 255, 0.8);
+            --highlight-bg: #fef3c7;
             --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.06);
             --shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.12), 0 1px 2px -1px rgba(15, 23, 42, 0.12);
             --shadow-lg: 0 12px 18px -6px rgba(15, 23, 42, 0.16), 0 6px 10px -4px rgba(15, 23, 42, 0.08);
             --radius: 12px;
             --transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #22c1b9;
+            --primary-dark: #129a92;
+            --secondary-color: #36d6cc;
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+            --error-color: #f87171;
+            --background: #0f1724;
+            --surface: #111c2b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #1f2a3a;
+            --app-gradient: radial-gradient(circle at top, #142136 0%, #0b121c 55%, #070c13 100%);
+            --overlay: rgba(7, 12, 19, 0.7);
+            --highlight-bg: #1f2a1b;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+            --shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.35);
+            --shadow-lg: 0 20px 24px -10px rgba(0, 0, 0, 0.5), 0 10px 14px -10px rgba(0, 0, 0, 0.4);
+            color-scheme: dark;
+        }
+
+        [data-theme="light"] {
+            color-scheme: light;
         }
 
         * {
@@ -32,7 +61,7 @@
 
         body {
             font-family: "Source Sans 3", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-            background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 55%, #f8fafc 100%);
+            background: var(--app-gradient);
             color: var(--text-primary);
             line-height: 1.6;
         }
@@ -54,14 +83,41 @@
             box-shadow: var(--shadow-lg);
         }
 
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
         .header h1 {
             font-size: 2rem;
-            margin-bottom: 8px;
         }
 
         .header p {
             opacity: 0.9;
             font-size: 1.1rem;
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(8px);
+        }
+
+        .theme-toggle:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.2);
         }
 
         /* Connection Panel */
@@ -476,7 +532,7 @@
         }
 
         .highlight {
-            background: #fef3c7;
+            background: var(--highlight-bg);
             padding: 2px 4px;
             border-radius: 3px;
             color: var(--text-primary);
@@ -646,6 +702,11 @@
                 padding: 24px;
             }
 
+            .header-top {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
             .results-grid {
                 grid-template-columns: 1fr;
             }
@@ -674,7 +735,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.8);
+            background: var(--overlay);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -826,528 +887,568 @@
             margin: 0;
         }
     </style>
-    <style>
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-        .results-table th, .results-table td {
-            border: 1px solid var(--border-color);
-            padding: 8px 10px;
-            text-align: left;
-            word-break: break-word;
-        }
-        .results-table tbody tr:hover {
-            background: var(--background);
-            cursor: pointer;
-        }
-        .results-table-wrap {
-            width: 100%;
-            grid-column: 1 / -1;
-            overflow-x: auto;
-        }
-    </style>
+        <style>
+            .results-table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+            }
+            .results-table th, .results-table td {
+                border: 1px solid var(--border-color);
+                padding: 8px 10px;
+                text-align: left;
+                word-break: break-word;
+            }
+            .results-table tbody tr:hover {
+                background: var(--background);
+                cursor: pointer;
+            }
+            .results-table-wrap {
+                width: 100%;
+                grid-column: 1 / -1;
+                overflow-x: auto;
+            }
+        </style>
 </head>
 <body>
-<div class="container">
-    <!-- Header -->
-    <header class="header">
-        <h1>🔍  多维查询系统</h1>
-        <p>强大的多维度搜索与过滤功能，快速定位您需要的内容</p>
-    </header>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-top">
+                <h1>🔍  多维查询系统</h1>
+                <button class="theme-toggle" id="themeToggle" type="button">🌙 夜间模式</button>
+            </div>
+            <p>强大的多维度搜索与过滤功能，快速定位您需要的内容</p>
+        </header>
 
-    <!-- Connection Panel -->
-    <section class="connection-panel">
-        <div class="panel-header">
-            <h2 class="panel-title">🔌 服务器连接配置</h2>
-            <button class="btn btn-primary" id="connectBtn">连接服务器</button>
-        </div>
-        <div class="form-grid">
-            <div class="form-group">
-                <label>服务器地址</label>
-                <input type="text" class="form-control" id="hostInput" placeholder="http://127.0.0.1:7700" value="http://192.168.2.27:7700">
+        <!-- Connection Panel -->
+        <section class="connection-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">🔌 服务器连接配置</h2>
+                <button class="btn btn-primary" id="connectBtn">连接服务器</button>
             </div>
-            <div class="form-group">
-                <label>API 密钥</label>
-                <input type="password" class="form-control" id="apiKeyInput" placeholder="请输入API密钥" value="insur132">
-            </div>
-            <div class="form-group">
-                <label>选择索引</label>
-                <select class="form-control" id="indexSelect">
-                    <option value="">请先连接服务器</option>
-                </select>
-            </div>
-        </div>
-    </section>
-
-    <!-- Search Section -->
-    <section class="search-section">
-        <!-- Main Search Panel -->
-        <div class="search-panel">
-            <!-- Search Box -->
-            <div class="search-box">
-                <span class="search-icon">🔍</span>
-                <input type="text" class="search-input" id="searchInput" placeholder="输入搜索关键词...">
-            </div>
-
-            <!-- Query Builder -->
-            <div class="query-builder" id="queryBuilder">
-                <h3 style="margin-bottom: 16px; font-size: 1.1rem;">📋 查询条件构建器</h3>
-                <div id="queryRows">
-                    <!-- Query rows will be added dynamically -->
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>服务器地址</label>
+                    <input type="text" class="form-control" id="hostInput" placeholder="http://192.168.2.27:7700" value="http://192.168.2.27:7700">
                 </div>
-                <div class="query-actions" style="margin-top: 16px;">
-                    <button class="btn btn-secondary" id="addQueryBtn">➕ 添加查询条件</button>
-                    <button class="btn btn-primary" id="applyQueryBtn">✅ 应用查询</button>
-                    <button class="btn btn-secondary" id="clearQueryBtn">🗑️ 清空查询</button>
+                <div class="form-group">
+                    <label>API 密钥</label>
+                    <input type="password" class="form-control" id="apiKeyInput" placeholder="请输入API密钥" value="insur132"> 
                 </div>
-            </div>
-
-            <!-- Advanced Settings -->
-            <div class="advanced-settings">
-                <h3 style="margin-bottom: 16px; font-size: 1.1rem;">⚙️ 高级搜索设置</h3>
-                <div class="settings-grid">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="highlightEnabled" checked>
-                        <label for="highlightEnabled">启用高亮显示</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="showRankingScore" checked>
-                        <label for="showRankingScore">显示评分</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="number" id="cropLength" value="1000" min="0" style="width: 80px;">
-                        <label for="cropLength">内容截断长度</label>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label>每页结果数</label>
-                        <input type="number" class="form-control" id="pageSizeInput" value="12" min="1" max="100">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Results Panel -->
-            <div class="results-panel" style="margin-top: 24px;">
-                <div class="results-stats">
-                    <span class="results-count">找到 <strong id="resultsCount">0</strong> 条结果</span>
-                    <div class="results-actions">
-                        <span id="searchTime"></span>
-                        <button class="btn btn-secondary" id="columnConfigBtn">列设置</button>
-                    </div>
-                </div>
-                <div id="resultsContainer" class="results-grid">
-                    <!-- Results will be rendered here -->
-                    <div class="empty-state">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        </svg>
-                        <p>输入搜索关键词开始查询</p>
-                    </div>
-                </div>
-                <div id="pagination" class="pagination">
-                    <!-- Pagination will be rendered here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Filters Sidebar -->
-        <aside class="filters-sidebar">
-            <!-- Search Fields -->
-            <div class="filter-section">
-                <h3 class="filter-title">
-                    搜索字段
-                    <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.85rem;" id="configSearchFields">配置</button>
-                </h3>
-                <ul class="filter-list" id="searchFieldsList">
-                    <!-- Search fields will be listed here -->
-                </ul>
-            </div>
-
-            <!-- Facets -->
-            <div class="filter-section" id="facetsSection" style="display: none;">
-                <h3 class="filter-title">📊 分面筛选</h3>
-                <div id="facetsContainer">
-                    <!-- Facets will be rendered here -->
-                </div>
-            </div>
-
-            <!-- Search History -->
-            <div class="filter-section">
-                <h3 class="filter-title">
-                    📝 搜索历史
-                    <span class="clear-history" id="clearHistory">清空</span>
-                </h3>
-                <ul class="history-list" id="historyList">
-                    <li style="padding: 12px; color: var(--text-secondary);">暂无搜索历史</li>
-                </ul>
-            </div>
-
-            <!-- Popular Searches -->
-            <div class="filter-section">
-                <h3 class="filter-title">🔥 热门搜索</h3>
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label style="font-size: 0.85rem; color: var(--text-secondary);">热门字段</label>
-                    <select class="form-control" id="popularFieldSelect">
-                        <option value="">选择字段</option>
+                <div class="form-group">
+                    <label>选择索引</label>
+                    <select class="form-control" id="indexSelect">
+                        <option value="">请先连接服务器</option>
                     </select>
                 </div>
-                <ul class="suggestions-list" id="suggestionsList">
-                    <!-- Popular searches will be listed here -->
-                </ul>
+            </div>
+        </section>
+
+        <!-- Search Section -->
+        <section class="search-section">
+            <!-- Main Search Panel -->
+            <div class="search-panel">
+                <!-- Search Box -->
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" id="searchInput" placeholder="输入搜索关键词...">
+                </div>
+
+                <!-- Query Builder -->
+                <div class="query-builder" id="queryBuilder">
+                    <h3 style="margin-bottom: 16px; font-size: 1.1rem;">📋 查询条件构建器</h3>
+                    <div id="queryRows">
+                        <!-- Query rows will be added dynamically -->
+                    </div>
+                    <div class="query-actions" style="margin-top: 16px;">
+                        <button class="btn btn-secondary" id="addQueryBtn">➕ 添加查询条件</button>
+                        <button class="btn btn-primary" id="applyQueryBtn">✅ 应用查询</button>
+                        <button class="btn btn-secondary" id="clearQueryBtn">🗑️ 清空查询</button>
+                    </div>
+                </div>
+
+                <!-- Advanced Settings -->
+                <div class="advanced-settings">
+                    <h3 style="margin-bottom: 16px; font-size: 1.1rem;">⚙️ 高级搜索设置</h3>
+                    <div class="settings-grid">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="highlightEnabled" checked>
+                            <label for="highlightEnabled">启用高亮显示</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="showRankingScore" checked>
+                            <label for="showRankingScore">显示评分</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="number" id="cropLength" value="1000" min="0" style="width: 80px;">
+                            <label for="cropLength">内容截断长度</label>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>每页结果数</label>
+                            <input type="number" class="form-control" id="pageSizeInput" value="12" min="1" max="100">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Panel -->
+                <div class="results-panel" style="margin-top: 24px;">
+                    <div class="results-stats">
+                        <span class="results-count">找到 <strong id="resultsCount">0</strong> 条结果</span>
+                        <div class="results-actions">
+                            <span id="searchTime"></span>
+                            <button class="btn btn-secondary" id="openFiltersBtn">筛选入口</button>
+                            <button class="btn btn-secondary" id="columnConfigBtn">列设置</button>
+                        </div>
+                    </div>
+                    <div id="resultsContainer" class="results-grid">
+                        <!-- Results will be rendered here -->
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <p>输入搜索关键词开始查询</p>
+                        </div>
+                    </div>
+                    <div id="pagination" class="pagination">
+                        <!-- Pagination will be rendered here -->
+                    </div>
+                </div>
             </div>
 
-            <!-- Sort Options -->
-            <div class="filter-section">
-                <h3 class="filter-title">📈 排序方式</h3>
-                <select class="form-control" id="sortSelect">
-                    <option value="">默认排序</option>
-                    <option value="id:asc">ID 升序</option>
-                    <option value="id:desc">ID 降序</option>
-                </select>
-            </div>
-        </aside>
-    </section>
+        </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <p>作者: 冰城拓 Copyright © 2025. 保留所有权利.</p>
-    </footer>
-</div>
-
-<!-- Toast Container -->
-<div class="toast-container" id="toastContainer"></div>
-
-<!-- Loading Overlay -->
-<div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner"></div>
-</div>
-
-<!-- Field Configuration Modal -->
-<div class="modal" id="fieldConfigModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title">配置搜索字段</h2>
-            <button class="modal-close" id="closeFieldModal">×</button>
-        </div>
-        <div id="fieldConfigContainer">
-            <!-- Field configurations will be rendered here -->
-        </div>
-        <div style="margin-top: 20px; text-align: right;">
-            <button class="btn btn-secondary" id="cancelFieldConfig">取消</button>
-            <button class="btn btn-primary" id="saveFieldConfig">保存配置</button>
-        </div>
+        <!-- Footer -->
+        <footer class="footer">
+            <p>作者: 冰城拓 Copyright © 2025. 保留所有权利.</p>
+        </footer>
     </div>
-</div>
 
-<!-- Column Configuration Modal -->
-<div class="modal" id="columnConfigModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title">列设置</h2>
-            <button class="modal-close" id="closeColumnModal">×</button>
-        </div>
-        <div>
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 8px;">
-                勾选控制显示/隐藏，列顺序可在表头拖拽调整。
-            </p>
-            <div class="column-config-list" id="columnConfigContainer">
-                <!-- Column config items will be generated here -->
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Field Configuration Modal -->
+    <div class="modal" id="fieldConfigModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">配置搜索字段</h2>
+                <button class="modal-close" id="closeFieldModal">×</button>
+            </div>
+            <div id="fieldConfigContainer">
+                <!-- Field configurations will be rendered here -->
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn btn-secondary" id="cancelFieldConfig">取消</button>
+                <button class="btn btn-primary" id="saveFieldConfig">保存配置</button>
             </div>
         </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" id="cancelColumnConfig">取消</button>
-            <button class="btn btn-primary" id="saveColumnConfig">保存设置</button>
+    </div>
+
+    <!-- Column Configuration Modal -->
+    <div class="modal" id="columnConfigModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">列设置</h2>
+                <button class="modal-close" id="closeColumnModal">×</button>
+            </div>
+            <div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 8px;">
+                    勾选控制显示/隐藏，列顺序可在表头拖拽调整。
+                </p>
+                <div class="column-config-list" id="columnConfigContainer">
+                    <!-- Column config items will be generated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelColumnConfig">取消</button>
+                <button class="btn btn-primary" id="saveColumnConfig">保存设置</button>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Result Detail Modal -->
-<div class="modal" id="resultModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title">结果详情</h2>
-            <button class="modal-close" id="closeResultModal">×</button>
-        </div>
-        <div id="resultDetailContent">
-            <!-- Result details will be rendered here -->
+    <!-- Result Detail Modal -->
+    <div class="modal" id="resultModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">结果详情</h2>
+                <button class="modal-close" id="closeResultModal">×</button>
+            </div>
+            <div id="resultDetailContent">
+                <!-- Result details will be rendered here -->
+            </div>
         </div>
     </div>
-</div>
 
-<!-- MeiliSearch SDK (official CDN) -->
-<script src="https://cdn.jsdelivr.net/npm/meilisearch@0.34.2/dist/bundles/meilisearch.umd.min.js" crossorigin="anonymous"></script>
+    <!-- Filters Drawer -->
+    <div class="filters-drawer" id="filtersDrawer" aria-hidden="true">
+        <div class="filters-drawer-content" role="dialog" aria-modal="true" aria-label="筛选与排序设置">
+            <div class="filters-drawer-header">
+                <h3 style="font-size: 1.1rem;">筛选与排序</h3>
+                <button class="btn btn-secondary" style="padding: 4px 12px;" id="closeFiltersDrawer">关闭</button>
+            </div>
+            <div class="filters-drawer-body">
+                <aside class="filters-sidebar">
+                    <!-- Search Fields -->
+                    <div class="filter-section">
+                        <h3 class="filter-title">
+                            搜索字段
+                            <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.85rem;" id="configSearchFields">配置</button>
+                        </h3>
+                        <ul class="filter-list" id="searchFieldsList">
+                            <!-- Search fields will be listed here -->
+                        </ul>
+                    </div>
 
-<script>
-    // 兼容旧代码或缓存：确保全局 `meilisearch` 可用（有些示例使用小写命名）
-    (function(){
-        if (typeof MeiliSearch !== 'undefined' && typeof window.meilisearch === 'undefined') {
-            try {
-                window.meilisearch = MeiliSearch;
-                // 兼容 meilisearch.Meilisearch
-                window.meilisearch.Meilisearch = MeiliSearch;
-            } catch (e) {
-                // ignore
-            }
-        }
-    })();
+                    <!-- Facets -->
+                    <div class="filter-section" id="facetsSection" style="display: none;">
+                        <h3 class="filter-title">📊 分面筛选</h3>
+                        <div id="facetsContainer">
+                            <!-- Facets will be rendered here -->
+                        </div>
+                    </div>
 
-</script>
+                    <!-- Search History -->
+                    <div class="filter-section">
+                        <h3 class="filter-title">
+                            📝 搜索历史
+                            <span class="clear-history" id="clearHistory">清空</span>
+                        </h3>
+                        <ul class="history-list" id="historyList">
+                            <li style="padding: 12px; color: var(--text-secondary);">暂无搜索历史</li>
+                        </ul>
+                    </div>
 
-<script>
-    // Initialize MeiliSearch Application
-    class MeiliSearchApp {
-        constructor() {
-            this.client = null;
-            this.index = null;
-            this.currentIndex = '';
-            this.queryRows = [];
-            this.searchFields = [];
-            this.filterableFields = [];
-            this.availableFields = [];
-            this.highlightFields = [];
-            this.displayFields = [];
-            this.facets = {};
-            this.searchHistory = this.loadSearchHistory();
-            this.fieldLabels = this.loadFieldLabels();
-            this.popularSearches = [];
-            this.popularSearchField = '';
-            this.currentPage = 1;
-            this.pageSize = 12;
-            this.lastHits = [];
-            this.lastResults = null;
-            this.lastBaseColumns = [];
-            this.tableSortField = '';
-            this.tableSortDir = 'asc';
-            this.columnOrder = [];
-            this.hiddenColumns = [];
-            this.isDraggingColumns = false;
+                    <!-- Popular Searches -->
+                    <div class="filter-section">
+                        <h3 class="filter-title">🔥 热门搜索</h3>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 0.85rem; color: var(--text-secondary);">热门字段</label>
+                            <select class="form-control" id="popularFieldSelect">
+                                <option value="">选择字段</option>
+                            </select>
+                        </div>
+                        <ul class="suggestions-list" id="suggestionsList">
+                            <!-- Popular searches will be listed here -->
+                        </ul>
+                    </div>
 
-            this.initializeElements();
-            this.bindEvents();
-            this.initializeUI();
-        }
+                    <!-- Sort Options -->
+                    <div class="filter-section">
+                        <h3 class="filter-title">📈 排序方式</h3>
+                        <select class="form-control" id="sortSelect">
+                            <option value="">默认排序</option>
+                            <option value="id:asc">ID 升序</option>
+                            <option value="id:desc">ID 降序</option>
+                        </select>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
 
-        initializeElements() {
-            this.elements = {
-                hostInput: document.getElementById('hostInput'),
-                apiKeyInput: document.getElementById('apiKeyInput'),
-                indexSelect: document.getElementById('indexSelect'),
-                connectBtn: document.getElementById('connectBtn'),
-                searchInput: document.getElementById('searchInput'),
-                queryRows: document.getElementById('queryRows'),
-                addQueryBtn: document.getElementById('addQueryBtn'),
-                applyQueryBtn: document.getElementById('applyQueryBtn'),
-                clearQueryBtn: document.getElementById('clearQueryBtn'),
-                resultsContainer: document.getElementById('resultsContainer'),
-                resultsCount: document.getElementById('resultsCount'),
-                searchTime: document.getElementById('searchTime'),
-                pagination: document.getElementById('pagination'),
-                searchFieldsList: document.getElementById('searchFieldsList'),
-                facetsSection: document.getElementById('facetsSection'),
-                facetsContainer: document.getElementById('facetsContainer'),
-                historyList: document.getElementById('historyList'),
-                clearHistory: document.getElementById('clearHistory'),
-                suggestionsList: document.getElementById('suggestionsList'),
-                popularFieldSelect: document.getElementById('popularFieldSelect'),
-                sortSelect: document.getElementById('sortSelect'),
-                highlightEnabled: document.getElementById('highlightEnabled'),
-                showRankingScore: document.getElementById('showRankingScore'),
-                cropLength: document.getElementById('cropLength'),
-                pageSizeInput: document.getElementById('pageSizeInput'),
-                columnConfigBtn: document.getElementById('columnConfigBtn'),
-                columnConfigModal: document.getElementById('columnConfigModal'),
-                columnConfigContainer: document.getElementById('columnConfigContainer'),
-                closeColumnModal: document.getElementById('closeColumnModal'),
-                cancelColumnConfig: document.getElementById('cancelColumnConfig'),
-                saveColumnConfig: document.getElementById('saveColumnConfig'),
-                configSearchFields: document.getElementById('configSearchFields'),
-                fieldConfigModal: document.getElementById('fieldConfigModal'),
-                fieldConfigContainer: document.getElementById('fieldConfigContainer'),
-                closeFieldModal: document.getElementById('closeFieldModal'),
-                cancelFieldConfig: document.getElementById('cancelFieldConfig'),
-                saveFieldConfig: document.getElementById('saveFieldConfig'),
-                resultModal: document.getElementById('resultModal'),
-                resultDetailContent: document.getElementById('resultDetailContent'),
-                closeResultModal: document.getElementById('closeResultModal'),
-                loadingOverlay: document.getElementById('loadingOverlay'),
-                toastContainer: document.getElementById('toastContainer')
-            };
-        }
+    <!-- MeiliSearch SDK (official CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/meilisearch@0.34.2/dist/bundles/meilisearch.umd.min.js" crossorigin="anonymous"></script>
 
-        bindEvents() {
-            this.elements.connectBtn.addEventListener('click', () => this.connect());
-            this.elements.searchInput.addEventListener('input', this.debounce(() => this.performSearch(), 300));
-            this.elements.addQueryBtn.addEventListener('click', () => this.addQueryRow());
-            this.elements.applyQueryBtn.addEventListener('click', () => this.applyQuery());
-            this.elements.clearQueryBtn.addEventListener('click', () => this.clearQuery());
-            this.elements.clearHistory.addEventListener('click', () => this.clearSearchHistory());
-            this.elements.sortSelect.addEventListener('change', () => this.performSearch());
-            this.elements.configSearchFields.addEventListener('click', () => this.openFieldConfig());
-            this.elements.closeFieldModal.addEventListener('click', () => this.closeFieldConfig());
-            this.elements.cancelFieldConfig.addEventListener('click', () => this.closeFieldConfig());
-            this.elements.saveFieldConfig.addEventListener('click', () => this.saveFieldConfig());
-            this.elements.closeResultModal.addEventListener('click', () => this.closeResultModal());
-            this.elements.columnConfigBtn.addEventListener('click', () => this.openColumnConfig());
-            this.elements.closeColumnModal.addEventListener('click', () => this.closeColumnConfig());
-            this.elements.cancelColumnConfig.addEventListener('click', () => this.closeColumnConfig());
-            this.elements.saveColumnConfig.addEventListener('click', () => this.saveColumnConfig());
-            this.elements.highlightEnabled.addEventListener('change', () => this.performSearch());
-            this.elements.showRankingScore.addEventListener('change', () => this.performSearch());
-            this.elements.cropLength.addEventListener('change', () => this.performSearch());
-            this.elements.pageSizeInput.addEventListener('change', (e) => {
-                this.pageSize = Math.max(1, parseInt(e.target.value) || 12);
-                this.currentPage = 1;
-                this.performSearch();
-            });
-            this.elements.popularFieldSelect.addEventListener('change', (e) => {
-                this.popularSearchField = e.target.value || '';
-                this.savePopularField(this.popularSearchField, this.currentIndex);
-                this.loadPopularSearches();
-            });
-        }
-
-        initializeUI() {
-            this.renderHistory();
-            this.renderSuggestions();
-            this.addQueryRow();
-            this.renderSuggestions();
-        }
-
-        // Connection Methods
-        async connect() {
-            const host = this.elements.hostInput.value.trim();
-            const apiKey = this.elements.apiKeyInput.value.trim();
-
-            if (!host) {
-                this.showToast('请输入服务器地址', 'error');
-                return;
-            }
-
-            try {
-                this.elements.loadingOverlay.classList.add('active');
-
-                if (typeof MeiliSearch === 'undefined') {
-                    throw new Error('MeiliSearch SDK 未加载，请检查 <script> 引用（network/CSP）。');
+    <script>
+        // 兼容旧代码或缓存：确保全局 `meilisearch` 可用（有些示例使用小写命名）
+        (function(){
+            if (typeof MeiliSearch !== 'undefined' && typeof window.meilisearch === 'undefined') {
+                try {
+                    window.meilisearch = MeiliSearch;
+                    // 兼容 meilisearch.Meilisearch
+                    window.meilisearch.Meilisearch = MeiliSearch;
+                } catch (e) {
+                    // ignore
                 }
-
-                this.client = new MeiliSearch({
-                    host: host,
-                    apiKey: apiKey
-                });
-
-                const indexes = await this.client.getIndexes();
-                const indexStats = await Promise.all(
-                    indexes.results.map(async (idx) => {
-                        try {
-                            const stats = await this.client.index(idx.uid).getStats();
-                            return { uid: idx.uid, count: stats && stats.numberOfDocuments };
-                        } catch {
-                            return { uid: idx.uid, count: undefined };
-                        }
-                    })
-                );
-
-                this.elements.indexSelect.innerHTML = '<option value="">选择索引</option>';
-                indexStats.forEach(info => {
-                    const option = document.createElement('option');
-                    option.value = info.uid;
-                    const countText = (info.count === 0 || info.count) ? ` (${this.formatNumber(info.count)})` : '';
-                    option.textContent = `${info.uid}${countText}`;
-                    this.elements.indexSelect.appendChild(option);
-                });
-
-                this.elements.indexSelect.addEventListener('change', (e) => this.selectIndex(e.target.value));
-
-                this.elements.loadingOverlay.classList.remove('active');
-                this.showToast('连接成功！', 'success');
-            } catch (error) {
-                this.elements.loadingOverlay.classList.remove('active');
-                this.showToast('连接失败: ' + error.message, 'error');
             }
-        }
+        })();
 
-        async selectIndex(indexName) {
-            if (!indexName) {
+    </script>
+
+    <script>
+        // Initialize MeiliSearch Application
+        class MeiliSearchApp {
+            constructor() {
+                this.client = null;
                 this.index = null;
                 this.currentIndex = '';
+                this.queryRows = [];
                 this.searchFields = [];
                 this.filterableFields = [];
+                this.availableFields = [];
                 this.highlightFields = [];
+                this.displayFields = [];
                 this.facets = {};
-                this.columnOrder = [];
-                this.hiddenColumns = [];
+                this.searchHistory = this.loadSearchHistory();
+                this.fieldLabels = this.loadFieldLabels();
+                this.popularSearches = [];
+                this.popularSearchField = '';
+                this.currentPage = 1;
+                this.pageSize = 12;
+                this.lastHits = [];
                 this.lastResults = null;
                 this.lastBaseColumns = [];
-                this.updateSearchFieldsUI();
-                this.updatePopularFieldOptions();
-                this.elements.facetsSection.style.display = 'none';
-                this.elements.suggestionsList.innerHTML = '<li style="padding: 12px; color: var(--text-secondary);">请选择索引以加载热门搜索</li>';
-                return;
+                this.tableSortField = '';
+                this.tableSortDir = 'asc';
+                this.columnOrder = [];
+                this.hiddenColumns = [];
+                this.isDraggingColumns = false;
+                
+                this.initializeElements();
+                this.bindEvents();
+                this.initializeTheme();
+                this.initializeUI();
             }
 
-            try {
-                this.elements.loadingOverlay.classList.add('active');
-                this.currentIndex = indexName;
-                this.index = this.client.index(indexName);
+            initializeElements() {
+                this.elements = {
+                    hostInput: document.getElementById('hostInput'),
+                    apiKeyInput: document.getElementById('apiKeyInput'),
+                    indexSelect: document.getElementById('indexSelect'),
+                    connectBtn: document.getElementById('connectBtn'),
+                    searchInput: document.getElementById('searchInput'),
+                    queryRows: document.getElementById('queryRows'),
+                    addQueryBtn: document.getElementById('addQueryBtn'),
+                    applyQueryBtn: document.getElementById('applyQueryBtn'),
+                    clearQueryBtn: document.getElementById('clearQueryBtn'),
+                    resultsContainer: document.getElementById('resultsContainer'),
+                    resultsCount: document.getElementById('resultsCount'),
+                    searchTime: document.getElementById('searchTime'),
+                    pagination: document.getElementById('pagination'),
+                    openFiltersBtn: document.getElementById('openFiltersBtn'),
+                    filtersDrawer: document.getElementById('filtersDrawer'),
+                    closeFiltersDrawer: document.getElementById('closeFiltersDrawer'),
+                    searchFieldsList: document.getElementById('searchFieldsList'),
+                    facetsSection: document.getElementById('facetsSection'),
+                    facetsContainer: document.getElementById('facetsContainer'),
+                    historyList: document.getElementById('historyList'),
+                    clearHistory: document.getElementById('clearHistory'),
+                    suggestionsList: document.getElementById('suggestionsList'),
+                    popularFieldSelect: document.getElementById('popularFieldSelect'),
+                    sortSelect: document.getElementById('sortSelect'),
+                    highlightEnabled: document.getElementById('highlightEnabled'),
+                    showRankingScore: document.getElementById('showRankingScore'),
+                    cropLength: document.getElementById('cropLength'),
+                    pageSizeInput: document.getElementById('pageSizeInput'),
+                    columnConfigBtn: document.getElementById('columnConfigBtn'),
+                    columnConfigModal: document.getElementById('columnConfigModal'),
+                    columnConfigContainer: document.getElementById('columnConfigContainer'),
+                    closeColumnModal: document.getElementById('closeColumnModal'),
+                    cancelColumnConfig: document.getElementById('cancelColumnConfig'),
+                    saveColumnConfig: document.getElementById('saveColumnConfig'),
+                    configSearchFields: document.getElementById('configSearchFields'),
+                    fieldConfigModal: document.getElementById('fieldConfigModal'),
+                    fieldConfigContainer: document.getElementById('fieldConfigContainer'),
+                    closeFieldModal: document.getElementById('closeFieldModal'),
+                    cancelFieldConfig: document.getElementById('cancelFieldConfig'),
+                    saveFieldConfig: document.getElementById('saveFieldConfig'),
+                    resultModal: document.getElementById('resultModal'),
+                    resultDetailContent: document.getElementById('resultDetailContent'),
+                    closeResultModal: document.getElementById('closeResultModal'),
+                    loadingOverlay: document.getElementById('loadingOverlay'),
+                    toastContainer: document.getElementById('toastContainer'),
+                    themeToggle: document.getElementById('themeToggle')
+                };
+            }
 
-                // Get index settings
-                const settings = await this.index.getSettings();
+            bindEvents() {
+                this.elements.connectBtn.addEventListener('click', () => this.connect());
+                this.elements.searchInput.addEventListener('input', this.debounce(() => this.performSearch(), 300));
+                this.elements.addQueryBtn.addEventListener('click', () => this.addQueryRow());
+                this.elements.applyQueryBtn.addEventListener('click', () => this.applyQuery());
+                this.elements.clearQueryBtn.addEventListener('click', () => this.clearQuery());
+                this.elements.clearHistory.addEventListener('click', () => this.clearSearchHistory());
+                this.elements.sortSelect.addEventListener('change', () => this.performSearch());
+                this.elements.configSearchFields.addEventListener('click', () => this.openFieldConfig());
+                this.elements.closeFieldModal.addEventListener('click', () => this.closeFieldConfig());
+                this.elements.cancelFieldConfig.addEventListener('click', () => this.closeFieldConfig());
+                this.elements.saveFieldConfig.addEventListener('click', () => this.saveFieldConfig());
+                this.elements.closeResultModal.addEventListener('click', () => this.closeResultModal());
+                this.elements.columnConfigBtn.addEventListener('click', () => this.openColumnConfig());
+                this.elements.closeColumnModal.addEventListener('click', () => this.closeColumnConfig());
+                this.elements.cancelColumnConfig.addEventListener('click', () => this.closeColumnConfig());
+                this.elements.saveColumnConfig.addEventListener('click', () => this.saveColumnConfig());
+                this.elements.highlightEnabled.addEventListener('change', () => this.performSearch());
+                this.elements.showRankingScore.addEventListener('change', () => this.performSearch());
+                this.elements.cropLength.addEventListener('change', () => this.performSearch());
+                this.elements.pageSizeInput.addEventListener('change', (e) => {
+                    this.pageSize = Math.max(1, parseInt(e.target.value) || 12);
+                    this.currentPage = 1;
+                    this.performSearch();
+                });
+                this.elements.popularFieldSelect.addEventListener('change', (e) => {
+                    this.popularSearchField = e.target.value || '';
+                    this.savePopularField(this.popularSearchField, this.currentIndex);
+                    this.loadPopularSearches();
+                });
+                this.elements.openFiltersBtn.addEventListener('click', () => this.openFiltersDrawer());
+                this.elements.closeFiltersDrawer.addEventListener('click', () => this.closeFiltersDrawer());
+                this.elements.filtersDrawer.addEventListener('click', (e) => {
+                    if (e.target === this.elements.filtersDrawer) {
+                        this.closeFiltersDrawer();
+                    }
+                });
+                if (this.elements.themeToggle) {
+                    this.elements.themeToggle.addEventListener('click', () => this.toggleTheme());
+                }
+            }
 
-                // sample one document to discover fields
-                let sampleDoc = {};
-                try {
-                    const docs = await this.index.getDocuments({ limit: 1 });
-                    if (docs && docs.results && docs.results.length > 0) sampleDoc = docs.results[0];
-                } catch (e) {
-                    // ignore sample errors
+            initializeUI() {
+                this.renderHistory();
+                this.renderSuggestions();
+                this.addQueryRow();
+                this.renderSuggestions();
+            }
+
+            openFiltersDrawer() {
+                this.elements.filtersDrawer.classList.add('active');
+                this.elements.filtersDrawer.setAttribute('aria-hidden', 'false');
+            }
+
+            closeFiltersDrawer() {
+                this.elements.filtersDrawer.classList.remove('active');
+                this.elements.filtersDrawer.setAttribute('aria-hidden', 'true');
+            }
+
+            // Connection Methods
+            async connect() {
+                const host = this.elements.hostInput.value.trim();
+                const apiKey = this.elements.apiKeyInput.value.trim();
+
+                if (!host) {
+                    this.showToast('请输入服务器地址', 'error');
+                    return;
                 }
 
-                const searchable = settings.searchableAttributes || [];
-                const displayed = settings.displayedAttributes || [];
-                const filterableAttributes = settings.filterableAttributes || [];
+                try {
+                    this.elements.loadingOverlay.classList.add('active');
 
-                // build available fields from settings + sample document keys
-                const sampleKeys = Object.keys(sampleDoc || {});
-                this.availableFields = Array.from(new Set([].concat(searchable, displayed, sampleKeys))).filter(Boolean);
+                    if (typeof MeiliSearch === 'undefined') {
+                        throw new Error('MeiliSearch SDK 未加载，请检查 <script> 引用（network/CSP）。');
+                    }
 
-                // default selected searchable fields to settings if present
-                this.searchFields = searchable.slice();
-                this.highlightFields = displayed.slice();
-                this.filterableFields = filterableAttributes.slice();
+                    this.client = new MeiliSearch({
+                        host: host,
+                        apiKey: apiKey
+                    });
 
-                // Get sort options
-                const sortableAttributes = settings.sortableAttributes || [];
-                this.updateSortOptions(sortableAttributes);
+                    const indexes = await this.client.getIndexes();
+                    const indexStats = await Promise.all(
+                        indexes.results.map(async (idx) => {
+                            try {
+                                const stats = await this.client.index(idx.uid).getStats();
+                                return { uid: idx.uid, count: stats && stats.numberOfDocuments };
+                            } catch {
+                                return { uid: idx.uid, count: undefined };
+                            }
+                        })
+                    );
 
-                this.updateSearchFieldsUI();
-                this.updatePopularFieldOptions();
-                this.refreshQueryRowFieldOptions();
-                this.elements.loadingOverlay.classList.remove('active');
-                this.showToast(`已选择索引: ${indexName}`, 'success');
-                this.loadColumnPrefs();
-                this.loadPopularSearches();
-            } catch (error) {
-                this.elements.loadingOverlay.classList.remove('active');
-                this.showToast('加载索引失败: ' + error.message, 'error');
+                    this.elements.indexSelect.innerHTML = '<option value="">选择索引</option>';
+                    indexStats.forEach(info => {
+                        const option = document.createElement('option');
+                        option.value = info.uid;
+                        const countText = (info.count === 0 || info.count) ? ` (${this.formatNumber(info.count)})` : '';
+                        option.textContent = `${info.uid}${countText}`;
+                        this.elements.indexSelect.appendChild(option);
+                    });
+
+                    this.elements.indexSelect.addEventListener('change', (e) => this.selectIndex(e.target.value));
+                    
+                    this.elements.loadingOverlay.classList.remove('active');
+                    this.showToast('连接成功！', 'success');
+                } catch (error) {
+                    this.elements.loadingOverlay.classList.remove('active');
+                    this.showToast('连接失败: ' + error.message, 'error');
+                }
             }
-        }
 
-        // Query Builder Methods
-        addQueryRow() {
-            const rowId = `query-${Date.now()}`;
-            const row = document.createElement('div');
-            row.className = 'query-row';
-            row.id = rowId;
-            const filterFields = this.getFilterFieldsForQuery();
+            async selectIndex(indexName) {
+                if (!indexName) {
+                    this.index = null;
+                    this.currentIndex = '';
+                    this.searchFields = [];
+                    this.filterableFields = [];
+                    this.highlightFields = [];
+                    this.facets = {};
+                    this.columnOrder = [];
+                    this.hiddenColumns = [];
+                    this.lastResults = null;
+                    this.lastBaseColumns = [];
+                    this.updateSearchFieldsUI();
+                    this.updatePopularFieldOptions();
+                    this.elements.facetsSection.style.display = 'none';
+                    this.elements.suggestionsList.innerHTML = '<li style="padding: 12px; color: var(--text-secondary);">请选择索引以加载热门搜索</li>';
+                    return;
+                }
 
-            row.innerHTML = `
+                try {
+                    this.elements.loadingOverlay.classList.add('active');
+                    this.currentIndex = indexName;
+                    this.index = this.client.index(indexName);
+
+                    // Get index settings
+                    const settings = await this.index.getSettings();
+
+                    // sample one document to discover fields
+                    let sampleDoc = {};
+                    try {
+                        const docs = await this.index.getDocuments({ limit: 1 });
+                        if (docs && docs.results && docs.results.length > 0) sampleDoc = docs.results[0];
+                    } catch (e) {
+                        // ignore sample errors
+                    }
+
+                    const searchable = settings.searchableAttributes || [];
+                    const displayed = settings.displayedAttributes || [];
+                    const filterableAttributes = settings.filterableAttributes || [];
+
+                    // build available fields from settings + sample document keys
+                    const sampleKeys = Object.keys(sampleDoc || {});
+                    this.availableFields = Array.from(new Set([].concat(searchable, displayed, sampleKeys))).filter(Boolean);
+
+                    // default selected searchable fields to settings if present
+                    this.searchFields = searchable.slice();
+                    this.highlightFields = displayed.slice();
+                    this.filterableFields = filterableAttributes.slice();
+
+                    // Get sort options
+                    const sortableAttributes = settings.sortableAttributes || [];
+                    this.updateSortOptions(sortableAttributes);
+
+                    this.updateSearchFieldsUI();
+                    this.updatePopularFieldOptions();
+                    this.refreshQueryRowFieldOptions();
+                    this.elements.loadingOverlay.classList.remove('active');
+                    this.showToast(`已选择索引: ${indexName}`, 'success');
+                    this.loadColumnPrefs();
+                    this.loadPopularSearches();
+                } catch (error) {
+                    this.elements.loadingOverlay.classList.remove('active');
+                    this.showToast('加载索引失败: ' + error.message, 'error');
+                }
+            }
+
+            // Query Builder Methods
+            addQueryRow() {
+                const rowId = `query-${Date.now()}`;
+                const row = document.createElement('div');
+                row.className = 'query-row';
+                row.id = rowId;
+                const filterFields = this.getFilterFieldsForQuery();
+                
+                row.innerHTML = `
                     <select class="form-control query-field">
                         <option value="">选择字段</option>
-                        ${filterFields.map(field =>
-                `<option value="${field}">${field}</option>`
-            ).join('')}
+                        ${filterFields.map(field => 
+                            `<option value="${field}">${field}</option>`
+                        ).join('')}
                     </select>
                     <select class="form-control query-operator">
                         <option value="=">等于</option>
@@ -1368,203 +1469,203 @@
                     </select>
                     <button class="btn remove-btn" onclick="app.removeQueryRow('${rowId}')">删除</button>
                 `;
-
-            this.elements.queryRows.appendChild(row);
-            this.queryRows.push(rowId);
-        }
-
-        removeQueryRow(rowId) {
-            const row = document.getElementById(rowId);
-            if (row) {
-                row.remove();
-                this.queryRows = this.queryRows.filter(id => id !== rowId);
+                
+                this.elements.queryRows.appendChild(row);
+                this.queryRows.push(rowId);
             }
-        }
 
-        applyQuery() {
-            if (!this.index) {
-                this.showToast('请先选择索引', 'error');
-                return;
+            removeQueryRow(rowId) {
+                const row = document.getElementById(rowId);
+                if (row) {
+                    row.remove();
+                    this.queryRows = this.queryRows.filter(id => id !== rowId);
+                }
             }
-            this.performSearch();
-        }
 
-        clearQuery() {
-            this.elements.queryRows.innerHTML = '';
-            this.queryRows = [];
-            this.addQueryRow();
-            this.showToast('查询条件已清空', 'success');
-        }
+            applyQuery() {
+                if (!this.index) {
+                    this.showToast('请先选择索引', 'error');
+                    return;
+                }
+                this.performSearch();
+            }
 
-        // Search Methods
-        async performSearch() {
-            if (!this.index) return;
+            clearQuery() {
+                this.elements.queryRows.innerHTML = '';
+                this.queryRows = [];
+                this.addQueryRow();
+                this.showToast('查询条件已清空', 'success');
+            }
 
-            const query = this.elements.searchInput.value.trim();
-            // Allow empty query if there are query rows
-            if (!query && this.queryRows.length === 0) return;
+            // Search Methods
+            async performSearch() {
+                if (!this.index) return;
 
-            try {
-                this.elements.loadingOverlay.classList.add('active');
+                const query = this.elements.searchInput.value.trim();
+                // Allow empty query if there are query rows
+                if (!query && this.queryRows.length === 0) return;
 
-                // Build search parameters
-                const searchParams = this.buildSearchParams(query);
+                try {
+                    this.elements.loadingOverlay.classList.add('active');
 
-                // Perform search
-                const results = await this.index.search(query, searchParams);
+                    // Build search parameters
+                    const searchParams = this.buildSearchParams(query);
 
-                // Add to history
-                if (query) {
-                    this.addToHistory(query);
+                    // Perform search
+                    const results = await this.index.search(query, searchParams);
+
+                    // Add to history
+                    if (query) {
+                        this.addToHistory(query);
+                    }
+
+                    // Render results
+                    this.renderResults(results);
+
+                    // Render facets if available
+                    if (results.facetDistribution) {
+                        this.renderFacets(results.facetDistribution);
+                    }
+
+                    // Update stats
+                    this.updateStats(results);
+
+                    this.elements.loadingOverlay.classList.remove('active');
+                } catch (error) {
+                    this.elements.loadingOverlay.classList.remove('active');
+                    this.showToast('搜索失败: ' + error.message, 'error');
+                }
+            }
+
+            buildSearchParams(query) {
+                const params = {
+                    limit: this.pageSize,
+                    offset: (this.currentPage - 1) * this.pageSize
+                };
+
+                // Add highlight settings
+                if (this.elements.highlightEnabled.checked) {
+                    const highlightTargets = (this.highlightFields && this.highlightFields.length > 0)
+                        ? this.highlightFields
+                        : (this.searchFields && this.searchFields.length > 0)
+                            ? this.searchFields
+                            : ['*'];
+                    params.attributesToHighlight = highlightTargets;
+                    params.highlightPreTag = '<em class="highlight">';
+                    params.highlightPostTag = '</em>';
                 }
 
-                // Render results
-                this.renderResults(results);
-
-                // Render facets if available
-                if (results.facetDistribution) {
-                    this.renderFacets(results.facetDistribution);
+                // Add crop settings
+                const cropLength = parseInt(this.elements.cropLength.value) || 100;
+                if (cropLength > 0 && this.elements.highlightEnabled.checked) {
+                    const cropTargets = (this.highlightFields && this.highlightFields.length > 0)
+                        ? this.highlightFields
+                        : (this.searchFields && this.searchFields.length > 0)
+                            ? this.searchFields
+                            : ['*'];
+                    params.attributesToCrop = cropTargets;
+                    params.cropLength = cropLength;
                 }
 
-                // Update stats
-                this.updateStats(results);
-
-                this.elements.loadingOverlay.classList.remove('active');
-            } catch (error) {
-                this.elements.loadingOverlay.classList.remove('active');
-                this.showToast('搜索失败: ' + error.message, 'error');
-            }
-        }
-
-        buildSearchParams(query) {
-            const params = {
-                limit: this.pageSize,
-                offset: (this.currentPage - 1) * this.pageSize
-            };
-
-            // Add highlight settings
-            if (this.elements.highlightEnabled.checked) {
-                const highlightTargets = (this.highlightFields && this.highlightFields.length > 0)
-                    ? this.highlightFields
-                    : (this.searchFields && this.searchFields.length > 0)
-                        ? this.searchFields
-                        : ['*'];
-                params.attributesToHighlight = highlightTargets;
-                params.highlightPreTag = '<em class="highlight">';
-                params.highlightPostTag = '</em>';
-            }
-
-            // Add crop settings
-            const cropLength = parseInt(this.elements.cropLength.value) || 100;
-            if (cropLength > 0 && this.elements.highlightEnabled.checked) {
-                const cropTargets = (this.highlightFields && this.highlightFields.length > 0)
-                    ? this.highlightFields
-                    : (this.searchFields && this.searchFields.length > 0)
-                        ? this.searchFields
-                        : ['*'];
-                params.attributesToCrop = cropTargets;
-                params.cropLength = cropLength;
-            }
-
-            // Add ranking score settings
-            if (this.elements.showRankingScore.checked) {
-                params.showRankingScore = true;
-                params.showRankingScoreDetails = true;
-            }
-
-            // Add sort
-            const sortValue = this.elements.sortSelect.value;
-            if (sortValue) {
-                params.sort = [sortValue];
-            }
-
-            // Add filters from query builder
-            const filters = this.buildFiltersFromQueryBuilder();
-            if (filters.length > 0) {
-                params.filter = filters;
-            }
-
-            // Add search fields
-            // Use attributesToRetrieve to control which fields are returned in hits
-            if (this.displayFields && this.displayFields.length > 0) {
-                params.attributesToRetrieve = this.displayFields;
-            } else {
-                // retrieve all fields by default
-                params.attributesToRetrieve = ['*'];
-            }
-
-            // Add facets if any
-            if (Object.keys(this.facets).length > 0) {
-                params.facets = Object.keys(this.facets);
-            }
-
-            return params;
-        }
-
-        buildFiltersFromQueryBuilder() {
-            const filters = [];
-            const rows = this.elements.queryRows.querySelectorAll('.query-row');
-
-            let currentGroup = [];
-            let lastLogic = 'AND';
-
-            rows.forEach(row => {
-                const field = row.querySelector('.query-field').value;
-                const operator = row.querySelector('.query-operator').value;
-                const value = row.querySelector('.query-value').value;
-                const logic = row.querySelector('.query-logic').value;
-
-                if (!field) return;
-
-                let filterCondition;
-                switch (operator) {
-                    case 'IN':
-                        filterCondition = `${field} IN [${value.split(',').map(v => `"${v.trim()}"`)}]`;
-                        break;
-                    case 'NOT IN':
-                        filterCondition = `${field} NOT IN [${value.split(',').map(v => `"${v.trim()}"`)}]`;
-                        break;
-                    case 'EXISTS':
-                        filterCondition = `${field} EXISTS`;
-                        break;
-                    case 'NOT EXISTS':
-                        filterCondition = `${field} NOT EXISTS`;
-                        break;
-                    default:
-                        filterCondition = `${field} ${operator} "${value}"`;
+                // Add ranking score settings
+                if (this.elements.showRankingScore.checked) {
+                    params.showRankingScore = true;
+                    params.showRankingScoreDetails = true;
                 }
 
-                if (currentGroup.length === 0 || lastLogic === 'AND') {
-                    currentGroup.push(filterCondition);
+                // Add sort
+                const sortValue = this.elements.sortSelect.value;
+                if (sortValue) {
+                    params.sort = [sortValue];
+                }
+
+                // Add filters from query builder
+                const filters = this.buildFiltersFromQueryBuilder();
+                if (filters.length > 0) {
+                    params.filter = filters;
+                }
+
+                // Add search fields
+                // Use attributesToRetrieve to control which fields are returned in hits
+                if (this.displayFields && this.displayFields.length > 0) {
+                    params.attributesToRetrieve = this.displayFields;
                 } else {
-                    // For OR logic, we need to handle it differently
+                    // retrieve all fields by default
+                    params.attributesToRetrieve = ['*'];
+                }
+
+                // Add facets if any
+                if (Object.keys(this.facets).length > 0) {
+                    params.facets = Object.keys(this.facets);
+                }
+
+                return params;
+            }
+
+            buildFiltersFromQueryBuilder() {
+                const filters = [];
+                const rows = this.elements.queryRows.querySelectorAll('.query-row');
+                
+                let currentGroup = [];
+                let lastLogic = 'AND';
+
+                rows.forEach(row => {
+                    const field = row.querySelector('.query-field').value;
+                    const operator = row.querySelector('.query-operator').value;
+                    const value = row.querySelector('.query-value').value;
+                    const logic = row.querySelector('.query-logic').value;
+
+                    if (!field) return;
+
+                    let filterCondition;
+                    switch (operator) {
+                        case 'IN':
+                            filterCondition = `${field} IN [${value.split(',').map(v => `"${v.trim()}"`)}]`;
+                            break;
+                        case 'NOT IN':
+                            filterCondition = `${field} NOT IN [${value.split(',').map(v => `"${v.trim()}"`)}]`;
+                            break;
+                        case 'EXISTS':
+                            filterCondition = `${field} EXISTS`;
+                            break;
+                        case 'NOT EXISTS':
+                            filterCondition = `${field} NOT EXISTS`;
+                            break;
+                        default:
+                            filterCondition = `${field} ${operator} "${value}"`;
+                    }
+
+                    if (currentGroup.length === 0 || lastLogic === 'AND') {
+                        currentGroup.push(filterCondition);
+                    } else {
+                        // For OR logic, we need to handle it differently
+                        if (currentGroup.length === 1) {
+                            filters.push(currentGroup[0]);
+                        } else {
+                            filters.push(`(${currentGroup.join(' AND ')})`);
+                        }
+                        filters.push(filterCondition);
+                        currentGroup = [];
+                    }
+
+                    lastLogic = logic;
+                });
+
+                if (currentGroup.length > 0) {
                     if (currentGroup.length === 1) {
                         filters.push(currentGroup[0]);
                     } else {
                         filters.push(`(${currentGroup.join(' AND ')})`);
                     }
-                    filters.push(filterCondition);
-                    currentGroup = [];
                 }
 
-                lastLogic = logic;
-            });
-
-            if (currentGroup.length > 0) {
-                if (currentGroup.length === 1) {
-                    filters.push(currentGroup[0]);
-                } else {
-                    filters.push(`(${currentGroup.join(' AND ')})`);
-                }
+                return filters;
             }
 
-            return filters;
-        }
-
-        // UI Rendering Methods
-        renderResults(results) {
-            if (!results.hits || results.hits.length === 0) {
-                this.elements.resultsContainer.innerHTML = `
+            // UI Rendering Methods
+            renderResults(results) {
+                if (!results.hits || results.hits.length === 0) {
+                    this.elements.resultsContainer.innerHTML = `
                         <div class="empty-state" style="grid-column: 1 / -1;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="11" cy="11" r="8"></circle>
@@ -1573,317 +1674,317 @@
                             <p>未找到匹配结果</p>
                         </div>
                     `;
-                this.elements.pagination.innerHTML = '';
-                return;
-            }
+                    this.elements.pagination.innerHTML = '';
+                    return;
+                }
 
-            // Render results as a table based on displayFields or all fields from hits
-            let hits = results.hits.slice();
-            this.lastHits = hits;
-            this.lastResults = results;
-            let columns = [];
-            if (this.displayFields && this.displayFields.length > 0) {
-                columns = this.displayFields.slice();
-            } else {
-                // Use all keys from the first hit, excluding internal fields
-                columns = Object.keys(hits[0]).filter(k => !k.startsWith('_'));
-            }
+                // Render results as a table based on displayFields or all fields from hits
+                let hits = results.hits.slice();
+                this.lastHits = hits;
+                this.lastResults = results;
+                let columns = [];
+                if (this.displayFields && this.displayFields.length > 0) {
+                    columns = this.displayFields.slice();
+                } else {
+                    // Use all keys from the first hit, excluding internal fields
+                    columns = Object.keys(hits[0]).filter(k => !k.startsWith('_'));
+                }
 
-            if (columns.length === 0) {
-                // If no columns found, include all fields except internal ones
-                columns = Object.keys(hits[0]).filter(k => !k.startsWith('_'));
-            }
+                if (columns.length === 0) {
+                    // If no columns found, include all fields except internal ones
+                    columns = Object.keys(hits[0]).filter(k => !k.startsWith('_'));
+                }
 
-            if (columns.length === 0) {
-                // Last resort: show id
-                columns = ['id'];
-            }
+                if (columns.length === 0) {
+                    // Last resort: show id
+                    columns = ['id'];
+                }
 
-            if (hits[0] && Object.prototype.hasOwnProperty.call(hits[0], 'id') && !columns.includes('id')) {
-                columns.unshift('id');
-            }
+                if (hits[0] && Object.prototype.hasOwnProperty.call(hits[0], 'id') && !columns.includes('id')) {
+                    columns.unshift('id');
+                }
 
-            this.lastBaseColumns = columns.slice();
-            columns = this.applyColumnPrefs(columns);
-            if (columns.length === 0) {
-                this.elements.resultsContainer.innerHTML = `
+                this.lastBaseColumns = columns.slice();
+                columns = this.applyColumnPrefs(columns);
+                if (columns.length === 0) {
+                    this.elements.resultsContainer.innerHTML = `
                         <div class="empty-state" style="grid-column: 1 / -1;">
                             <p>当前列已全部隐藏，请在“列设置”中勾选显示。</p>
                         </div>
                     `;
-                this.elements.pagination.innerHTML = '';
-                return;
-            }
+                    this.elements.pagination.innerHTML = '';
+                    return;
+                }
 
-            if (this.tableSortField && columns.includes(this.tableSortField)) {
-                hits = this.sortHits(hits, this.tableSortField, this.tableSortDir);
-            }
+                if (this.tableSortField && columns.includes(this.tableSortField)) {
+                    hits = this.sortHits(hits, this.tableSortField, this.tableSortDir);
+                }
 
-            let tableHtml = '<div class="results-table-wrap"><table class="results-table"><thead><tr>' +
-                columns.map(c => {
-                    const label = this.fieldLabels[c] || c;
-                    const isActive = this.tableSortField === c;
-                    const dirMark = isActive ? (this.tableSortDir === 'asc' ? ' ▲' : ' ▼') : '';
-                    return `<th class="sortable-th" draggable="true" data-col="${c}" onclick="app.toggleTableSort('${c}')">${label}${dirMark}</th>`;
-                }).join('') +
-                '<th>操作</th></tr></thead><tbody>';
+                let tableHtml = '<div class="results-table-wrap"><table class="results-table"><thead><tr>' +
+                    columns.map(c => {
+                        const label = this.fieldLabels[c] || c;
+                        const isActive = this.tableSortField === c;
+                        const dirMark = isActive ? (this.tableSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+                        return `<th class="sortable-th" draggable="true" data-col="${c}" onclick="app.toggleTableSort('${c}')">${label}${dirMark}</th>`;
+                    }).join('') +
+                    '<th>操作</th></tr></thead><tbody>';
 
-            tableHtml += hits.map(hit => {
-                const row = columns.map(col => {
-                    const cell = this.getCellValue(hit, col);
-                    if (!cell) return '<td></td>';
-                    return `<td title="${cell.title}">${cell.html}</td>`;
+                tableHtml += hits.map(hit => {
+                    const row = columns.map(col => {
+                        const cell = this.getCellValue(hit, col);
+                        if (!cell) return '<td></td>';
+                        return `<td title="${cell.title}">${cell.html}</td>`;
+                    }).join('');
+
+                    const rankingScore = hit._rankingScore ? `<br><small style="color: var(--text-secondary);">评分: ${(hit._rankingScore * 100).toFixed(1)}%</small>` : '';
+
+                    return `<tr>${row}<td><button class="btn btn-secondary" onclick="app.showResultDetail('${hit.id}')">查看</button>${rankingScore}</td></tr>`;
                 }).join('');
 
-                const rankingScore = hit._rankingScore ? `<br><small style="color: var(--text-secondary);">评分: ${(hit._rankingScore * 100).toFixed(1)}%</small>` : '';
+                tableHtml += '</tbody></table></div>';
+                this.elements.resultsContainer.innerHTML = tableHtml;
 
-                return `<tr>${row}<td><button class="btn btn-secondary" onclick="app.showResultDetail('${hit.id}')">查看</button>${rankingScore}</td></tr>`;
-            }).join('');
-
-            tableHtml += '</tbody></table></div>';
-            this.elements.resultsContainer.innerHTML = tableHtml;
-
-            this.renderPagination(results.estimatedTotalHits);
-            this.attachColumnDragHandlers();
-        }
-
-        toggleTableSort(field) {
-            if (!field) return;
-            if (this.isDraggingColumns) return;
-            if (this.tableSortField === field) {
-                this.tableSortDir = this.tableSortDir === 'asc' ? 'desc' : 'asc';
-            } else {
-                this.tableSortField = field;
-                this.tableSortDir = 'asc';
+                this.renderPagination(results.estimatedTotalHits);
+                this.attachColumnDragHandlers();
             }
-            this.performSearch();
-        }
 
-        applyColumnPrefs(columns) {
-            let ordered = this.orderColumns(columns);
-            if (this.hiddenColumns && this.hiddenColumns.length > 0) {
-                ordered = ordered.filter(c => !this.hiddenColumns.includes(c));
-            }
-            return ordered;
-        }
-
-        orderColumns(columns) {
-            let ordered = [];
-            if (this.columnOrder && this.columnOrder.length > 0) {
-                ordered = this.columnOrder.filter(c => columns.includes(c));
-                columns.forEach(c => {
-                    if (!ordered.includes(c)) ordered.push(c);
-                });
-            } else {
-                ordered = columns.slice();
-            }
-            return ordered;
-        }
-
-        attachColumnDragHandlers() {
-            const ths = this.elements.resultsContainer.querySelectorAll('th.sortable-th');
-            if (!ths || ths.length === 0) return;
-            ths.forEach(th => {
-                th.addEventListener('dragstart', (e) => {
-                    const col = th.dataset.col;
-                    if (!col) return;
-                    this.isDraggingColumns = true;
-                    e.dataTransfer.setData('text/plain', col);
-                    e.dataTransfer.effectAllowed = 'move';
-                });
-                th.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    th.classList.add('drag-over');
-                    e.dataTransfer.dropEffect = 'move';
-                });
-                th.addEventListener('dragleave', () => {
-                    th.classList.remove('drag-over');
-                });
-                th.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    th.classList.remove('drag-over');
-                    const from = e.dataTransfer.getData('text/plain');
-                    const to = th.dataset.col;
-                    if (!from || !to || from === to) return;
-                    this.moveColumnOrder(from, to);
-                });
-                th.addEventListener('dragend', () => {
-                    th.classList.remove('drag-over');
-                    setTimeout(() => { this.isDraggingColumns = false; }, 0);
-                });
-            });
-        }
-
-        moveColumnOrder(from, to) {
-            const base = this.lastBaseColumns && this.lastBaseColumns.length > 0
-                ? this.lastBaseColumns.slice()
-                : [];
-            const order = (this.columnOrder && this.columnOrder.length > 0)
-                ? this.columnOrder.filter(c => base.includes(c))
-                : base.slice();
-            const fromIdx = order.indexOf(from);
-            const toIdx = order.indexOf(to);
-            if (fromIdx === -1 || toIdx === -1) return;
-            order.splice(fromIdx, 1);
-            order.splice(toIdx, 0, from);
-            this.columnOrder = order;
-            this.saveColumnPrefs();
-            this.refreshResultsTable();
-        }
-
-        sortHits(hits, field, dir) {
-            const factor = dir === 'desc' ? -1 : 1;
-            return hits.slice().sort((a, b) => {
-                const av = this.normalizeSortValue(a[field]);
-                const bv = this.normalizeSortValue(b[field]);
-                if (av.type === 'number' && bv.type === 'number') {
-                    if (av.value === bv.value) return 0;
-                    return av.value > bv.value ? factor : -factor;
+            toggleTableSort(field) {
+                if (!field) return;
+                if (this.isDraggingColumns) return;
+                if (this.tableSortField === field) {
+                    this.tableSortDir = this.tableSortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.tableSortField = field;
+                    this.tableSortDir = 'asc';
                 }
-                const as = String(av.value);
-                const bs = String(bv.value);
-                if (as === bs) return 0;
-                return as > bs ? factor : -factor;
-            });
-        }
-
-        normalizeSortValue(value) {
-            if (value === null || value === undefined) return { type: 'string', value: '' };
-            if (Array.isArray(value)) {
-                const first = value.find(v => v !== null && v !== undefined);
-                return this.normalizeSortValue(first);
-            }
-            if (typeof value === 'object') {
-                return { type: 'string', value: JSON.stringify(value) };
-            }
-            const num = Number(value);
-            if (!Number.isNaN(num) && value !== '' && value !== true && value !== false) {
-                return { type: 'number', value: num };
-            }
-            return { type: 'string', value: String(value) };
-        }
-
-        getCellValue(hit, col) {
-            const useHighlight = this.elements.highlightEnabled.checked && hit._formatted && hit._formatted[col] !== undefined;
-            const rawValue = useHighlight ? hit._formatted[col] : hit[col];
-            if (rawValue === undefined || rawValue === null) return null;
-
-            let displayHtml = '';
-            let titleText = '';
-
-            if (Array.isArray(rawValue)) {
-                const items = rawValue.map(item => {
-                    if (item === null || item === undefined) return '';
-                    return useHighlight ? String(item) : this.escapeHtml(String(item));
-                }).filter(Boolean);
-                displayHtml = items.join(', ');
-                titleText = items.map(item => this.stripHtml(item)).join(', ');
-            } else if (typeof rawValue === 'object') {
-                const json = JSON.stringify(rawValue);
-                displayHtml = useHighlight ? this.escapeHtml(json) : this.escapeHtml(json);
-                titleText = json;
-            } else {
-                const text = String(rawValue);
-                displayHtml = useHighlight ? text : this.escapeHtml(text);
-                titleText = this.stripHtml(text);
+                this.performSearch();
             }
 
-            return { html: displayHtml, title: this.escapeHtml(titleText) };
-        }
-
-        escapeHtml(value) {
-            return String(value)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/\"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
-        stripHtml(value) {
-            return String(value).replace(/<[^>]*>/g, '');
-        }
-
-        escapeJsString(value) {
-            return String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        }
-
-        formatNumber(value) {
-            const num = Number(value);
-            if (Number.isNaN(num)) return String(value);
-            return num.toLocaleString('zh-CN');
-        }
-
-        renderMetadata(hit) {
-            const metadata = [];
-
-            if (hit.category) metadata.push(`<span class="result-tag">${hit.category}</span>`);
-            if (hit.tags && Array.isArray(hit.tags)) {
-                hit.tags.forEach(tag => metadata.push(`<span class="result-tag">${tag}</span>`));
-            }
-            if (hit.created_at) {
-                metadata.push(`<span class="result-tag">${new Date(hit.created_at).toLocaleDateString()}</span>`);
-            }
-            if (hit.author) metadata.push(`<span class="result-tag">${hit.author}</span>`);
-
-            return metadata.join('');
-        }
-
-        renderPagination(totalHits) {
-            const totalPages = Math.ceil(totalHits / this.pageSize);
-            if (totalPages <= 1) {
-                this.elements.pagination.innerHTML = '';
-                return;
+            applyColumnPrefs(columns) {
+                let ordered = this.orderColumns(columns);
+                if (this.hiddenColumns && this.hiddenColumns.length > 0) {
+                    ordered = ordered.filter(c => !this.hiddenColumns.includes(c));
+                }
+                return ordered;
             }
 
-            let html = `
-                    <button class="pagination-btn" ${this.currentPage === 1 ? 'disabled' : ''}
+            orderColumns(columns) {
+                let ordered = [];
+                if (this.columnOrder && this.columnOrder.length > 0) {
+                    ordered = this.columnOrder.filter(c => columns.includes(c));
+                    columns.forEach(c => {
+                        if (!ordered.includes(c)) ordered.push(c);
+                    });
+                } else {
+                    ordered = columns.slice();
+                }
+                return ordered;
+            }
+
+            attachColumnDragHandlers() {
+                const ths = this.elements.resultsContainer.querySelectorAll('th.sortable-th');
+                if (!ths || ths.length === 0) return;
+                ths.forEach(th => {
+                    th.addEventListener('dragstart', (e) => {
+                        const col = th.dataset.col;
+                        if (!col) return;
+                        this.isDraggingColumns = true;
+                        e.dataTransfer.setData('text/plain', col);
+                        e.dataTransfer.effectAllowed = 'move';
+                    });
+                    th.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        th.classList.add('drag-over');
+                        e.dataTransfer.dropEffect = 'move';
+                    });
+                    th.addEventListener('dragleave', () => {
+                        th.classList.remove('drag-over');
+                    });
+                    th.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        th.classList.remove('drag-over');
+                        const from = e.dataTransfer.getData('text/plain');
+                        const to = th.dataset.col;
+                        if (!from || !to || from === to) return;
+                        this.moveColumnOrder(from, to);
+                    });
+                    th.addEventListener('dragend', () => {
+                        th.classList.remove('drag-over');
+                        setTimeout(() => { this.isDraggingColumns = false; }, 0);
+                    });
+                });
+            }
+
+            moveColumnOrder(from, to) {
+                const base = this.lastBaseColumns && this.lastBaseColumns.length > 0
+                    ? this.lastBaseColumns.slice()
+                    : [];
+                const order = (this.columnOrder && this.columnOrder.length > 0)
+                    ? this.columnOrder.filter(c => base.includes(c))
+                    : base.slice();
+                const fromIdx = order.indexOf(from);
+                const toIdx = order.indexOf(to);
+                if (fromIdx === -1 || toIdx === -1) return;
+                order.splice(fromIdx, 1);
+                order.splice(toIdx, 0, from);
+                this.columnOrder = order;
+                this.saveColumnPrefs();
+                this.refreshResultsTable();
+            }
+
+            sortHits(hits, field, dir) {
+                const factor = dir === 'desc' ? -1 : 1;
+                return hits.slice().sort((a, b) => {
+                    const av = this.normalizeSortValue(a[field]);
+                    const bv = this.normalizeSortValue(b[field]);
+                    if (av.type === 'number' && bv.type === 'number') {
+                        if (av.value === bv.value) return 0;
+                        return av.value > bv.value ? factor : -factor;
+                    }
+                    const as = String(av.value);
+                    const bs = String(bv.value);
+                    if (as === bs) return 0;
+                    return as > bs ? factor : -factor;
+                });
+            }
+
+            normalizeSortValue(value) {
+                if (value === null || value === undefined) return { type: 'string', value: '' };
+                if (Array.isArray(value)) {
+                    const first = value.find(v => v !== null && v !== undefined);
+                    return this.normalizeSortValue(first);
+                }
+                if (typeof value === 'object') {
+                    return { type: 'string', value: JSON.stringify(value) };
+                }
+                const num = Number(value);
+                if (!Number.isNaN(num) && value !== '' && value !== true && value !== false) {
+                    return { type: 'number', value: num };
+                }
+                return { type: 'string', value: String(value) };
+            }
+
+            getCellValue(hit, col) {
+                const useHighlight = this.elements.highlightEnabled.checked && hit._formatted && hit._formatted[col] !== undefined;
+                const rawValue = useHighlight ? hit._formatted[col] : hit[col];
+                if (rawValue === undefined || rawValue === null) return null;
+
+                let displayHtml = '';
+                let titleText = '';
+
+                if (Array.isArray(rawValue)) {
+                    const items = rawValue.map(item => {
+                        if (item === null || item === undefined) return '';
+                        return useHighlight ? String(item) : this.escapeHtml(String(item));
+                    }).filter(Boolean);
+                    displayHtml = items.join(', ');
+                    titleText = items.map(item => this.stripHtml(item)).join(', ');
+                } else if (typeof rawValue === 'object') {
+                    const json = JSON.stringify(rawValue);
+                    displayHtml = useHighlight ? this.escapeHtml(json) : this.escapeHtml(json);
+                    titleText = json;
+                } else {
+                    const text = String(rawValue);
+                    displayHtml = useHighlight ? text : this.escapeHtml(text);
+                    titleText = this.stripHtml(text);
+                }
+
+                return { html: displayHtml, title: this.escapeHtml(titleText) };
+            }
+
+            escapeHtml(value) {
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            stripHtml(value) {
+                return String(value).replace(/<[^>]*>/g, '');
+            }
+
+            escapeJsString(value) {
+                return String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            }
+
+            formatNumber(value) {
+                const num = Number(value);
+                if (Number.isNaN(num)) return String(value);
+                return num.toLocaleString('zh-CN');
+            }
+
+            renderMetadata(hit) {
+                const metadata = [];
+                
+                if (hit.category) metadata.push(`<span class="result-tag">${hit.category}</span>`);
+                if (hit.tags && Array.isArray(hit.tags)) {
+                    hit.tags.forEach(tag => metadata.push(`<span class="result-tag">${tag}</span>`));
+                }
+                if (hit.created_at) {
+                    metadata.push(`<span class="result-tag">${new Date(hit.created_at).toLocaleDateString()}</span>`);
+                }
+                if (hit.author) metadata.push(`<span class="result-tag">${hit.author}</span>`);
+                
+                return metadata.join('');
+            }
+
+            renderPagination(totalHits) {
+                const totalPages = Math.ceil(totalHits / this.pageSize);
+                if (totalPages <= 1) {
+                    this.elements.pagination.innerHTML = '';
+                    return;
+                }
+
+                let html = `
+                    <button class="pagination-btn" ${this.currentPage === 1 ? 'disabled' : ''} 
                         onclick="app.goToPage(${this.currentPage - 1})">上一页</button>
                 `;
 
-            // Show limited page numbers
-            const startPage = Math.max(1, this.currentPage - 2);
-            const endPage = Math.min(totalPages, this.currentPage + 2);
+                // Show limited page numbers
+                const startPage = Math.max(1, this.currentPage - 2);
+                const endPage = Math.min(totalPages, this.currentPage + 2);
 
-            if (startPage > 1) {
-                html += `<button class="pagination-btn" onclick="app.goToPage(1)">1</button>`;
-                if (startPage > 2) html += `<span>...</span>`;
-            }
+                if (startPage > 1) {
+                    html += `<button class="pagination-btn" onclick="app.goToPage(1)">1</button>`;
+                    if (startPage > 2) html += `<span>...</span>`;
+                }
 
-            for (let i = startPage; i <= endPage; i++) {
-                html += `
-                        <button class="pagination-btn ${i === this.currentPage ? 'active' : ''}"
+                for (let i = startPage; i <= endPage; i++) {
+                    html += `
+                        <button class="pagination-btn ${i === this.currentPage ? 'active' : ''}" 
                             onclick="app.goToPage(${i})">${i}</button>
                     `;
-            }
+                }
 
-            if (endPage < totalPages) {
-                if (endPage < totalPages - 1) html += `<span>...</span>`;
-                html += `<button class="pagination-btn" onclick="app.goToPage(${totalPages})">${totalPages}</button>`;
-            }
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) html += `<span>...</span>`;
+                    html += `<button class="pagination-btn" onclick="app.goToPage(${totalPages})">${totalPages}</button>`;
+                }
 
-            html += `
-                    <button class="pagination-btn" ${this.currentPage === totalPages ? 'disabled' : ''}
+                html += `
+                    <button class="pagination-btn" ${this.currentPage === totalPages ? 'disabled' : ''} 
                         onclick="app.goToPage(${this.currentPage + 1})">下一页</button>
                 `;
 
-            this.elements.pagination.innerHTML = html;
-        }
+                this.elements.pagination.innerHTML = html;
+            }
 
-        renderFacets(facetDistribution) {
-            this.elements.facetsSection.style.display = 'block';
-
-            let html = '';
-            for (const [facetName, facetValues] of Object.entries(facetDistribution)) {
-                html += `
+            renderFacets(facetDistribution) {
+                this.elements.facetsSection.style.display = 'block';
+                
+                let html = '';
+                for (const [facetName, facetValues] of Object.entries(facetDistribution)) {
+                    html += `
                         <div class="filter-section" style="margin-bottom: 16px; padding-bottom: 16px;">
                             <h4 style="margin-bottom: 12px; font-size: 1rem;">${facetName}</h4>
                             <ul class="filter-list">
                                 ${Object.entries(facetValues).slice(0, 10).map(([value, count]) => `
                                     <li class="filter-item">
-                                        <input type="checkbox"
-                                            data-facet="${facetName}"
-                                            data-value="${value}"
+                                        <input type="checkbox" 
+                                            data-facet="${facetName}" 
+                                            data-value="${value}" 
                                             onchange="app.toggleFacet(this)">
                                         <span class="filter-label">${value}</span>
                                         <span class="filter-count">${count}</span>
@@ -1892,346 +1993,346 @@
                             </ul>
                         </div>
                     `;
+                }
+                
+                this.elements.facetsContainer.innerHTML = html;
             }
 
-            this.elements.facetsContainer.innerHTML = html;
-        }
-
-        updateStats(results) {
-            this.elements.resultsCount.textContent = results.estimatedTotalHits || 0;
-            this.elements.searchTime.textContent = results.processingTimeMs ?
-                `耗时 ${results.processingTimeMs}ms` : '';
-        }
-
-        updateSearchFieldsUI() {
-            if (!this.availableFields || this.availableFields.length === 0) {
-                this.elements.searchFieldsList.innerHTML = '<li style="padding: 12px; color: var(--text-secondary);">暂无搜索字段</li>';
-                return;
+            updateStats(results) {
+                this.elements.resultsCount.textContent = results.estimatedTotalHits || 0;
+                this.elements.searchTime.textContent = results.processingTimeMs ? 
+                    `耗时 ${results.processingTimeMs}ms` : '';
             }
 
-            this.elements.searchFieldsList.innerHTML = this.availableFields.map(field => `
+            updateSearchFieldsUI() {
+                if (!this.availableFields || this.availableFields.length === 0) {
+                    this.elements.searchFieldsList.innerHTML = '<li style="padding: 12px; color: var(--text-secondary);">暂无搜索字段</li>';
+                    return;
+                }
+
+                this.elements.searchFieldsList.innerHTML = this.availableFields.map(field => `
                     <li class="filter-item">
-                        <input type="checkbox"
-                            data-field="${field}"
-                            ${this.searchFields.includes(field) ? 'checked' : ''}
+                        <input type="checkbox" 
+                            data-field="${field}" 
+                            ${this.searchFields.includes(field) ? 'checked' : ''} 
                             onchange="app.toggleSearchField(this)">
                         <span class="filter-label">${field}</span>
                     </li>
                 `).join('');
-        }
-
-        updateSortOptions(sortableAttributes) {
-            const currentSort = this.elements.sortSelect.value;
-            this.elements.sortSelect.innerHTML = '<option value="">默认排序</option>';
-
-            sortableAttributes.forEach(attr => {
-                const optionAsc = document.createElement('option');
-                optionAsc.value = `${attr}:asc`;
-                optionAsc.textContent = `${attr} 升序`;
-
-                const optionDesc = document.createElement('option');
-                optionDesc.value = `${attr}:desc`;
-                optionDesc.textContent = `${attr} 降序`;
-
-                this.elements.sortSelect.appendChild(optionAsc);
-                this.elements.sortSelect.appendChild(optionDesc);
-            });
-
-            if (currentSort) {
-                this.elements.sortSelect.value = currentSort;
             }
-        }
 
-        // History Methods
-        loadSearchHistory() {
-            try {
-                return JSON.parse(localStorage.getItem('searchHistory') || '[]');
-            } catch {
-                return [];
+            updateSortOptions(sortableAttributes) {
+                const currentSort = this.elements.sortSelect.value;
+                this.elements.sortSelect.innerHTML = '<option value="">默认排序</option>';
+                
+                sortableAttributes.forEach(attr => {
+                    const optionAsc = document.createElement('option');
+                    optionAsc.value = `${attr}:asc`;
+                    optionAsc.textContent = `${attr} 升序`;
+                    
+                    const optionDesc = document.createElement('option');
+                    optionDesc.value = `${attr}:desc`;
+                    optionDesc.textContent = `${attr} 降序`;
+                    
+                    this.elements.sortSelect.appendChild(optionAsc);
+                    this.elements.sortSelect.appendChild(optionDesc);
+                });
+
+                if (currentSort) {
+                    this.elements.sortSelect.value = currentSort;
+                }
             }
-        }
 
-        saveSearchHistory(history) {
-            localStorage.setItem('searchHistory', JSON.stringify(history));
-        }
+            // History Methods
+            loadSearchHistory() {
+                try {
+                    return JSON.parse(localStorage.getItem('searchHistory') || '[]');
+                } catch {
+                    return [];
+                }
+            }
 
-        loadFieldLabels(indexName) {
-            try {
+            saveSearchHistory(history) {
+                localStorage.setItem('searchHistory', JSON.stringify(history));
+            }
+
+            loadFieldLabels(indexName) {
+                try {
+                    const key = `fieldLabels:${indexName || 'default'}`;
+                    return JSON.parse(localStorage.getItem(key) || '{}');
+                } catch {
+                    return {};
+                }
+            }
+
+            saveFieldLabels(labels, indexName) {
                 const key = `fieldLabels:${indexName || 'default'}`;
-                return JSON.parse(localStorage.getItem(key) || '{}');
-            } catch {
-                return {};
-            }
-        }
-
-        saveFieldLabels(labels, indexName) {
-            const key = `fieldLabels:${indexName || 'default'}`;
-            localStorage.setItem(key, JSON.stringify(labels || {}));
-        }
-
-        addToHistory(query) {
-            if (!query || this.searchHistory.some(h => h.query === query)) return;
-
-            const historyItem = {
-                query,
-                timestamp: new Date().toISOString()
-            };
-
-            this.searchHistory.unshift(historyItem);
-            if (this.searchHistory.length > 20) {
-                this.searchHistory = this.searchHistory.slice(0, 20);
+                localStorage.setItem(key, JSON.stringify(labels || {}));
             }
 
-            this.saveSearchHistory(this.searchHistory);
-            this.renderHistory();
-        }
+            addToHistory(query) {
+                if (!query || this.searchHistory.some(h => h.query === query)) return;
+                
+                const historyItem = {
+                    query,
+                    timestamp: new Date().toISOString()
+                };
 
-        renderHistory() {
-            if (this.searchHistory.length === 0) {
-                this.elements.historyList.innerHTML = '<li style="padding: 12px; color: var(--text-secondary);">暂无搜索历史</li>';
-                return;
+                this.searchHistory.unshift(historyItem);
+                if (this.searchHistory.length > 20) {
+                    this.searchHistory = this.searchHistory.slice(0, 20);
+                }
+
+                this.saveSearchHistory(this.searchHistory);
+                this.renderHistory();
             }
 
-            this.elements.historyList.innerHTML = this.searchHistory.map(item => `
+            renderHistory() {
+                if (this.searchHistory.length === 0) {
+                    this.elements.historyList.innerHTML = '<li style="padding: 12px; color: var(--text-secondary);">暂无搜索历史</li>';
+                    return;
+                }
+
+                this.elements.historyList.innerHTML = this.searchHistory.map(item => `
                     <li class="history-item" onclick="app.performHistorySearch('${item.query}')">
                         <span>${item.query}</span>
                         <span class="history-time">${this.formatTime(item.timestamp)}</span>
                     </li>
                 `).join('');
-        }
-
-        formatTime(timestamp) {
-            const date = new Date(timestamp);
-            const now = new Date();
-            const diff = now - date;
-
-            if (diff < 60000) return '刚刚';
-            if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
-            if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
-            return date.toLocaleDateString();
-        }
-
-        performHistorySearch(query) {
-            this.elements.searchInput.value = query;
-            this.performSearch();
-        }
-
-        clearSearchHistory() {
-            this.searchHistory = [];
-            this.saveSearchHistory(this.searchHistory);
-            this.renderHistory();
-            this.showToast('搜索历史已清空', 'success');
-        }
-
-        // Suggestions Methods
-        renderSuggestions() {
-            if (!this.popularSearches || this.popularSearches.length === 0) {
-                this.elements.suggestionsList.innerHTML = '<li style="padding: 12px; color: var(--text-secondary);">暂无热门搜索</li>';
-                return;
             }
-            this.elements.suggestionsList.innerHTML = this.popularSearches.map(item => {
-                const safeValue = this.escapeJsString(item.value);
-                const label = this.escapeHtml(item.value);
-                return `
+
+            formatTime(timestamp) {
+                const date = new Date(timestamp);
+                const now = new Date();
+                const diff = now - date;
+
+                if (diff < 60000) return '刚刚';
+                if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+                if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+                return date.toLocaleDateString();
+            }
+
+            performHistorySearch(query) {
+                this.elements.searchInput.value = query;
+                this.performSearch();
+            }
+
+            clearSearchHistory() {
+                this.searchHistory = [];
+                this.saveSearchHistory(this.searchHistory);
+                this.renderHistory();
+                this.showToast('搜索历史已清空', 'success');
+            }
+
+            // Suggestions Methods
+            renderSuggestions() {
+                if (!this.popularSearches || this.popularSearches.length === 0) {
+                    this.elements.suggestionsList.innerHTML = '<li style="padding: 12px; color: var(--text-secondary);">暂无热门搜索</li>';
+                    return;
+                }
+                this.elements.suggestionsList.innerHTML = this.popularSearches.map(item => {
+                    const safeValue = this.escapeJsString(item.value);
+                    const label = this.escapeHtml(item.value);
+                    return `
                     <li class="suggestion-item" onclick="app.performPopularSearch('${safeValue}')">
                         ${label}
                         ${item.count !== undefined ? `<span class="filter-count">${item.count}</span>` : ''}
                     </li>
                 `;
-            }).join('');
-        }
-
-        performPopularSearch(value) {
-            const field = this.popularSearchField;
-            if (!field) {
-                this.performHistorySearch(value);
-                return;
+                }).join('');
             }
-            this.elements.searchInput.value = '';
-            this.setSingleFilter(field, value);
-            this.performSearch();
-        }
 
-        setSingleFilter(field, value) {
-            this.elements.queryRows.innerHTML = '';
-            this.queryRows = [];
-            this.addQueryRow();
-            const row = this.elements.queryRows.querySelector('.query-row');
-            if (!row) return;
-            const fieldSelect = row.querySelector('.query-field');
-            const operatorSelect = row.querySelector('.query-operator');
-            const valueInput = row.querySelector('.query-value');
-            if (fieldSelect) fieldSelect.value = field;
-            if (operatorSelect) operatorSelect.value = '=';
-            if (valueInput) valueInput.value = value;
-        }
-
-        loadPopularField(indexName) {
-            try {
-                const key = `popularSearchField:${indexName || 'default'}`;
-                return localStorage.getItem(key) || '';
-            } catch {
-                return '';
+            performPopularSearch(value) {
+                const field = this.popularSearchField;
+                if (!field) {
+                    this.performHistorySearch(value);
+                    return;
+                }
+                this.elements.searchInput.value = '';
+                this.setSingleFilter(field, value);
+                this.performSearch();
             }
-        }
 
-        savePopularField(field, indexName) {
-            try {
-                const key = `popularSearchField:${indexName || 'default'}`;
-                if (field) localStorage.setItem(key, field);
-                else localStorage.removeItem(key);
-            } catch {
-                // ignore
+            setSingleFilter(field, value) {
+                this.elements.queryRows.innerHTML = '';
+                this.queryRows = [];
+                this.addQueryRow();
+                const row = this.elements.queryRows.querySelector('.query-row');
+                if (!row) return;
+                const fieldSelect = row.querySelector('.query-field');
+                const operatorSelect = row.querySelector('.query-operator');
+                const valueInput = row.querySelector('.query-value');
+                if (fieldSelect) fieldSelect.value = field;
+                if (operatorSelect) operatorSelect.value = '=';
+                if (valueInput) valueInput.value = value;
             }
-        }
 
-        updatePopularFieldOptions() {
-            const options = (this.filterableFields && this.filterableFields.length > 0)
-                ? this.filterableFields.slice()
-                : [];
+            loadPopularField(indexName) {
+                try {
+                    const key = `popularSearchField:${indexName || 'default'}`;
+                    return localStorage.getItem(key) || '';
+                } catch {
+                    return '';
+                }
+            }
 
-            const current = this.loadPopularField(this.currentIndex);
-            this.elements.popularFieldSelect.innerHTML = '<option value="">选择字段</option>' +
-                options.map(field => `<option value="${field}">${field}</option>`).join('');
+            savePopularField(field, indexName) {
+                try {
+                    const key = `popularSearchField:${indexName || 'default'}`;
+                    if (field) localStorage.setItem(key, field);
+                    else localStorage.removeItem(key);
+                } catch {
+                    // ignore
+                }
+            }
 
-            if (current && options.includes(current)) {
-                this.popularSearchField = current;
-                this.elements.popularFieldSelect.value = current;
-            } else if (!current && options.length > 0) {
-                this.popularSearchField = options[0];
-                this.elements.popularFieldSelect.value = options[0];
-                this.savePopularField(options[0], this.currentIndex);
-            } else {
-                this.popularSearchField = '';
-                this.elements.popularFieldSelect.value = '';
-            }
-        }
+            updatePopularFieldOptions() {
+                const options = (this.filterableFields && this.filterableFields.length > 0)
+                    ? this.filterableFields.slice()
+                    : [];
 
-        async loadPopularSearches() {
-            if (!this.index) {
-                this.popularSearches = [];
-                this.renderSuggestions();
-                return;
-            }
-            const field = this.popularSearchField;
-            if (!field) {
-                this.popularSearches = [];
-                this.renderSuggestions();
-                return;
-            }
-            try {
-                const res = await this.index.search('', { limit: 0, facets: [field] });
-                const dist = (res && res.facetDistribution && res.facetDistribution[field]) || {};
-                const items = Object.entries(dist)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 10)
-                    .map(([value, count]) => ({ value, count }));
-                this.popularSearches = items;
-                this.renderSuggestions();
-            } catch (err) {
-                this.popularSearches = [];
-                this.renderSuggestions();
-                this.showToast('热门搜索加载失败: ' + err.message, 'warning');
-            }
-        }
+                const current = this.loadPopularField(this.currentIndex);
+                this.elements.popularFieldSelect.innerHTML = '<option value="">选择字段</option>' +
+                    options.map(field => `<option value="${field}">${field}</option>`).join('');
 
-        loadColumnPrefs() {
-            try {
-                const key = `columnPrefs:${this.currentIndex || 'default'}`;
-                const data = JSON.parse(localStorage.getItem(key) || '{}');
-                this.columnOrder = Array.isArray(data.order) ? data.order : [];
-                this.hiddenColumns = Array.isArray(data.hidden) ? data.hidden : [];
-            } catch {
-                this.columnOrder = [];
-                this.hiddenColumns = [];
+                if (current && options.includes(current)) {
+                    this.popularSearchField = current;
+                    this.elements.popularFieldSelect.value = current;
+                } else if (!current && options.length > 0) {
+                    this.popularSearchField = options[0];
+                    this.elements.popularFieldSelect.value = options[0];
+                    this.savePopularField(options[0], this.currentIndex);
+                } else {
+                    this.popularSearchField = '';
+                    this.elements.popularFieldSelect.value = '';
+                }
             }
-        }
 
-        saveColumnPrefs() {
-            try {
-                const key = `columnPrefs:${this.currentIndex || 'default'}`;
-                const data = { order: this.columnOrder || [], hidden: this.hiddenColumns || [] };
-                localStorage.setItem(key, JSON.stringify(data));
-            } catch {
-                // ignore
+            async loadPopularSearches() {
+                if (!this.index) {
+                    this.popularSearches = [];
+                    this.renderSuggestions();
+                    return;
+                }
+                const field = this.popularSearchField;
+                if (!field) {
+                    this.popularSearches = [];
+                    this.renderSuggestions();
+                    return;
+                }
+                try {
+                    const res = await this.index.search('', { limit: 0, facets: [field] });
+                    const dist = (res && res.facetDistribution && res.facetDistribution[field]) || {};
+                    const items = Object.entries(dist)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 10)
+                        .map(([value, count]) => ({ value, count }));
+                    this.popularSearches = items;
+                    this.renderSuggestions();
+                } catch (err) {
+                    this.popularSearches = [];
+                    this.renderSuggestions();
+                    this.showToast('热门搜索加载失败: ' + err.message, 'warning');
+                }
             }
-        }
 
-        openColumnConfig() {
-            const base = (this.lastBaseColumns && this.lastBaseColumns.length > 0)
-                ? this.lastBaseColumns.slice()
-                : [];
-            if (base.length === 0) {
-                this.showToast('暂无结果列可配置，请先搜索', 'warning');
-                return;
+            loadColumnPrefs() {
+                try {
+                    const key = `columnPrefs:${this.currentIndex || 'default'}`;
+                    const data = JSON.parse(localStorage.getItem(key) || '{}');
+                    this.columnOrder = Array.isArray(data.order) ? data.order : [];
+                    this.hiddenColumns = Array.isArray(data.hidden) ? data.hidden : [];
+                } catch {
+                    this.columnOrder = [];
+                    this.hiddenColumns = [];
+                }
             }
-            const ordered = this.orderColumns(base);
-            const hiddenSet = new Set(this.hiddenColumns || []);
-            this.elements.columnConfigContainer.innerHTML = ordered.map(col => `
+
+            saveColumnPrefs() {
+                try {
+                    const key = `columnPrefs:${this.currentIndex || 'default'}`;
+                    const data = { order: this.columnOrder || [], hidden: this.hiddenColumns || [] };
+                    localStorage.setItem(key, JSON.stringify(data));
+                } catch {
+                    // ignore
+                }
+            }
+
+            openColumnConfig() {
+                const base = (this.lastBaseColumns && this.lastBaseColumns.length > 0)
+                    ? this.lastBaseColumns.slice()
+                    : [];
+                if (base.length === 0) {
+                    this.showToast('暂无结果列可配置，请先搜索', 'warning');
+                    return;
+                }
+                const ordered = this.orderColumns(base);
+                const hiddenSet = new Set(this.hiddenColumns || []);
+                this.elements.columnConfigContainer.innerHTML = ordered.map(col => `
                     <label class="column-config-item">
                         <input type="checkbox" data-col="${col}" ${hiddenSet.has(col) ? '' : 'checked'}>
                         <span>${this.fieldLabels[col] || col}</span>
                     </label>
                 `).join('');
-            this.elements.columnConfigModal.classList.add('active');
-        }
-
-        closeColumnConfig() {
-            this.elements.columnConfigModal.classList.remove('active');
-        }
-
-        saveColumnConfig() {
-            const hidden = [];
-            this.elements.columnConfigContainer.querySelectorAll('input[type="checkbox"]').forEach(input => {
-                const col = input.dataset.col;
-                if (!input.checked) hidden.push(col);
-            });
-            this.hiddenColumns = hidden;
-            this.saveColumnPrefs();
-            this.closeColumnConfig();
-            this.refreshResultsTable();
-        }
-
-        refreshResultsTable() {
-            if (this.lastResults) {
-                this.renderResults(this.lastResults);
-            }
-        }
-
-        // Field Configuration Methods
-        openFieldConfig() {
-            if (!this.index) {
-                this.showToast('请先选择索引', 'error');
-                return;
+                this.elements.columnConfigModal.classList.add('active');
             }
 
-            let html = '';
-            const weights = this.searchFieldWeights || {};
-            (this.availableFields || []).forEach(field => {
-                const checkedSearch = this.searchFields.includes(field) ? 'checked' : '';
-                const checkedHighlight = this.highlightFields.includes(field) ? 'checked' : '';
-                const checkedDisplay = this.displayFields.includes(field) ? 'checked' : '';
-                const weightVal = weights[field] !== undefined ? weights[field] : 1;
+            closeColumnConfig() {
+                this.elements.columnConfigModal.classList.remove('active');
+            }
 
-                html += `
+            saveColumnConfig() {
+                const hidden = [];
+                this.elements.columnConfigContainer.querySelectorAll('input[type="checkbox"]').forEach(input => {
+                    const col = input.dataset.col;
+                    if (!input.checked) hidden.push(col);
+                });
+                this.hiddenColumns = hidden;
+                this.saveColumnPrefs();
+                this.closeColumnConfig();
+                this.refreshResultsTable();
+            }
+
+            refreshResultsTable() {
+                if (this.lastResults) {
+                    this.renderResults(this.lastResults);
+                }
+            }
+
+            // Field Configuration Methods
+            openFieldConfig() {
+                if (!this.index) {
+                    this.showToast('请先选择索引', 'error');
+                    return;
+                }
+
+                let html = '';
+                const weights = this.searchFieldWeights || {};
+                (this.availableFields || []).forEach(field => {
+                    const checkedSearch = this.searchFields.includes(field) ? 'checked' : '';
+                    const checkedHighlight = this.highlightFields.includes(field) ? 'checked' : '';
+                    const checkedDisplay = this.displayFields.includes(field) ? 'checked' : '';
+                    const weightVal = weights[field] !== undefined ? weights[field] : 1;
+
+                    html += `
                         <div class="field-config">
                             <div class="field-header">
                                 <h4 style="margin: 0;">${field}</h4>
                                 <label>
-                                    <input type="checkbox"
-                                        class="searchable-check"
-                                        data-field="${field}"
+                                    <input type="checkbox" 
+                                        class="searchable-check" 
+                                        data-field="${field}" 
                                         ${checkedSearch}> 可搜索
                                 </label>
                             </div>
                             <div class="field-controls">
                                 <div class="form-group">
                                     <label>权重</label>
-                                    <input type="number"
-                                        class="form-control field-weight"
-                                        data-field="${field}"
-                                        value="${weightVal}"
-                                        min="0"
+                                    <input type="number" 
+                                        class="form-control field-weight" 
+                                        data-field="${field}" 
+                                        value="${weightVal}" 
+                                        min="0" 
                                         step="0.1">
                                 </div>
                                 <div class="form-group">
@@ -2244,9 +2345,9 @@
                                 <div class="form-group">
                                     <label>高亮</label>
                                     <label class="inline-check">
-                                        <input type="checkbox"
-                                            class="highlight-check"
-                                            data-field="${field}"
+                                        <input type="checkbox" 
+                                            class="highlight-check" 
+                                            data-field="${field}" 
                                             ${checkedHighlight}>
                                         启用
                                     </label>
@@ -2254,9 +2355,9 @@
                                 <div class="form-group">
                                     <label>显示</label>
                                     <label class="inline-check">
-                                        <input type="checkbox"
-                                            class="display-check"
-                                            data-field="${field}"
+                                        <input type="checkbox" 
+                                            class="display-check" 
+                                            data-field="${field}" 
                                             ${checkedDisplay}>
                                         启用
                                     </label>
@@ -2264,223 +2365,251 @@
                             </div>
                         </div>
                     `;
-            });
-
-            this.elements.fieldConfigContainer.innerHTML = html;
-            this.elements.fieldConfigModal.classList.add('active');
-        }
-
-        closeFieldConfig() {
-            this.elements.fieldConfigModal.classList.remove('active');
-        }
-
-        saveFieldConfig() {
-            // Update search fields with weights
-            (async () => {
-                const searchableFields = [];
-                const highlightFields = [];
-                const displayFields = [];
-                const weights = {};
-                const labels = {};
-
-                document.querySelectorAll('.searchable-check').forEach(checkbox => {
-                    const field = checkbox.dataset.field;
-                    const checked = checkbox.checked;
-                    const weight = document.querySelector(`.field-weight[data-field="${field}"]`)?.value || 1;
-                    if (checked) {
-                        searchableFields.push(field);
-                    }
-                    weights[field] = parseFloat(weight) || 1;
                 });
 
-                document.querySelectorAll('.highlight-check:checked').forEach(checkbox => {
-                    highlightFields.push(checkbox.dataset.field);
-                });
-
-                document.querySelectorAll('.display-check:checked').forEach(checkbox => {
-                    displayFields.push(checkbox.dataset.field);
-                });
-
-                document.querySelectorAll('.field-label').forEach(input => {
-                    const field = input.dataset.field;
-                    const value = (input.value || '').trim();
-                    labels[field] = value || field;
-                });
-
-                // Update in-memory state
-                this.searchFields = searchableFields;
-                this.searchFieldWeights = weights;
-                this.highlightFields = highlightFields;
-                this.fieldLabels = labels;
-                this.saveFieldLabels(labels);
-
-                // Update UI and existing query-row selects
-                this.updateSearchFieldsUI();
-                this.updatePopularFieldOptions();
-                this.refreshQueryRowFieldOptions();
-
-                // If an index is selected and we have permission, update index searchableAttributes
-                if (this.index && this.searchFields.length > 0) {
-                    try {
-                        this.elements.loadingOverlay.classList.add('active');
-                        const nextFilterable = Array.from(new Set([
-                            ...(this.filterableFields || []),
-                            ...this.searchFields
-                        ]));
-                        await this.index.updateSettings({
-                            searchableAttributes: this.searchFields,
-                            filterableAttributes: nextFilterable
-                        });
-                        this.filterableFields = nextFilterable;
-                        this.updatePopularFieldOptions();
-                        this.loadPopularSearches();
-                        this.elements.loadingOverlay.classList.remove('active');
-                        this.showToast('字段配置已保存并已更新索引设置(含筛选字段)', 'success');
-                    } catch (err) {
-                        this.elements.loadingOverlay.classList.remove('active');
-                        this.showToast('保存字段配置但无法更新索引设置: ' + err.message, 'warning');
-                    }
-                } else {
-                    this.showToast('字段配置已保存', 'success');
-                }
-
-                this.closeFieldConfig();
-            })();
-        }
-
-        // Result Detail Methods
-        showResultDetail(id) {
-            const item = (this.lastHits || []).find(hit => String(hit.id) === String(id));
-            if (item) {
-                this.renderResultDetail(item);
-                return;
+                this.elements.fieldConfigContainer.innerHTML = html;
+                this.elements.fieldConfigModal.classList.add('active');
             }
 
-            // Fallback: query by id if not found in current hits
-            const isNumeric = /^-?\\d+(?:\\.\\d+)?$/.test(String(id));
-            const safeId = isNumeric ? String(id) : `"${String(id).replace(/\"/g, '\\"')}"`;
-            this.index.search('', { filter: [`id = ${safeId}`] }).then(results => {
-                if (results.hits && results.hits.length > 0) {
-                    this.renderResultDetail(results.hits[0]);
-                }
-            });
-        }
+            closeFieldConfig() {
+                this.elements.fieldConfigModal.classList.remove('active');
+            }
 
-        renderResultDetail(item) {
-            let html = `
+            saveFieldConfig() {
+                // Update search fields with weights
+                (async () => {
+                    const searchableFields = [];
+                    const highlightFields = [];
+                    const displayFields = [];
+                    const weights = {};
+                    const labels = {};
+
+                    document.querySelectorAll('.searchable-check').forEach(checkbox => {
+                        const field = checkbox.dataset.field;
+                        const checked = checkbox.checked;
+                        const weight = document.querySelector(`.field-weight[data-field="${field}"]`)?.value || 1;
+                        if (checked) {
+                            searchableFields.push(field);
+                        }
+                        weights[field] = parseFloat(weight) || 1;
+                    });
+
+                    document.querySelectorAll('.highlight-check:checked').forEach(checkbox => {
+                        highlightFields.push(checkbox.dataset.field);
+                    });
+
+                    document.querySelectorAll('.display-check:checked').forEach(checkbox => {
+                        displayFields.push(checkbox.dataset.field);
+                    });
+
+                    document.querySelectorAll('.field-label').forEach(input => {
+                        const field = input.dataset.field;
+                        const value = (input.value || '').trim();
+                        labels[field] = value || field;
+                    });
+
+                    // Update in-memory state
+                    this.searchFields = searchableFields;
+                    this.searchFieldWeights = weights;
+                    this.highlightFields = highlightFields;
+                    this.fieldLabels = labels;
+                    this.saveFieldLabels(labels);
+
+                    // Update UI and existing query-row selects
+                    this.updateSearchFieldsUI();
+                    this.updatePopularFieldOptions();
+                    this.refreshQueryRowFieldOptions();
+
+                    // If an index is selected and we have permission, update index searchableAttributes
+                    if (this.index && this.searchFields.length > 0) {
+                        try {
+                            this.elements.loadingOverlay.classList.add('active');
+                            const nextFilterable = Array.from(new Set([
+                                ...(this.filterableFields || []),
+                                ...this.searchFields
+                            ]));
+                            await this.index.updateSettings({ 
+                                searchableAttributes: this.searchFields,
+                                filterableAttributes: nextFilterable
+                            });
+                            this.filterableFields = nextFilterable;
+                            this.updatePopularFieldOptions();
+                            this.loadPopularSearches();
+                            this.elements.loadingOverlay.classList.remove('active');
+                            this.showToast('字段配置已保存并已更新索引设置(含筛选字段)', 'success');
+                        } catch (err) {
+                            this.elements.loadingOverlay.classList.remove('active');
+                            this.showToast('保存字段配置但无法更新索引设置: ' + err.message, 'warning');
+                        }
+                    } else {
+                        this.showToast('字段配置已保存', 'success');
+                    }
+
+                    this.closeFieldConfig();
+                })();
+            }
+
+            // Result Detail Methods
+            showResultDetail(id) {
+                const item = (this.lastHits || []).find(hit => String(hit.id) === String(id));
+                if (item) {
+                    this.renderResultDetail(item);
+                    return;
+                }
+
+                // Fallback: query by id if not found in current hits
+                const isNumeric = /^-?\\d+(?:\\.\\d+)?$/.test(String(id));
+                const safeId = isNumeric ? String(id) : `"${String(id).replace(/\"/g, '\\"')}"`;
+                this.index.search('', { filter: [`id = ${safeId}`] }).then(results => {
+                    if (results.hits && results.hits.length > 0) {
+                        this.renderResultDetail(results.hits[0]);
+                    }
+                });
+            }
+
+            renderResultDetail(item) {
+                let html = `
                     <div style="line-height: 1.8;">
                         ${item.title || item.name ? `<h3 style="margin-bottom: 16px;">${item.title || item.name}</h3>` : ''}
                         ${item.description ? `<p style="margin-bottom: 16px; color: var(--text-secondary);">${item.description}</p>` : ''}
                 `;
 
-            // Render all other fields
-            for (const [key, value] of Object.entries(item)) {
-                if (['id', 'title', 'name', 'description', '_formatted', '_rankingScore'].includes(key)) continue;
-
-                const displayValue = Array.isArray(value) ? value.join(', ') :
-                    typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
-
-                html += `
+                // Render all other fields
+                for (const [key, value] of Object.entries(item)) {
+                    if (['id', 'title', 'name', 'description', '_formatted', '_rankingScore'].includes(key)) continue;
+                    
+                    const displayValue = Array.isArray(value) ? value.join(', ') : 
+                                      typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
+                    
+                    html += `
                         <div style="margin-bottom: 12px;">
                             <strong style="color: var(--text-primary);">${key}:</strong>
                             <span style="color: var(--text-secondary);">${displayValue}</span>
                         </div>
                     `;
+                }
+
+                html += '</div>';
+                this.elements.resultDetailContent.innerHTML = html;
+                this.elements.resultModal.classList.add('active');
             }
 
-            html += '</div>';
-            this.elements.resultDetailContent.innerHTML = html;
-            this.elements.resultModal.classList.add('active');
-        }
-
-        closeResultModal() {
-            this.elements.resultModal.classList.remove('active');
-        }
-
-        // Pagination Methods
-        goToPage(page) {
-            const p = parseInt(page) || 1;
-            if (p === this.currentPage) return;
-            this.currentPage = Math.max(1, p);
-            this.performSearch();
-        }
-
-        // Helper Methods
-        toggleSearchField(checkbox) {
-            const field = checkbox.dataset.field;
-            if (checkbox.checked) {
-                this.searchFields.push(field);
-            } else {
-                this.searchFields = this.searchFields.filter(f => f !== field);
-            }
-            this.performSearch();
-        }
-
-        getFilterFieldsForQuery() {
-            if (this.filterableFields && this.filterableFields.length > 0) {
-                return this.filterableFields.slice();
-            }
-            return this.searchFields.slice();
-        }
-
-        refreshQueryRowFieldOptions() {
-            const filterFields = this.getFilterFieldsForQuery();
-            document.querySelectorAll('.query-row .query-field').forEach(select => {
-                const current = select.value;
-                select.innerHTML = '<option value="">选择字段</option>' +
-                    filterFields.map(field => `<option value="${field}">${field}</option>`).join('');
-                if (filterFields.includes(current)) select.value = current;
-            });
-        }
-
-        toggleFacet(checkbox) {
-            const facet = checkbox.dataset.facet;
-            const value = checkbox.dataset.value;
-
-            if (!this.facets[facet]) {
-                this.facets[facet] = [];
+            closeResultModal() {
+                this.elements.resultModal.classList.remove('active');
             }
 
-            if (checkbox.checked) {
-                this.facets[facet].push(value);
-            } else {
-                this.facets[facet] = this.facets[facet].filter(v => v !== value);
+            // Pagination Methods
+            goToPage(page) {
+                const p = parseInt(page) || 1;
+                if (p === this.currentPage) return;
+                this.currentPage = Math.max(1, p);
+                this.performSearch();
             }
 
-            this.performSearch();
-        }
+            // Helper Methods
+            toggleSearchField(checkbox) {
+                const field = checkbox.dataset.field;
+                if (checkbox.checked) {
+                    this.searchFields.push(field);
+                } else {
+                    this.searchFields = this.searchFields.filter(f => f !== field);
+                }
+                this.performSearch();
+            }
 
-        debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
+            getFilterFieldsForQuery() {
+                if (this.filterableFields && this.filterableFields.length > 0) {
+                    return this.filterableFields.slice();
+                }
+                return this.searchFields.slice();
+            }
+
+            refreshQueryRowFieldOptions() {
+                const filterFields = this.getFilterFieldsForQuery();
+                document.querySelectorAll('.query-row .query-field').forEach(select => {
+                    const current = select.value;
+                    select.innerHTML = '<option value="">选择字段</option>' +
+                        filterFields.map(field => `<option value="${field}">${field}</option>`).join('');
+                    if (filterFields.includes(current)) select.value = current;
+                });
+            }
+
+            toggleFacet(checkbox) {
+                const facet = checkbox.dataset.facet;
+                const value = checkbox.dataset.value;
+
+                if (!this.facets[facet]) {
+                    this.facets[facet] = [];
+                }
+
+                if (checkbox.checked) {
+                    this.facets[facet].push(value);
+                } else {
+                    this.facets[facet] = this.facets[facet].filter(v => v !== value);
+                }
+
+                this.performSearch();
+            }
+
+            debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
                     clearTimeout(timeout);
-                    func(...args);
+                    timeout = setTimeout(later, wait);
                 };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
+            }
 
-        showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerHTML = `
+            initializeTheme() {
+                const savedTheme = localStorage.getItem('theme');
+                const theme = savedTheme || 'dark';
+                this.setTheme(theme, false);
+            }
+
+            setTheme(theme, persist = true) {
+                const nextTheme = theme === 'light' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', nextTheme);
+                if (persist) {
+                    localStorage.setItem('theme', nextTheme);
+                }
+                this.updateThemeToggle(nextTheme);
+            }
+
+            toggleTheme() {
+                const current = document.documentElement.getAttribute('data-theme') || 'dark';
+                const next = current === 'dark' ? 'light' : 'dark';
+                this.setTheme(next, true);
+            }
+
+            updateThemeToggle(theme) {
+                if (!this.elements.themeToggle) return;
+                const isDark = theme === 'dark';
+                this.elements.themeToggle.textContent = isDark ? '🌙 夜间模式' : '☀️ 日间模式';
+                this.elements.themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+            }
+
+            showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.innerHTML = `
                     <span>${type === 'success' ? '✅' : '❌'}</span>
                     <span>${message}</span>
                 `;
-
-            this.elements.toastContainer.appendChild(toast);
-
-            setTimeout(() => {
-                toast.style.animation = 'slideIn 0.3s ease reverse';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
+                
+                this.elements.toastContainer.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'slideIn 0.3s ease reverse';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
         }
-    }
 
-    // Initialize the application
-    const app = new MeiliSearchApp();
-</script>
+        // Initialize the application
+        const app = new MeiliSearchApp();
+    </script>
 </body>
 </html></html>
