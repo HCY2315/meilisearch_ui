@@ -973,7 +973,8 @@
     </style>
         <style>
             .results-table {
-                width: 100%;
+                width: max-content;
+                min-width: 100%;
                 border-collapse: collapse;
                 table-layout: fixed;
             }
@@ -982,6 +983,31 @@
                 padding: 8px 10px;
                 text-align: left;
                 word-break: break-word;
+            }
+            .results-table th {
+                position: relative;
+            }
+            .column-resizer {
+                position: absolute;
+                top: 0;
+                right: -2px;
+                width: 8px;
+                height: 100%;
+                cursor: col-resize;
+                user-select: none;
+            }
+            .column-resizer::after {
+                content: "";
+                position: absolute;
+                top: 15%;
+                right: 3px;
+                width: 1px;
+                height: 70%;
+                background: transparent;
+            }
+            .column-resizer:hover::after,
+            .column-resizer.active::after {
+                background: var(--border-color);
             }
             .results-table tbody tr:hover {
                 background: var(--background);
@@ -1301,6 +1327,8 @@
                 this.columnOrder = [];
                 this.hiddenColumns = [];
                 this.isDraggingColumns = false;
+                this.isResizingColumns = false;
+                this.columnWidths = {};
                 this.aiConfig = this.loadAiConfig();
                 this.aiLastInfo = null;
                 
@@ -1517,6 +1545,7 @@
                     this.facets = {};
                     this.columnOrder = [];
                     this.hiddenColumns = [];
+                    this.columnWidths = {};
                     this.lastResults = null;
                     this.lastBaseColumns = [];
                     this.updateSearchFieldsUI();
@@ -1566,6 +1595,7 @@
                     this.elements.loadingOverlay.classList.remove('active');
                     this.showToast(`已选择索引: ${indexName}`, 'success');
                     this.loadColumnPrefs();
+                    this.loadColumnWidthPrefs();
                     this.loadPopularSearches();
                 } catch (error) {
                     this.elements.loadingOverlay.classList.remove('active');
@@ -1935,14 +1965,25 @@
                     hits = this.sortHits(hits, this.tableSortField, this.tableSortDir);
                 }
 
-                let tableHtml = '<div class="results-table-wrap"><table class="results-table"><thead><tr>' +
+                const actionColKey = '__action__';
+                const colgroup = '<colgroup>' + columns.map(c => {
+                    const width = this.columnWidths ? this.columnWidths[c] : null;
+                    const style = width ? ` style="width:${width}px"` : '';
+                    return `<col data-col="${c}"${style}>`;
+                }).join('') + (() => {
+                    const actionWidth = this.columnWidths ? this.columnWidths[actionColKey] : null;
+                    const style = actionWidth ? ` style="width:${actionWidth}px"` : '';
+                    return `<col data-col="${actionColKey}"${style}>`;
+                })() + '</colgroup>';
+
+                let tableHtml = '<div class="results-table-wrap"><table class="results-table">' + colgroup + '<thead><tr>' +
                     columns.map(c => {
                         const label = this.fieldLabels[c] || c;
                         const isActive = this.tableSortField === c;
                         const dirMark = isActive ? (this.tableSortDir === 'asc' ? ' ▲' : ' ▼') : '';
-                        return `<th class="sortable-th" draggable="true" data-col="${c}" onclick="app.toggleTableSort('${c}')">${label}${dirMark}</th>`;
+                        return `<th class="sortable-th" draggable="true" data-col="${c}" onclick="app.toggleTableSort('${c}')"><span class="th-label">${label}${dirMark}</span><span class="column-resizer" data-col="${c}" title="拖动调整列宽"></span></th>`;
                     }).join('') +
-                    '<th>操作</th></tr></thead><tbody>';
+                    `<th data-col="${actionColKey}">操作<span class="column-resizer" data-col="${actionColKey}" title="拖动调整列宽"></span></th></tr></thead><tbody>`;
 
                 tableHtml += hits.map(hit => {
                     const row = columns.map(col => {
@@ -1963,10 +2004,12 @@
 
                 this.renderPagination(results.estimatedTotalHits);
                 this.attachColumnDragHandlers();
+                this.attachColumnResizeHandlers();
             }
 
             toggleTableSort(field) {
                 if (!field) return;
+                if (this.isResizingColumns) return;
                 if (this.isDraggingColumns) return;
                 if (this.tableSortField === field) {
                     this.tableSortDir = this.tableSortDir === 'asc' ? 'desc' : 'asc';
@@ -2003,6 +2046,10 @@
                 if (!ths || ths.length === 0) return;
                 ths.forEach(th => {
                     th.addEventListener('dragstart', (e) => {
+                        if (this.isResizingColumns) {
+                            e.preventDefault();
+                            return;
+                        }
                         const col = th.dataset.col;
                         if (!col) return;
                         this.isDraggingColumns = true;
@@ -2029,6 +2076,67 @@
                         th.classList.remove('drag-over');
                         setTimeout(() => { this.isDraggingColumns = false; }, 0);
                     });
+                });
+            }
+
+            attachColumnResizeHandlers() {
+                const table = this.elements.resultsContainer.querySelector('table.results-table');
+                if (!table) return;
+                const resizers = table.querySelectorAll('.column-resizer');
+                if (!resizers || resizers.length === 0) return;
+                const minWidth = 80;
+                const body = document.body;
+                resizers.forEach(resizer => {
+                    resizer.setAttribute('draggable', 'false');
+                    resizer.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                    });
+                    resizer.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const th = resizer.closest('th');
+                        if (!th) return;
+                        const colKey = resizer.dataset.col;
+                        if (!colKey) return;
+                        const startX = e.clientX;
+                        const startWidth = th.getBoundingClientRect().width;
+                        this.isResizingColumns = true;
+                        resizer.classList.add('active');
+                        body.style.cursor = 'col-resize';
+                        body.style.userSelect = 'none';
+
+                        const onMove = (moveEvent) => {
+                            const delta = moveEvent.clientX - startX;
+                            const nextWidth = Math.max(minWidth, Math.round(startWidth + delta));
+                            this.setColumnWidth(colKey, nextWidth);
+                        };
+                        const onUp = () => {
+                            this.isResizingColumns = false;
+                            resizer.classList.remove('active');
+                            body.style.cursor = '';
+                            body.style.userSelect = '';
+                            window.removeEventListener('mousemove', onMove);
+                            window.removeEventListener('mouseup', onUp);
+                            this.saveColumnWidthPrefs();
+                        };
+
+                        window.addEventListener('mousemove', onMove);
+                        window.addEventListener('mouseup', onUp);
+                    });
+                });
+            }
+
+            setColumnWidth(colKey, width) {
+                if (!colKey || !width) return;
+                this.columnWidths = this.columnWidths || {};
+                this.columnWidths[colKey] = width;
+                const table = this.elements.resultsContainer.querySelector('table.results-table');
+                if (!table) return;
+                const cols = table.querySelectorAll('col');
+                cols.forEach(col => {
+                    if (col.dataset.col === colKey) {
+                        col.style.width = `${width}px`;
+                    }
                 });
             }
 
@@ -2469,6 +2577,26 @@
                 try {
                     const key = `columnPrefs:${this.currentIndex || 'default'}`;
                     const data = { order: this.columnOrder || [], hidden: this.hiddenColumns || [] };
+                    localStorage.setItem(key, JSON.stringify(data));
+                } catch {
+                    // ignore
+                }
+            }
+
+            loadColumnWidthPrefs() {
+                try {
+                    const key = `columnWidthPrefs:${this.currentIndex || 'default'}`;
+                    const data = JSON.parse(localStorage.getItem(key) || '{}');
+                    this.columnWidths = data && typeof data === 'object' ? data : {};
+                } catch {
+                    this.columnWidths = {};
+                }
+            }
+
+            saveColumnWidthPrefs() {
+                try {
+                    const key = `columnWidthPrefs:${this.currentIndex || 'default'}`;
+                    const data = this.columnWidths && typeof this.columnWidths === 'object' ? this.columnWidths : {};
                     localStorage.setItem(key, JSON.stringify(data));
                 } catch {
                     // ignore
