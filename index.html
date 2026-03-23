@@ -236,7 +236,7 @@
 
         .search-input {
             width: 100%;
-            padding: 16px 20px 16px 48px;
+            padding: 16px 88px 16px 48px;
             border: 2px solid var(--border-color);
             border-radius: 12px;
             font-size: 1rem;
@@ -256,6 +256,85 @@
             transform: translateY(-50%);
             color: var(--text-secondary);
             font-size: 1.2rem;
+        }
+
+        .ai-badge {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            background: var(--background);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            transition: var(--transition);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .ai-badge.active {
+            background: linear-gradient(135deg, #22c1b9, #36d6cc);
+            color: #0b1b1c;
+            border-color: transparent;
+            box-shadow: 0 6px 10px rgba(34, 193, 185, 0.25);
+        }
+
+        .ai-dropdown {
+            position: absolute;
+            right: 16px;
+            top: calc(50% + 18px);
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            padding: 14px 16px;
+            min-width: 240px;
+            z-index: 5;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: var(--transition);
+        }
+
+        .ai-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .ai-dropdown .dropdown-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .ai-dropdown .dropdown-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .ai-dropdown input[type="range"] {
+            width: 100%;
+        }
+
+        .ai-weight-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .ai-weight-hint {
+            margin-top: 6px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
         }
 
         /* Query Builder */
@@ -666,6 +745,10 @@
             border-left: 4px solid var(--error-color);
         }
 
+        .toast.warning {
+            border-left: 4px solid var(--warning-color);
+        }
+
         @keyframes slideIn {
             from {
                 transform: translateX(100%);
@@ -954,6 +1037,20 @@
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
                     <input type="text" class="search-input" id="searchInput" placeholder="输入搜索关键词...">
+                    <span class="ai-badge" id="aiBadge">AI</span>
+                    <div class="ai-dropdown" id="aiDropdown" aria-hidden="true">
+                        <div class="dropdown-title">AI 权重</div>
+                        <div class="dropdown-row">
+                            <span>基础</span>
+                            <span class="ai-weight-value" id="aiWeightBase">60%</span>
+                        </div>
+                        <div class="dropdown-row">
+                            <span>AI</span>
+                            <span class="ai-weight-value" id="aiWeightValue">40%</span>
+                        </div>
+                        <input type="range" id="aiWeight" min="0" max="100" value="40">
+                        <div class="ai-weight-hint" id="aiWeightHint">基础 60% · AI 40%</div>
+                    </div>
                 </div>
 
                 <!-- Query Builder -->
@@ -1179,6 +1276,7 @@
                 this.client = null;
                 this.index = null;
                 this.currentIndex = '';
+                this.host = 'http://192.168.2.27:11434';
                 this.queryRows = [];
                 this.searchFields = [];
                 this.filterableFields = [];
@@ -1200,8 +1298,11 @@
                 this.columnOrder = [];
                 this.hiddenColumns = [];
                 this.isDraggingColumns = false;
+                this.aiConfig = this.loadAiConfig();
+                this.aiLastInfo = null;
                 
                 this.initializeElements();
+                this.applyAiConfigToUI();
                 this.bindEvents();
                 this.initializeTheme();
                 this.initializeUI();
@@ -1254,6 +1355,12 @@
                     closeResultModal: document.getElementById('closeResultModal'),
                     loadingOverlay: document.getElementById('loadingOverlay'),
                     toastContainer: document.getElementById('toastContainer'),
+                    aiWeight: document.getElementById('aiWeight'),
+                    aiWeightValue: document.getElementById('aiWeightValue'),
+                    aiWeightBase: document.getElementById('aiWeightBase'),
+                    aiWeightHint: document.getElementById('aiWeightHint'),
+                    aiBadge: document.getElementById('aiBadge'),
+                    aiDropdown: document.getElementById('aiDropdown'),
                     themeToggle: document.getElementById('themeToggle')
                 };
             }
@@ -1282,6 +1389,25 @@
                     this.pageSize = Math.max(1, parseInt(e.target.value) || 12);
                     this.currentPage = 1;
                     this.performSearch();
+                });
+                if (this.elements.aiWeight) {
+                    this.elements.aiWeight.addEventListener('input', () => {
+                        this.syncAiConfigFromUI();
+                        this.performSearch();
+                    });
+                }
+                if (this.elements.aiBadge) {
+                    this.elements.aiBadge.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.toggleAiDropdown();
+                    });
+                }
+                document.addEventListener('click', (e) => {
+                    if (!this.elements.aiDropdown || !this.elements.aiBadge) return;
+                    const inside = this.elements.aiDropdown.contains(e.target) || this.elements.aiBadge.contains(e.target);
+                    if (!inside) {
+                        this.closeAiDropdown();
+                    }
                 });
                 this.elements.popularFieldSelect.addEventListener('change', (e) => {
                     this.popularSearchField = e.target.value || '';
@@ -1334,6 +1460,7 @@
                         throw new Error('MeiliSearch SDK 未加载，请检查 <script> 引用（network/CSP）。');
                     }
 
+                    this.host = host;
                     this.client = new MeiliSearch({
                         host: host,
                         apiKey: apiKey
@@ -1509,10 +1636,7 @@
                 try {
                     this.elements.loadingOverlay.classList.add('active');
 
-                    // Build search parameters
                     const searchParams = this.buildSearchParams(query);
-
-                    // Perform search
                     const results = await this.index.search(query, searchParams);
 
                     // Add to history
@@ -1538,7 +1662,7 @@
                 }
             }
 
-            buildSearchParams(query) {
+            buildSearchParams(query, options = {}) {
                 const params = {
                     limit: this.pageSize,
                     offset: (this.currentPage - 1) * this.pageSize,
@@ -1570,9 +1694,17 @@
                 }
 
                 // Add ranking score settings
-                if (this.elements.showRankingScore.checked) {
+                if (this.elements.showRankingScore.checked || options.forceRankingScore) {
                     params.showRankingScore = true;
                     params.showRankingScoreDetails = true;
+                }
+
+                const aiWeight = Math.min(100, Math.max(0, Number(this.aiConfig.aiWeight) || 0));
+                if (aiWeight > 0) {
+                    params.hybrid = {
+                        semanticRatio: aiWeight / 100,
+                        embedder: 'bgem3'
+                    };
                 }
 
                 // Add sort
@@ -1602,6 +1734,75 @@
                 }
 
                 return params;
+            }
+
+            loadAiConfig() {
+                const defaults = { aiWeight: 40 };
+                try {
+                    const data = JSON.parse(localStorage.getItem('aiSearchConfig') || '{}');
+                    return { ...defaults, ...data };
+                } catch {
+                    return { ...defaults };
+                }
+            }
+
+            saveAiConfig() {
+                try {
+                    localStorage.setItem('aiSearchConfig', JSON.stringify(this.aiConfig || {}));
+                } catch {
+                    // ignore
+                }
+            }
+
+            applyAiConfigToUI() {
+                if (!this.aiConfig) return;
+                if (this.elements.aiWeight) this.elements.aiWeight.value = this.aiConfig.aiWeight ?? 40;
+                this.updateAiWeightDisplay();
+                this.updateAiBadge();
+            }
+
+            syncAiConfigFromUI() {
+                if (!this.aiConfig) this.aiConfig = this.loadAiConfig();
+                this.aiConfig.aiWeight = Math.min(100, Math.max(0, parseInt(this.elements.aiWeight?.value) || 0));
+                this.saveAiConfig();
+                this.updateAiWeightDisplay();
+                this.updateAiBadge();
+            }
+
+            updateAiWeightDisplay() {
+                const weight = this.aiConfig.aiWeight ?? 0;
+                const base = 100 - weight;
+                if (this.elements.aiWeightValue) this.elements.aiWeightValue.textContent = `${weight}%`;
+                if (this.elements.aiWeightBase) this.elements.aiWeightBase.textContent = `${base}%`;
+                if (this.elements.aiWeightHint) this.elements.aiWeightHint.textContent = `基础 ${base}% · AI ${weight}%`;
+            }
+
+            updateAiBadge() {
+                if (!this.elements.aiBadge) return;
+                if ((this.aiConfig.aiWeight ?? 0) > 0) {
+                    this.elements.aiBadge.classList.add('active');
+                } else {
+                    this.elements.aiBadge.classList.remove('active');
+                }
+            }
+
+            toggleAiDropdown() {
+                if (!this.elements.aiDropdown) return;
+                const isActive = this.elements.aiDropdown.classList.contains('active');
+                if (isActive) this.closeAiDropdown();
+                else this.openAiDropdown();
+            }
+
+            openAiDropdown() {
+                if (!this.elements.aiDropdown) return;
+                this.elements.aiDropdown.classList.add('active');
+                this.elements.aiDropdown.setAttribute('aria-hidden', 'false');
+            }
+
+            closeAiDropdown() {
+                if (!this.elements.aiDropdown) return;
+                this.elements.aiDropdown.classList.remove('active');
+                this.elements.aiDropdown.setAttribute('aria-hidden', 'true');
             }
 
             buildFiltersFromQueryBuilder() {
@@ -1738,7 +1939,9 @@
                         return `<td title="${cell.title}">${cell.html}</td>`;
                     }).join('');
 
-                    const rankingScore = hit._rankingScore ? `<br><small style="color: var(--text-secondary);">评分: ${(hit._rankingScore * 100).toFixed(1)}%</small>` : '';
+                    const rankingScore = hit._rankingScore !== undefined
+                        ? `<br><small style="color: var(--text-secondary);">评分: ${(hit._rankingScore * 100).toFixed(1)}%</small>`
+                        : '';
 
                     return `<tr>${row}<td><button class="btn btn-secondary" onclick="app.showResultDetail('${hit.id}')">查看</button>${rankingScore}</td></tr>`;
                 }).join('');
@@ -2596,8 +2799,9 @@
             showToast(message, type = 'success') {
                 const toast = document.createElement('div');
                 toast.className = `toast ${type}`;
+                const icon = type === 'success' ? '✅' : (type === 'warning' ? '⚠️' : '❌');
                 toast.innerHTML = `
-                    <span>${type === 'success' ? '✅' : '❌'}</span>
+                    <span>${icon}</span>
                     <span>${message}</span>
                 `;
                 
