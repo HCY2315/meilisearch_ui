@@ -1040,6 +1040,10 @@
                     <span class="ai-badge" id="aiBadge">AI</span>
                     <div class="ai-dropdown" id="aiDropdown" aria-hidden="true">
                         <div class="dropdown-title">AI 权重</div>
+                        <label class="dropdown-row" style="margin-bottom: 10px; cursor: pointer;">
+                            <span>启用 AI</span>
+                            <input type="checkbox" id="aiEnabled" style="accent-color: var(--primary-color);">
+                        </label>
                         <div class="dropdown-row">
                             <span>基础</span>
                             <span class="ai-weight-value" id="aiWeightBase">60%</span>
@@ -1354,6 +1358,7 @@
                     closeResultModal: document.getElementById('closeResultModal'),
                     loadingOverlay: document.getElementById('loadingOverlay'),
                     toastContainer: document.getElementById('toastContainer'),
+                    aiEnabled: document.getElementById('aiEnabled'),
                     aiWeight: document.getElementById('aiWeight'),
                     aiWeightValue: document.getElementById('aiWeightValue'),
                     aiWeightBase: document.getElementById('aiWeightBase'),
@@ -1389,6 +1394,12 @@
                     this.currentPage = 1;
                     this.performSearch();
                 });
+                if (this.elements.aiEnabled) {
+                    this.elements.aiEnabled.addEventListener('change', () => {
+                        this.syncAiConfigFromUI();
+                        this.performSearch();
+                    });
+                }
                 if (this.elements.aiWeight) {
                     this.elements.aiWeight.addEventListener('input', () => {
                         this.syncAiConfigFromUI();
@@ -1699,7 +1710,7 @@
                 }
 
                 const aiWeight = Math.min(100, Math.max(0, Number(this.aiConfig.aiWeight) || 0));
-                if (aiWeight > 0) {
+                if (this.aiConfig.aiEnabled && aiWeight > 0) {
                     params.hybrid = {
                         semanticRatio: aiWeight / 100,
                         embedder: 'bgem3'
@@ -1736,7 +1747,7 @@
             }
 
             loadAiConfig() {
-                const defaults = { aiWeight: 40 };
+                const defaults = { aiWeight: 40, aiEnabled: true };
                 try {
                     const data = JSON.parse(localStorage.getItem('aiSearchConfig') || '{}');
                     return { ...defaults, ...data };
@@ -1755,6 +1766,7 @@
 
             applyAiConfigToUI() {
                 if (!this.aiConfig) return;
+                if (this.elements.aiEnabled) this.elements.aiEnabled.checked = !!this.aiConfig.aiEnabled;
                 if (this.elements.aiWeight) this.elements.aiWeight.value = this.aiConfig.aiWeight ?? 40;
                 this.updateAiWeightDisplay();
                 this.updateAiBadge();
@@ -1762,6 +1774,7 @@
 
             syncAiConfigFromUI() {
                 if (!this.aiConfig) this.aiConfig = this.loadAiConfig();
+                if (this.elements.aiEnabled) this.aiConfig.aiEnabled = !!this.elements.aiEnabled.checked;
                 this.aiConfig.aiWeight = Math.min(100, Math.max(0, parseInt(this.elements.aiWeight?.value) || 0));
                 this.saveAiConfig();
                 this.updateAiWeightDisplay();
@@ -1778,7 +1791,7 @@
 
             updateAiBadge() {
                 if (!this.elements.aiBadge) return;
-                if ((this.aiConfig.aiWeight ?? 0) > 0) {
+                if (this.aiConfig.aiEnabled && (this.aiConfig.aiWeight ?? 0) > 0) {
                     this.elements.aiBadge.classList.add('active');
                 } else {
                     this.elements.aiBadge.classList.remove('active');
