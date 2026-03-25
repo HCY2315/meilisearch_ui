@@ -340,6 +340,13 @@ body {
     gap: 12px;
     margin-bottom: 12px;
     align-items: flex-end;
+    width: 100%;
+}
+
+#queryRows {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .query-field {
@@ -561,6 +568,24 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     background: var(--background);
+}
+
+.column-name-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 120px;
+    flex: 1;
+}
+
+.column-name-original {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.column-name-display {
+    padding: 4px 6px;
+    font-size: 0.85rem;
 }
 
 .modal-footer {
@@ -968,6 +993,15 @@ body {
 
 .results-table th {
     position: relative;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 1rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.results-table thead tr {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
 }
 
 .column-resizer {
@@ -998,6 +1032,15 @@ body {
 .results-table tbody tr:hover {
     background: var(--background);
     cursor: pointer;
+}
+
+.pk-col {
+    color: var(--text-secondary);
+}
+
+.pk-cell {
+    background: var(--background);
+    color: var(--text-secondary);
 }
 
 .results-table-wrap {

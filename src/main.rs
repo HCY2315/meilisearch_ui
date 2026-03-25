@@ -203,6 +203,11 @@ enum Msg {
     SelectAllDisplay(bool),
     SaveFieldConfig(Vec<FieldConfigItem>),
     SaveFieldConfigResult(Result<(), String>),
+    ToggleEditLock,
+    SetPrimaryKey(String),
+    UpdateCellEdit(String, String, String),
+    SaveEdits,
+    SaveEditsFinished(Result<(), String>),
     OpenResultModal(Option<String>),
     ShowResultDetail(SearchHit),
     CloseResultModal,
@@ -258,6 +263,9 @@ struct App {
     field_config_open: bool,
     result_modal_open: bool,
     result_detail: Option<SearchHit>,
+    edit_locked: bool,
+    primary_key_field: String,
+    pending_edits: HashMap<String, HashMap<String, Value>>,
     loading: bool,
     toasts: Vec<Toast>,
     toast_seq: u64,
@@ -329,6 +337,9 @@ impl Component for App {
             field_config_open: false,
             result_modal_open: false,
             result_detail: None,
+            edit_locked: true,
+            primary_key_field: "id".to_string(),
+            pending_edits: HashMap::new(),
             loading: false,
             toasts: vec![],
             toast_seq: 1,
@@ -436,13 +447,7 @@ impl Component for App {
             }
             Msg::SetSearchInput(value) => {
                 self.search_input = value;
-                if let Some(timeout) = self.debounce.take() {
-                    timeout.cancel();
-                }
-                let link = ctx.link().clone();
-                self.debounce = Some(Timeout::new(300, move || {
-                    link.send_message(Msg::DebouncedSearch);
-                }));
+                self.schedule_debounced_search(ctx, 300);
                 true
             }
             Msg::DebouncedSearch => {
@@ -501,24 +506,32 @@ impl Component for App {
                 if let Some(row) = self.query_rows.iter_mut().find(|row| row.id == id) {
                     row.field = value;
                 }
+                self.current_page = 1;
+                self.schedule_debounced_search(ctx, 300);
                 true
             }
             Msg::UpdateQueryOperator(id, value) => {
                 if let Some(row) = self.query_rows.iter_mut().find(|row| row.id == id) {
                     row.operator = value;
                 }
+                self.current_page = 1;
+                self.schedule_debounced_search(ctx, 300);
                 true
             }
             Msg::UpdateQueryValue(id, value) => {
                 if let Some(row) = self.query_rows.iter_mut().find(|row| row.id == id) {
                     row.value = value;
                 }
+                self.current_page = 1;
+                self.schedule_debounced_search(ctx, 300);
                 true
             }
             Msg::UpdateQueryLogic(id, value) => {
                 if let Some(row) = self.query_rows.iter_mut().find(|row| row.id == id) {
                     row.logic = value;
                 }
+                self.current_page = 1;
+                self.schedule_debounced_search(ctx, 300);
                 true
             }
             Msg::ApplyQuery => {
@@ -527,6 +540,9 @@ impl Component for App {
                     return false;
                 }
                 self.current_page = 1;
+                if let Some(timeout) = self.debounce.take() {
+                    timeout.cancel();
+                }
                 ctx.link().send_message(Msg::PerformSearch);
                 false
             }
@@ -534,6 +550,8 @@ impl Component for App {
                 self.query_rows.clear();
                 self.add_query_row();
                 self.push_toast("查询条件已清空".to_string(), ToastType::Success, ctx);
+                self.current_page = 1;
+                ctx.link().send_message(Msg::PerformSearch);
                 true
             }
             Msg::ToggleSearchField(field, checked) => {
@@ -635,6 +653,15 @@ impl Component for App {
             }
             Msg::SaveColumnConfig(hidden) => {
                 self.hidden_columns = hidden;
+                let labels = collect_column_labels();
+                if !labels.is_empty() {
+                    for (k, v) in labels.iter() {
+                        if !v.trim().is_empty() {
+                            self.field_labels.insert(k.clone(), v.clone());
+                        }
+                    }
+                    save_field_labels(&self.field_labels, Some(&self.current_index));
+                }
                 self.save_column_prefs();
                 self.column_config_open = false;
                 self.refresh_results_table();
@@ -725,15 +752,15 @@ impl Component for App {
             }
             Msg::SelectAllSearchable(checked) => {
                 set_all_checkboxes(".searchable-check", checked);
-                true
+                false
             }
             Msg::SelectAllHighlight(checked) => {
                 set_all_checkboxes(".highlight-check", checked);
-                true
+                false
             }
             Msg::SelectAllDisplay(checked) => {
                 set_all_checkboxes(".display-check", checked);
-                true
+                false
             }
             Msg::SaveFieldConfig(items) => {
                 let mut searchable = vec![];
@@ -805,6 +832,78 @@ impl Component for App {
                 }
                 self.field_config_open = false;
                 self.load_popular_searches(ctx);
+                true
+            }
+            Msg::ToggleEditLock => {
+                self.edit_locked = !self.edit_locked;
+                if !self.edit_locked {
+                    if self.last_base_columns.is_empty() {
+                        self.push_toast("暂无结果列，请先搜索".to_string(), ToastType::Warning, ctx);
+                    } else if self.primary_key_field.is_empty() || !self.last_base_columns.contains(&self.primary_key_field) {
+                        if self.last_base_columns.contains(&"id".to_string()) {
+                            self.primary_key_field = "id".to_string();
+                        } else {
+                            self.primary_key_field = self.last_base_columns[0].clone();
+                        }
+                    }
+                    if self.primary_key_field.is_empty() {
+                        self.push_toast("请选择主键字段".to_string(), ToastType::Warning, ctx);
+                    }
+                }
+                true
+            }
+            Msg::SetPrimaryKey(field) => {
+                self.primary_key_field = field;
+                self.pending_edits.clear();
+                true
+            }
+            Msg::UpdateCellEdit(doc_id, field, value) => {
+                if doc_id.is_empty() {
+                    return false;
+                }
+                let entry = self.pending_edits.entry(doc_id).or_insert_with(HashMap::new);
+                entry.insert(field, Value::String(value));
+                true
+            }
+            Msg::SaveEdits => {
+                if self.edit_locked {
+                    self.push_toast("当前处于锁定状态，无法保存修改".to_string(), ToastType::Warning, ctx);
+                    return false;
+                }
+                if self.pending_edits.is_empty() {
+                    self.push_toast("没有需要保存的修改".to_string(), ToastType::Warning, ctx);
+                    return false;
+                }
+                if self.current_index.is_empty() {
+                    self.push_toast("请先选择索引".to_string(), ToastType::Error, ctx);
+                    return false;
+                }
+                let host = self.host_input.trim().to_string();
+                let api_key = self.api_key_input.trim().to_string();
+                let index = self.current_index.clone();
+                let hits = self.last_hits.clone();
+                let primary_key = self.primary_key_field.clone();
+                let edits = self.pending_edits.clone();
+                let link = ctx.link().clone();
+                self.loading = true;
+                spawn_local(async move {
+                    let res = update_documents(&host, &api_key, &index, &primary_key, &hits, &edits).await;
+                    link.send_message(Msg::SaveEditsFinished(res));
+                });
+                true
+            }
+            Msg::SaveEditsFinished(result) => {
+                self.loading = false;
+                match result {
+                    Ok(_) => {
+                        self.pending_edits.clear();
+                        self.push_toast("修改已提交保存".to_string(), ToastType::Success, ctx);
+                        ctx.link().send_message(Msg::PerformSearch);
+                    }
+                    Err(err) => {
+                        self.push_toast(format!("保存失败: {err}"), ToastType::Error, ctx);
+                    }
+                }
                 true
             }
             Msg::OpenResultModal(id) => {
@@ -1021,12 +1120,15 @@ impl Component for App {
                             <div>
                                 { for self.query_rows.iter().map(|row| self.render_query_row(ctx, row)) }
                             </div>
-                            <div class="query-actions" style="margin-top: 16px;">
-                                <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::AddQueryRow)}>{ "➕ 添加查询条件" }</button>
-                                <button class="btn btn-primary" onclick={ctx.link().callback(|_| Msg::ApplyQuery)}>{ "✅ 应用查询" }</button>
-                                <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::ClearQuery)}>{ "🗑️ 清空查询" }</button>
-                            </div>
-                        </div>
+                <div class="query-actions" style="margin-top: 16px;">
+                    <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::AddQueryRow)}>{ "➕ 添加查询条件" }</button>
+                    <button class="btn btn-primary" onclick={ctx.link().callback(|_| Msg::ApplyQuery)}>{ "✅ 应用查询" }</button>
+                    <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::ClearQuery)}>{ "🗑️ 清空查询" }</button>
+                </div>
+                <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">
+                    { "当前过滤: " }{ self.filter_preview_text() }
+                </div>
+            </div>
 
                         <div class="advanced-settings">
                             <h3 style="margin-bottom: 16px; font-size: 1.1rem;">{ "⚙️ 高级搜索设置" }</h3>
@@ -1074,11 +1176,33 @@ impl Component for App {
                         <div class="results-panel" style="margin-top: 24px;">
                             <div class="results-stats">
                                 <span class="results-count">{ "找到 " }<strong>{ self.results_count_text() }</strong>{ " 条结果" }</span>
-                                <div class="results-actions">
-                                    <span>{ self.search_time_text() }</span>
-                                    <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::OpenFilters(true))}>{ "筛选入口" }</button>
-                                    <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::OpenColumnConfig(true))}>{ "列设置" }</button>
-                                </div>
+                        <div class="results-actions">
+                            <span>{ self.search_time_text() }</span>
+                            <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::OpenFilters(true))}>{ "筛选入口" }</button>
+                            <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::OpenColumnConfig(true))}>{ "列设置" }</button>
+                            <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::ToggleEditLock)}>
+                                { if self.edit_locked { "🔒 已锁定" } else { "🔓 可编辑" } }
+                            </button>
+                            { if !self.edit_locked {
+                                html! {
+                                    <select
+                                        class="form-control"
+                                        style="min-width: 140px;"
+                                        onchange={ctx.link().callback(|e: yew::events::Event| Msg::SetPrimaryKey(select_value(e)))}
+                                        value={self.primary_key_field.clone()}
+                                    >
+                                        { self.render_primary_key_options() }
+                                    </select>
+                                }
+                            } else { Html::default() } }
+                            <button
+                                class="btn btn-primary"
+                                disabled={self.edit_locked || self.pending_edits.is_empty()}
+                                onclick={ctx.link().callback(|_| Msg::SaveEdits)}
+                            >
+                                { "保存修改" }
+                            </button>
+                        </div>
                             </div>
                             <div id="resultsContainer" class="results-grid">
                                 { self.render_results(ctx) }
@@ -1135,7 +1259,7 @@ impl Component for App {
                         <div>
                             <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 8px;">{ "勾选控制显示/隐藏，列顺序可在表头拖拽调整。" }</p>
                             <div class="column-config-list">
-                                { self.render_column_config() }
+                                { self.render_column_config(ctx) }
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -1251,6 +1375,8 @@ impl App {
         self.popular_searches.clear();
         self.popular_search_field.clear();
         self.current_page = 1;
+        self.primary_key_field = "id".to_string();
+        self.pending_edits.clear();
         self.results_count = 0;
         self.processing_time_ms = None;
         self.facet_distribution = None;
@@ -1288,14 +1414,17 @@ impl App {
         let operator_value = normalize_operator(&row.operator);
         let logic_value = if row.logic.trim().is_empty() { "AND".to_string() } else { row.logic.clone() };
         html! {
-            <div class="query-row">
+            <div class="query-row" key={row.id}>
                 <select
                     class="form-control query-field"
                     value={row.field.clone()}
                     onchange={ctx.link().callback(move |e: yew::events::Event| Msg::UpdateQueryField(id, select_value(e)))}
                 >
                     <option value="">{ "选择字段" }</option>
-                    { for filter_fields.iter().map(|field| html! { <option value={field.clone()}>{ field.clone() }</option> }) }
+                    { for filter_fields.iter().map(|field| {
+                        let label = self.field_labels.get(field).cloned().unwrap_or_else(|| field.clone());
+                        html! { <option value={field.clone()}>{ label }</option> }
+                    }) }
                 </select>
                 <select
                     class="form-control query-operator"
@@ -1330,6 +1459,10 @@ impl App {
                 <button class="btn remove-btn" onclick={ctx.link().callback(move |_| Msg::RemoveQueryRow(id))}>{ "删除" }</button>
             </div>
         }
+    }
+
+    fn filter_preview_text(&self) -> String {
+        build_filter_expression_from_dom().unwrap_or_else(|| "（无）".to_string())
     }
 
     fn get_filter_fields_for_query(&self) -> Vec<String> {
@@ -1398,15 +1531,28 @@ impl App {
             params["sort"] = json!([self.sort_value.clone()]);
         }
 
-        let mut filters = self.build_filters_from_query_builder();
+        let mut filter_expr = build_filter_expression_from_dom();
         let facet_filters = self.build_facet_filters();
-        filters.extend(facet_filters);
-        if !filters.is_empty() {
-            params["filter"] = json!(filters);
+        if !facet_filters.is_empty() {
+            let facet_expr = facet_filters.join(" AND ");
+            filter_expr = match filter_expr {
+                Some(expr) => Some(format!("({}) AND ({})", expr, facet_expr)),
+                None => Some(facet_expr),
+            };
+        }
+        if let Some(expr) = filter_expr {
+            params["filter"] = json!(expr);
         }
 
         if !self.display_fields.is_empty() {
-            params["attributesToRetrieve"] = json!(self.display_fields.clone());
+            let mut attrs = self.display_fields.clone();
+            if !attrs.contains(&"id".to_string()) {
+                attrs.push("id".to_string());
+            }
+            if !self.primary_key_field.is_empty() && !attrs.contains(&self.primary_key_field) {
+                attrs.push(self.primary_key_field.clone());
+            }
+            params["attributesToRetrieve"] = json!(attrs);
         } else {
             params["attributesToRetrieve"] = json!(["*"]);
         }
@@ -1418,61 +1564,6 @@ impl App {
         params
     }
 
-    fn build_filters_from_query_builder(&self) -> Vec<String> {
-        let mut filters: Vec<String> = vec![];
-        let mut current_group: Vec<String> = vec![];
-        let mut last_logic = "AND".to_string();
-
-        for row in &self.query_rows {
-            if row.field.is_empty() {
-                continue;
-            }
-            let filter_condition = match row.operator.as_str() {
-                "IN" => {
-                    let items: Vec<String> = row
-                        .value
-                        .split(',')
-                        .map(|v| format_filter_value(v.trim()))
-                        .collect();
-                    format!("{} IN [{}]", row.field, items.join(", "))
-                }
-                "NOT IN" => {
-                    let items: Vec<String> = row
-                        .value
-                        .split(',')
-                        .map(|v| format_filter_value(v.trim()))
-                        .collect();
-                    format!("{} NOT IN [{}]", row.field, items.join(", "))
-                }
-                "EXISTS" => format!("{} EXISTS", row.field),
-                "NOT EXISTS" => format!("{} NOT EXISTS", row.field),
-                _ => format!("{} {} {}", row.field, row.operator, format_filter_value(&row.value)),
-            };
-
-            if current_group.is_empty() || last_logic == "AND" {
-                current_group.push(filter_condition);
-            } else {
-                if current_group.len() == 1 {
-                    filters.push(current_group[0].clone());
-                } else {
-                    filters.push(format!("({})", current_group.join(" AND ")));
-                }
-                filters.push(filter_condition);
-                current_group.clear();
-            }
-            last_logic = row.logic.clone();
-        }
-
-        if !current_group.is_empty() {
-            if current_group.len() == 1 {
-                filters.push(current_group[0].clone());
-            } else {
-                filters.push(format!("({})", current_group.join(" AND ")));
-            }
-        }
-
-        filters
-    }
 
     fn build_facet_filters(&self) -> Vec<String> {
         let mut filters = vec![];
@@ -1596,7 +1687,10 @@ impl App {
                         let drop_col = col.clone();
                         let sort_col = col.clone();
                         let resize_col = col.clone();
-                        let th_class = if self.drag_over_col.as_ref() == Some(col) { "sortable-th drag-over" } else { "sortable-th" };
+                        let mut th_class = if self.drag_over_col.as_ref() == Some(col) { "sortable-th drag-over".to_string() } else { "sortable-th".to_string() };
+                        if !self.primary_key_field.is_empty() && self.primary_key_field == *col {
+                            th_class.push_str(" pk-col");
+                        }
                         html! {
                             <th
                                 class={th_class}
@@ -1608,7 +1702,10 @@ impl App {
                                 ondragend={ctx.link().callback(|_| Msg::DragEnd)}
                                 onclick={ctx.link().callback(move |_| Msg::ToggleTableSort(sort_col.clone()))}
                             >
-                                <span class="th-label">{ format!("{}{}", label, dir_mark) }</span>
+                                <span class="th-label">
+                                    { if !self.primary_key_field.is_empty() && self.primary_key_field == *col { "🔑 " } else { "" } }
+                                    { format!("{}{}", label, dir_mark) }
+                                </span>
                                 <span
                                     class="column-resizer"
                                     data-col={col_key.clone()}
@@ -1654,13 +1751,49 @@ impl App {
             <tbody>
                 { for hits.iter().map(|hit| {
                     let id = get_id_string(hit);
-                    let row_cells = columns.iter().map(|col| {
-                if let Some(cell) = get_cell_value(hit, col, self.highlight_enabled) {
-                            html! { <td title={cell.title}>{ cell.html }</td> }
-                        } else {
-                            html! { <td></td> }
-                        }
-                    });
+                let row_cells = columns.iter().map(|col| {
+                    let doc_id = get_doc_key(hit, &self.primary_key_field);
+                    let is_primary_key = !self.primary_key_field.is_empty() && self.primary_key_field == *col;
+                    let is_editable = !self.edit_locked && !doc_id.is_empty() && !is_primary_key;
+                    let edited_value = self
+                        .pending_edits
+                        .get(&doc_id)
+                        .and_then(|m| m.get(col))
+                        .cloned();
+
+                    if is_editable {
+                        let raw_value = edited_value.unwrap_or_else(|| hit.get(col).cloned().unwrap_or(Value::Null));
+                        let display = value_to_string_for_edit(&raw_value);
+                        let field = col.clone();
+                        let doc_key = doc_id.clone();
+                        return html! {
+                            <td>
+                                <input
+                                    class="form-control"
+                                    style="padding: 6px 8px; font-size: 0.9rem;"
+                                    value={display}
+                                    oninput={ctx.link().callback(move |e: yew::events::InputEvent| {
+                                        Msg::UpdateCellEdit(doc_key.clone(), field.clone(), input_value(e))
+                                    })}
+                                />
+                            </td>
+                        };
+                    }
+
+                    if let Some(edit_override) = edited_value {
+                        let display = value_to_string_for_edit(&edit_override);
+                        let class = if is_primary_key { "pk-cell" } else { "" };
+                        return html! { <td class={class} title={display.clone()}>{ display }</td> };
+                    }
+
+                    if let Some(cell) = get_cell_value(hit, col, self.highlight_enabled) {
+                        let class = if is_primary_key { "pk-cell" } else { "" };
+                        html! { <td class={class} title={cell.title}>{ cell.html }</td> }
+                    } else {
+                        let class = if is_primary_key { "pk-cell" } else { "" };
+                        html! { <td class={class}></td> }
+                    }
+                });
                     let ranking = hit.ranking_score.map(|score| {
                         html! { <>
                             <br />
@@ -1824,6 +1957,17 @@ impl App {
         html! { for items }
     }
 
+    fn render_primary_key_options(&self) -> Html {
+        if self.last_base_columns.is_empty() {
+            return html! { <option value="">{ "选择主键" }</option> };
+        }
+        let mut items = vec![html! { <option value="">{ "选择主键" }</option> }];
+        for col in &self.last_base_columns {
+            items.push(html! { <option value={col.clone()}>{ col.clone() }</option> });
+        }
+        html! { for items }
+    }
+
     fn render_facets(&self, ctx: &Context<Self>) -> Html {
         let mut nodes = vec![];
                 if let Some(map) = &self.facet_distribution {
@@ -1879,7 +2023,7 @@ impl App {
         }
     }
 
-    fn render_column_config(&self) -> Html {
+    fn render_column_config(&self, _ctx: &Context<Self>) -> Html {
         let base = if !self.last_base_columns.is_empty() {
             self.last_base_columns.clone()
         } else {
@@ -1890,10 +2034,18 @@ impl App {
         html! {
             for ordered.iter().map(|col| {
                 let checked = !hidden.contains(col);
+                let label_value = self.field_labels.get(col).cloned().unwrap_or_else(|| col.clone());
                 html! {
                     <label class="column-config-item">
                         <input type="checkbox" data-col={col.clone()} checked={checked} />
-                        <span>{ self.field_labels.get(col).cloned().unwrap_or_else(|| col.clone()) }</span>
+                        <div class="column-name-stack">
+                            <span class="column-name-original">{ col.clone() }</span>
+                            <input
+                                class="form-control column-label-input column-name-display"
+                                data-col={col.clone()}
+                                value={label_value}
+                            />
+                        </div>
                     </label>
                 }
             })
@@ -2172,6 +2324,16 @@ impl App {
         self.resize_up_listener = Some(up_listener);
     }
 
+    fn schedule_debounced_search(&mut self, ctx: &Context<Self>, delay_ms: u32) {
+        if let Some(timeout) = self.debounce.take() {
+            timeout.cancel();
+        }
+        let link = ctx.link().clone();
+        self.debounce = Some(Timeout::new(delay_ms, move || {
+            link.send_message(Msg::DebouncedSearch);
+        }));
+    }
+
     fn push_toast(&mut self, message: String, kind: ToastType, ctx: &Context<Self>) {
         let id = self.toast_seq;
         self.toast_seq += 1;
@@ -2302,9 +2464,104 @@ fn set_all_checkboxes(selector: &str, checked: bool) {
     }
 }
 
+fn build_filter_expression_from_dom() -> Option<String> {
+    let Ok(rows) = web_document().query_selector_all(".query-row") else { return None };
+    let mut conditions: Vec<(String, String)> = vec![];
+    for i in 0..rows.length() {
+        let Some(node) = rows.item(i) else { continue };
+        let Some(row) = node.dyn_ref::<Element>() else { continue };
+        let field = row
+            .query_selector(".query-field")
+            .ok()
+            .flatten()
+            .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
+            .map(|s| s.value())
+            .unwrap_or_default();
+        if field.trim().is_empty() {
+            continue;
+        }
+        let operator = row
+            .query_selector(".query-operator")
+            .ok()
+            .flatten()
+            .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
+            .map(|s| s.value())
+            .unwrap_or_else(|| "=".to_string());
+        let value = row
+            .query_selector(".query-value")
+            .ok()
+            .flatten()
+            .and_then(|e| e.dyn_into::<web_sys::HtmlInputElement>().ok())
+            .map(|s| s.value())
+            .unwrap_or_default();
+        let logic = row
+            .query_selector(".query-logic")
+            .ok()
+            .flatten()
+            .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
+            .map(|s| s.value())
+            .unwrap_or_else(|| "AND".to_string());
+
+        let operator = normalize_operator(&operator);
+        let filter_condition = match operator.as_str() {
+            "IN" => {
+                let items: Vec<String> = value
+                    .split(',')
+                    .map(|v| v.trim())
+                    .filter(|v| !v.is_empty())
+                    .map(format_filter_value)
+                    .collect();
+                if items.is_empty() {
+                    continue;
+                }
+                format!("{} IN [{}]", field, items.join(", "))
+            }
+            "NOT IN" => {
+                let items: Vec<String> = value
+                    .split(',')
+                    .map(|v| v.trim())
+                    .filter(|v| !v.is_empty())
+                    .map(format_filter_value)
+                    .collect();
+                if items.is_empty() {
+                    continue;
+                }
+                format!("{} NOT IN [{}]", field, items.join(", "))
+            }
+            "EXISTS" => format!("{} EXISTS", field),
+            "NOT EXISTS" => format!("{} NOT EXISTS", field),
+            _ => {
+                if value.trim().is_empty() {
+                    continue;
+                }
+                format!("{} {} {}", field, operator, format_filter_value(&value))
+            }
+        };
+
+        conditions.push((filter_condition, logic));
+    }
+
+    build_filter_expression_from_conditions(&conditions)
+}
+
+fn build_filter_expression_from_conditions(conditions: &[(String, String)]) -> Option<String> {
+    if conditions.is_empty() {
+        return None;
+    }
+    let mut expr = conditions[0].0.clone();
+    let mut prev_logic = conditions[0].1.clone();
+    for i in 1..conditions.len() {
+        let logic = prev_logic.to_uppercase();
+        let joiner = if logic == "OR" { " OR " } else { " AND " };
+        expr = format!("{}{}{}", expr, joiner, conditions[i].0);
+        prev_logic = conditions[i].1.clone();
+    }
+    Some(expr)
+}
+
 fn collect_hidden_columns() -> Vec<String> {
     let mut hidden = vec![];
-    if let Ok(inputs) = web_document().query_selector_all(".column-config-item input") {
+    if let Ok(inputs) = web_document().query_selector_all(".column-config-item input[type=\"checkbox\"]") {
         for i in 0..inputs.length() {
             if let Some(node) = inputs.item(i) {
                 if let Some(input) = node.dyn_ref::<web_sys::HtmlInputElement>() {
@@ -2318,6 +2575,22 @@ fn collect_hidden_columns() -> Vec<String> {
         }
     }
     hidden
+}
+
+fn collect_column_labels() -> HashMap<String, String> {
+    let mut labels = HashMap::new();
+    if let Ok(nodes) = web_document().query_selector_all(".column-label-input") {
+        for i in 0..nodes.length() {
+            if let Some(node) = nodes.item(i) {
+                if let Some(input) = node.dyn_ref::<web_sys::HtmlInputElement>() {
+                    if let Some(col) = input.get_attribute("data-col") {
+                        labels.insert(col, input.value());
+                    }
+                }
+            }
+        }
+    }
+    labels
 }
 
 fn collect_field_config() -> Vec<FieldConfigItem> {
@@ -2438,7 +2711,7 @@ fn format_time(timestamp: &str) -> String {
 }
 
 fn hit_has_id(hit: &SearchHit) -> bool {
-    hit.id.is_some()
+    hit.id.is_some() || hit.fields.get("id").is_some()
 }
 
 fn get_id_string(hit: &SearchHit) -> String {
@@ -2455,6 +2728,15 @@ fn get_id_string(hit: &SearchHit) -> String {
             }
         })
         .unwrap_or_default()
+}
+
+fn get_doc_key(hit: &SearchHit, primary_key: &str) -> String {
+    if !primary_key.trim().is_empty() {
+        if let Some(val) = hit.get(primary_key) {
+            return value_to_string(val);
+        }
+    }
+    get_id_string(hit)
 }
 
 fn hit_entries(hit: &SearchHit) -> Vec<(String, Value)> {
@@ -2536,6 +2818,16 @@ fn value_to_string(value: &Value) -> String {
     } else {
         value.to_string()
     }
+}
+
+fn value_to_string_for_edit(value: &Value) -> String {
+    if value.is_null() {
+        return "".to_string();
+    }
+    if value.is_object() || value.is_array() {
+        return serde_json::to_string(value).unwrap_or_default();
+    }
+    value_to_string(value)
 }
 
 fn escape_html(input: &str) -> String {
@@ -2802,4 +3094,76 @@ async fn fetch_by_id(host: &str, api_key: &str, index: &str, id: &str) -> Result
     }
     let res: SearchResponse = response.json().await.map_err(|e| e.to_string())?;
     res.hits.into_iter().next().ok_or_else(|| "not found".to_string())
+}
+
+async fn update_documents(
+    host: &str,
+    api_key: &str,
+    index: &str,
+    primary_key: &str,
+    hits: &[SearchHit],
+    edits: &HashMap<String, HashMap<String, Value>>,
+) -> Result<(), String> {
+    let mut docs: Vec<Value> = vec![];
+    for hit in hits {
+        let doc_id = get_doc_key(hit, primary_key);
+        if doc_id.is_empty() {
+            continue;
+        }
+        let Some(fields) = edits.get(&doc_id) else { continue };
+        let mut obj = serde_json::Map::new();
+        for (k, v) in hit.fields.iter() {
+            obj.insert(k.clone(), v.clone());
+        }
+        if let Some(id) = &hit.id {
+            obj.insert("id".to_string(), id.clone());
+        }
+        if !primary_key.trim().is_empty() {
+            if let Some(pk_val) = hit.get(primary_key) {
+                obj.insert(primary_key.to_string(), pk_val.clone());
+            }
+        }
+        for (field, value) in fields.iter() {
+            let parsed = parse_edit_value(value);
+            obj.insert(field.clone(), parsed);
+        }
+        docs.push(Value::Object(obj));
+    }
+    if docs.is_empty() {
+        return Ok(());
+    }
+
+    let url = format!("{}/indexes/{}/documents", host.trim_end_matches('/'), index);
+    let builder = Request::post(&url);
+    let req = apply_auth_header(builder, api_key).json(&docs).map_err(|e| e.to_string())?;
+    let response = req.send().await.map_err(|e| e.to_string())?;
+    if !response.ok() {
+        return Err(response.text().await.unwrap_or_else(|_| "update documents error".to_string()));
+    }
+    Ok(())
+}
+
+fn parse_edit_value(value: &Value) -> Value {
+    match value {
+        Value::String(s) => {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                return Value::String("".to_string());
+            }
+            if let Ok(parsed) = serde_json::from_str::<Value>(trimmed) {
+                return parsed;
+            }
+            if trimmed.eq_ignore_ascii_case("true") {
+                return Value::Bool(true);
+            }
+            if trimmed.eq_ignore_ascii_case("false") {
+                return Value::Bool(false);
+            }
+            if let Ok(num) = trimmed.parse::<f64>() {
+                return Value::Number(serde_json::Number::from_f64(num).unwrap_or_else(|| serde_json::Number::from(0)));
+            }
+            Value::String(s.clone())
+        }
+        other => other.clone(),
+    }
 }
