@@ -496,6 +496,7 @@ impl Component for App {
                 true
             }
             Msg::RemoveQueryRow(id) => {
+                self.sync_query_rows_from_dom();
                 self.query_rows.retain(|row| row.id != id);
                 if self.query_rows.is_empty() {
                     self.add_query_row();
@@ -1414,7 +1415,7 @@ impl App {
         let operator_value = normalize_operator(&row.operator);
         let logic_value = if row.logic.trim().is_empty() { "AND".to_string() } else { row.logic.clone() };
         html! {
-            <div class="query-row" key={row.id}>
+            <div class="query-row" key={row.id} data-row-id={row.id.to_string()}>
                 <select
                     class="form-control query-field"
                     value={row.field.clone()}
@@ -1462,7 +1463,19 @@ impl App {
     }
 
     fn filter_preview_text(&self) -> String {
-        build_filter_expression_from_dom().unwrap_or_else(|| "（无）".to_string())
+        let keyword = self.search_input.trim();
+        let filter_expr = build_filter_expression_from_dom();
+        let keyword_part = if keyword.is_empty() {
+            None
+        } else {
+            Some(format!("关键词: \"{}\"", keyword))
+        };
+        match (keyword_part, filter_expr) {
+            (Some(k), Some(f)) => format!("{} AND {}", k, f),
+            (Some(k), None) => k,
+            (None, Some(f)) => f,
+            (None, None) => "（无）".to_string(),
+        }
     }
 
     fn get_filter_fields_for_query(&self) -> Vec<String> {
@@ -1478,6 +1491,50 @@ impl App {
         for row in &mut self.query_rows {
             if !fields.contains(&row.field) {
                 row.field = "".to_string();
+            }
+        }
+    }
+
+    fn sync_query_rows_from_dom(&mut self) {
+        let Ok(rows) = web_document().query_selector_all(".query-row") else { return };
+        for i in 0..rows.length() {
+            let Some(node) = rows.item(i) else { continue };
+            let Some(row_el) = node.dyn_ref::<Element>() else { continue };
+            let id_attr = row_el.get_attribute("data-row-id").unwrap_or_default();
+            let Ok(row_id) = id_attr.parse::<u64>() else { continue };
+            let field = row_el
+                .query_selector(".query-field")
+                .ok()
+                .flatten()
+                .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
+                .map(|s| s.value())
+                .unwrap_or_default();
+            let operator = row_el
+                .query_selector(".query-operator")
+                .ok()
+                .flatten()
+                .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
+                .map(|s| s.value())
+                .unwrap_or_else(|| "=".to_string());
+            let value = row_el
+                .query_selector(".query-value")
+                .ok()
+                .flatten()
+                .and_then(|e| e.dyn_into::<web_sys::HtmlInputElement>().ok())
+                .map(|s| s.value())
+                .unwrap_or_default();
+            let logic = row_el
+                .query_selector(".query-logic")
+                .ok()
+                .flatten()
+                .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
+                .map(|s| s.value())
+                .unwrap_or_else(|| "AND".to_string());
+            if let Some(row) = self.query_rows.iter_mut().find(|r| r.id == row_id) {
+                row.field = field;
+                row.operator = operator;
+                row.value = value;
+                row.logic = logic;
             }
         }
     }
@@ -2549,12 +2606,10 @@ fn build_filter_expression_from_conditions(conditions: &[(String, String)]) -> O
         return None;
     }
     let mut expr = conditions[0].0.clone();
-    let mut prev_logic = conditions[0].1.clone();
     for i in 1..conditions.len() {
-        let logic = prev_logic.to_uppercase();
+        let logic = conditions[i].1.to_uppercase();
         let joiner = if logic == "OR" { " OR " } else { " AND " };
         expr = format!("{}{}{}", expr, joiner, conditions[i].0);
-        prev_logic = conditions[i].1.clone();
     }
     Some(expr)
 }
