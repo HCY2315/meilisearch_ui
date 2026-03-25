@@ -1,7 +1,9 @@
 [build]
 target = "index.html"
-dist = "dist"
-public_url = "/"
+# 修改为 nginx 目录下的一个子目录名
+dist = "/home/chaoyue/code/contoiner/nginx/html/meilisearch"
+# 注意：如果放在子目录下，public_url 通常也需要对应修改
+public_url = "/meilisearch/"
 
 [serve]
 port = 8080
