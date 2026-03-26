@@ -23,6 +23,7 @@ web-sys = { version = "0.3", features = [
     "DomTokenList",
     "DomRect",
     "DragEvent",
+    "DataTransfer",
     "MouseEvent",
 ] }
 gloo-net = { version = "0.5", features = ["http", "json"] }

@@ -125,6 +125,24 @@ struct ResizeState {
 }
 
 #[derive(Clone, Debug)]
+struct ViewResizeState {
+    col_idx: usize,
+    start_x: i32,
+    start_width_px: f32,
+    container_width_px: f32,
+    base_widths: Vec<u32>,
+}
+
+#[derive(Clone, Debug)]
+struct ViewFieldResizeState {
+    col_idx: usize,
+    start_x: i32,
+    start_width_px: f32,
+    container_width_px: f32,
+    base_widths: Vec<u32>,
+}
+
+#[derive(Clone, Debug)]
 struct FieldConfigItem {
     field: String,
     searchable: bool,
@@ -132,6 +150,16 @@ struct FieldConfigItem {
     label: String,
     highlight: bool,
     display: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct ViewConfig {
+    name: String,
+    columns: Vec<Vec<String>>,
+    #[serde(default)]
+    widths: Vec<u32>,
+    #[serde(default)]
+    label_widths: Vec<u32>,
 }
 
 #[derive(Clone, Debug)]
@@ -208,6 +236,25 @@ enum Msg {
     UpdateCellEdit(String, String, String),
     SaveEdits,
     SaveEditsFinished(Result<(), String>),
+    OpenViewConfig(bool),
+    SetViewMode(String),
+    UpdateViewName(String),
+    StartViewFieldDrag(String),
+    DropViewField(usize),
+    AddViewColumn,
+    RemoveViewColumn,
+    RemoveViewColumnAt(usize),
+    StartViewColumnDrag(usize),
+    DropViewColumnAt(usize),
+    StartViewFieldDragInColumn(String, usize),
+    DropViewFieldToPool,
+    StartViewColumnResize(usize, i32, f32, f32),
+    ViewColumnResizeMove(i32),
+    EndViewColumnResize,
+    StartViewFieldResize(usize, i32, f32, f32),
+    ViewFieldResizeMove(i32),
+    EndViewFieldResize,
+    SaveViewConfig,
     OpenResultModal(Option<String>),
     ShowResultDetail(SearchHit),
     CloseResultModal,
@@ -266,6 +313,16 @@ struct App {
     edit_locked: bool,
     primary_key_field: String,
     pending_edits: HashMap<String, HashMap<String, Value>>,
+    view_modal_open: bool,
+    view_mode: String,
+    view_name_input: String,
+    view_configs: Vec<ViewConfig>,
+    view_layout_working: Vec<Vec<String>>,
+    view_widths_working: Vec<u32>,
+    view_label_widths_working: Vec<u32>,
+    view_drag_field: Option<String>,
+    view_drag_from_column: Option<usize>,
+    view_drag_column: Option<usize>,
     loading: bool,
     toasts: Vec<Toast>,
     toast_seq: u64,
@@ -277,6 +334,12 @@ struct App {
     dragging_col: Option<String>,
     drag_over_col: Option<String>,
     is_resizing_columns: bool,
+    view_resize_state: Option<ViewResizeState>,
+    view_resize_move_listener: Option<EventListener>,
+    view_resize_up_listener: Option<EventListener>,
+    view_field_resize_state: Option<ViewFieldResizeState>,
+    view_field_resize_move_listener: Option<EventListener>,
+    view_field_resize_up_listener: Option<EventListener>,
 }
 
 impl Component for App {
@@ -340,6 +403,16 @@ impl Component for App {
             edit_locked: true,
             primary_key_field: "id".to_string(),
             pending_edits: HashMap::new(),
+            view_modal_open: false,
+            view_mode: "table".to_string(),
+            view_name_input: "".to_string(),
+            view_configs: vec![],
+            view_layout_working: vec![vec![], vec![]],
+            view_widths_working: vec![0, 0],
+            view_label_widths_working: vec![140, 140],
+            view_drag_field: None,
+            view_drag_from_column: None,
+            view_drag_column: None,
             loading: false,
             toasts: vec![],
             toast_seq: 1,
@@ -351,6 +424,12 @@ impl Component for App {
             dragging_col: None,
             drag_over_col: None,
             is_resizing_columns: false,
+            view_resize_state: None,
+            view_resize_move_listener: None,
+            view_resize_up_listener: None,
+            view_field_resize_state: None,
+            view_field_resize_move_listener: None,
+            view_field_resize_up_listener: None,
         };
 
         app.add_query_row();
@@ -429,6 +508,7 @@ impl Component for App {
                         self.load_column_prefs();
                         self.load_column_width_prefs();
                         self.load_field_labels();
+                        self.load_view_configs();
                         self.refresh_query_rows();
                         self.push_toast(
                             format!("已选择索引: {}", self.current_index),
@@ -907,6 +987,290 @@ impl Component for App {
                 }
                 true
             }
+            Msg::StartViewColumnResize(col_idx, start_x, start_width_px, container_width_px) => {
+                self.view_resize_state = Some(ViewResizeState {
+                    col_idx,
+                    start_x,
+                    start_width_px,
+                    container_width_px,
+                    base_widths: self.current_view_widths(),
+                });
+                let link = ctx.link().clone();
+                let window = web_window();
+                let move_listener = EventListener::new(&window, "mousemove", move |event| {
+                    let event = event.dyn_ref::<web_sys::MouseEvent>();
+                    if let Some(event) = event {
+                        link.send_message(Msg::ViewColumnResizeMove(event.client_x()));
+                    }
+                });
+                let link = ctx.link().clone();
+                let up_listener = EventListener::new(&window, "mouseup", move |_| {
+                    link.send_message(Msg::EndViewColumnResize);
+                });
+                self.view_resize_move_listener = Some(move_listener);
+                self.view_resize_up_listener = Some(up_listener);
+                true
+            }
+            Msg::ViewColumnResizeMove(client_x) => {
+                let state = match self.view_resize_state.clone() {
+                    Some(state) => state,
+                    None => return false,
+                };
+                if state.container_width_px <= 0.0 {
+                    return false;
+                }
+                let delta = (client_x - state.start_x) as f32;
+                let mut new_px = state.start_width_px + delta;
+                let min_px = 140.0_f32;
+                new_px = new_px.max(min_px).min(state.container_width_px);
+                let mut new_percent = (new_px / state.container_width_px * 100.0).round() as u32;
+                new_percent = new_percent.clamp(5, 95);
+                let widths = Self::normalize_view_widths(state.base_widths.clone(), state.base_widths.len());
+                if state.col_idx >= widths.len() || widths.len() == 1 {
+                    return false;
+                }
+                let old_current = widths[state.col_idx];
+                let sum_others = widths.iter().sum::<u32>().saturating_sub(old_current);
+                let remaining = 100u32.saturating_sub(new_percent);
+                let mut next = vec![0u32; widths.len()];
+                next[state.col_idx] = new_percent;
+                if sum_others == 0 {
+                    let even = remaining / (widths.len() as u32 - 1);
+                    let mut remain = remaining.saturating_sub(even * (widths.len() as u32 - 1));
+                    for (i, item) in next.iter_mut().enumerate() {
+                        if i == state.col_idx {
+                            continue;
+                        }
+                        *item = even;
+                        if remain > 0 {
+                            *item += 1;
+                            remain -= 1;
+                        }
+                    }
+                } else {
+                    let mut used = new_percent;
+                    for (i, w) in widths.iter().enumerate() {
+                        if i == state.col_idx {
+                            continue;
+                        }
+                        let value = ((*w as f32 / sum_others as f32) * remaining as f32).floor() as u32;
+                        next[i] = value;
+                        used += value;
+                    }
+                    let mut remain = 100u32.saturating_sub(used);
+                    let mut idx = 0usize;
+                    while remain > 0 && next.len() > 1 {
+                        if idx != state.col_idx {
+                            next[idx] += 1;
+                            remain -= 1;
+                        }
+                        idx = (idx + 1) % next.len();
+                    }
+                }
+                self.set_active_view_widths(next.clone());
+                true
+            }
+            Msg::EndViewColumnResize => {
+                self.view_resize_state = None;
+                self.view_resize_move_listener = None;
+                self.view_resize_up_listener = None;
+                true
+            }
+            Msg::StartViewFieldResize(col_idx, start_x, start_width_px, container_width_px) => {
+                self.view_field_resize_state = Some(ViewFieldResizeState {
+                    col_idx,
+                    start_x,
+                    start_width_px,
+                    container_width_px,
+                    base_widths: self.current_view_label_widths(),
+                });
+                let link = ctx.link().clone();
+                let window = web_window();
+                let move_listener = EventListener::new(&window, "mousemove", move |event| {
+                    let event = event.dyn_ref::<web_sys::MouseEvent>();
+                    if let Some(event) = event {
+                        link.send_message(Msg::ViewFieldResizeMove(event.client_x()));
+                    }
+                });
+                let link = ctx.link().clone();
+                let up_listener = EventListener::new(&window, "mouseup", move |_| {
+                    link.send_message(Msg::EndViewFieldResize);
+                });
+                self.view_field_resize_move_listener = Some(move_listener);
+                self.view_field_resize_up_listener = Some(up_listener);
+                true
+            }
+            Msg::ViewFieldResizeMove(client_x) => {
+                let state = match self.view_field_resize_state.clone() {
+                    Some(state) => state,
+                    None => return false,
+                };
+                if state.container_width_px <= 0.0 {
+                    return false;
+                }
+                let delta = (client_x - state.start_x) as f32;
+                let mut new_px = state.start_width_px + delta;
+                let min_px = 80.0_f32;
+                let max_px = (state.container_width_px - 80.0).max(min_px);
+                new_px = new_px.max(min_px).min(max_px);
+                let mut widths = Self::normalize_label_widths(state.base_widths.clone(), state.base_widths.len());
+                if state.col_idx >= widths.len() {
+                    return false;
+                }
+                widths[state.col_idx] = new_px.round() as u32;
+                self.set_active_view_label_widths(widths);
+                true
+            }
+            Msg::EndViewFieldResize => {
+                self.view_field_resize_state = None;
+                self.view_field_resize_move_listener = None;
+                self.view_field_resize_up_listener = None;
+                true
+            }
+            Msg::OpenViewConfig(open) => {
+                self.view_modal_open = open;
+                if open {
+                    if let Some(cfg) = self.active_view_config() {
+                        self.view_name_input = cfg.name.clone();
+                        self.view_layout_working = cfg.columns.clone();
+                        self.view_widths_working = Self::normalize_view_widths(cfg.widths.clone(), self.view_layout_working.len());
+                        self.view_label_widths_working = Self::normalize_label_widths(cfg.label_widths.clone(), self.view_layout_working.len());
+                    } else {
+                        self.view_name_input = "".to_string();
+                        self.view_layout_working = vec![vec![], vec![]];
+                        self.view_widths_working = vec![0; self.view_layout_working.len()];
+                        self.view_label_widths_working = vec![140; self.view_layout_working.len()];
+                    }
+                }
+                true
+            }
+            Msg::SetViewMode(mode) => {
+                self.view_mode = mode;
+                self.save_view_mode();
+                true
+            }
+            Msg::UpdateViewName(value) => {
+                self.view_name_input = value;
+                true
+            }
+            Msg::StartViewFieldDrag(field) => {
+                self.view_drag_field = Some(field);
+                self.view_drag_from_column = None;
+                true
+            }
+            Msg::StartViewFieldDragInColumn(field, column_idx) => {
+                self.view_drag_field = Some(field);
+                self.view_drag_from_column = Some(column_idx);
+                true
+            }
+            Msg::DropViewField(column_idx) => {
+                if let Some(field) = self.view_drag_field.clone() {
+                    self.view_drag_field = None;
+                    self.view_drag_from_column = None;
+                    self.view_layout_working.iter_mut().for_each(|col| col.retain(|f| f != &field));
+                    if column_idx < self.view_layout_working.len() {
+                        self.view_layout_working[column_idx].push(field);
+                    }
+                    return true;
+                }
+                false
+            }
+            Msg::DropViewFieldToPool => {
+                if let Some(field) = self.view_drag_field.clone() {
+                    self.view_drag_field = None;
+                    self.view_drag_from_column = None;
+                    self.view_layout_working.iter_mut().for_each(|col| col.retain(|f| f != &field));
+                    return true;
+                }
+                false
+            }
+            Msg::AddViewColumn => {
+                self.view_layout_working.push(vec![]);
+                self.view_widths_working.push(0);
+                self.view_label_widths_working.push(140);
+                true
+            }
+            Msg::RemoveViewColumn => {
+                if self.view_layout_working.len() > 1 {
+                    self.view_layout_working.pop();
+                    self.view_widths_working.pop();
+                    self.view_label_widths_working.pop();
+                    return true;
+                }
+                false
+            }
+            Msg::RemoveViewColumnAt(idx) => {
+                if self.view_layout_working.len() > 1 && idx < self.view_layout_working.len() {
+                    self.view_layout_working.remove(idx);
+                    if idx < self.view_widths_working.len() {
+                        self.view_widths_working.remove(idx);
+                    }
+                    if idx < self.view_label_widths_working.len() {
+                        self.view_label_widths_working.remove(idx);
+                    }
+                    return true;
+                }
+                false
+            }
+            Msg::StartViewColumnDrag(idx) => {
+                self.view_drag_field = None;
+                self.view_drag_from_column = None;
+                self.view_drag_column = Some(idx);
+                true
+            }
+            Msg::DropViewColumnAt(target_idx) => {
+                if let Some(field) = self.view_drag_field.clone() {
+                    self.view_drag_field = None;
+                    self.view_drag_from_column = None;
+                    if target_idx < self.view_layout_working.len() {
+                        self.view_layout_working.iter_mut().for_each(|col| col.retain(|f| f != &field));
+                        self.view_layout_working[target_idx].push(field);
+                        return true;
+                    }
+                    return false;
+                }
+                let Some(from_idx) = self.view_drag_column.take() else { return false };
+                let len = self.view_layout_working.len();
+                if from_idx >= len || target_idx >= len || from_idx == target_idx {
+                    return false;
+                }
+                let col = self.view_layout_working.remove(from_idx);
+                let width = if from_idx < self.view_widths_working.len() { Some(self.view_widths_working.remove(from_idx)) } else { None };
+                let label_width = if from_idx < self.view_label_widths_working.len() { Some(self.view_label_widths_working.remove(from_idx)) } else { None };
+                let insert_at = if target_idx > from_idx { target_idx - 1 } else { target_idx };
+                self.view_layout_working.insert(insert_at, col);
+                if let Some(w) = width {
+                    self.view_widths_working.insert(insert_at, w);
+                }
+                if let Some(w) = label_width {
+                    self.view_label_widths_working.insert(insert_at, w);
+                }
+                true
+            }
+            Msg::SaveViewConfig => {
+                let name = self.view_name_input.trim().to_string();
+                if name.is_empty() {
+                    self.push_toast("请输入视图名称".to_string(), ToastType::Warning, ctx);
+                    return false;
+                }
+                let mut columns = self.view_layout_working.clone();
+                for col in columns.iter_mut() {
+                    col.retain(|f| !f.trim().is_empty());
+                }
+                let widths = Self::normalize_view_widths(self.view_widths_working.clone(), columns.len());
+                let label_widths = Self::normalize_label_widths(self.view_label_widths_working.clone(), columns.len());
+                let cfg = ViewConfig { name: name.clone(), columns, widths, label_widths };
+                if let Some(existing) = self.view_configs.iter_mut().find(|c| c.name == name) {
+                    *existing = cfg;
+                } else {
+                    self.view_configs.push(cfg);
+                }
+                self.save_view_configs();
+                self.view_mode = name;
+                self.save_view_mode();
+                self.view_modal_open = false;
+                true
+            }
             Msg::OpenResultModal(id) => {
                 match id {
                     Some(value) => {
@@ -1181,6 +1545,15 @@ impl Component for App {
                             <span>{ self.search_time_text() }</span>
                             <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::OpenFilters(true))}>{ "筛选入口" }</button>
                             <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::OpenColumnConfig(true))}>{ "列设置" }</button>
+                            <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::OpenViewConfig(true))}>{ "视图设置" }</button>
+                            <select
+                                class="form-control"
+                                style="min-width: 140px;"
+                                onchange={ctx.link().callback(|e: yew::events::Event| Msg::SetViewMode(select_value(e)))}
+                                value={self.view_mode.clone()}
+                            >
+                                { self.render_view_options() }
+                            </select>
                             <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::ToggleEditLock)}>
                                 { if self.edit_locked { "🔒 已锁定" } else { "🔓 可编辑" } }
                             </button>
@@ -1205,7 +1578,7 @@ impl Component for App {
                             </button>
                         </div>
                             </div>
-                            <div id="resultsContainer" class="results-grid">
+                            <div id="resultsContainer" class={if self.view_mode == "table" { "results-grid" } else { "results-grid custom-grid" }}>
                                 { self.render_results(ctx) }
                             </div>
                             <div id="pagination" class="pagination">
@@ -1266,6 +1639,42 @@ impl Component for App {
                         <div class="modal-footer">
                             <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::OpenColumnConfig(false))}>{ "取消" }</button>
                             <button class="btn btn-primary" onclick={ctx.link().callback(|_| Msg::SaveColumnConfig(collect_hidden_columns()))}>{ "保存设置" }</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class={if self.view_modal_open { "modal active" } else { "modal" }}>
+                    <div class="modal-content view-modal">
+                        <div class="modal-header">
+                            <h2 class="modal-title">{ "视图设置" }</h2>
+                            <button class="modal-close" onclick={ctx.link().callback(|_| Msg::OpenViewConfig(false))}>{ "×" }</button>
+                        </div>
+                        <div style="margin-bottom: 16px; display: flex; gap: 12px; align-items: center;">
+                            <input
+                                class="form-control"
+                                style="max-width: 240px;"
+                                placeholder="视图名称"
+                                value={self.view_name_input.clone()}
+                                oninput={ctx.link().callback(|e: yew::events::InputEvent| Msg::UpdateViewName(input_value(e)))}
+                            />
+                            <button class="btn btn-primary" onclick={ctx.link().callback(|_| Msg::SaveViewConfig)}>{ "保存视图" }</button>
+                            <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::AddViewColumn)}>{ "增加列" }</button>
+                            <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::RemoveViewColumn)}>{ "删除列" }</button>
+                        </div>
+                        <div class="view-workspace">
+                            <div class="view-fields">
+                                <div class="view-title">{ "可用字段" }</div>
+                                <div
+                                    class="view-field-list"
+                                    ondragover={Callback::from(|e: DragEvent| e.prevent_default())}
+                                    ondrop={ctx.link().callback(|e: DragEvent| { e.prevent_default(); Msg::DropViewFieldToPool })}
+                                >
+                                    { for self.render_view_field_pool(ctx) }
+                                </div>
+                            </div>
+                            <div class="view-columns" style={format!("grid-template-columns: repeat({}, minmax(0, 1fr));", self.view_layout_working.len().max(1))}>
+                                { for (0..self.view_layout_working.len()).map(|idx| self.render_view_column(ctx, idx)) }
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1378,6 +1787,14 @@ impl App {
         self.current_page = 1;
         self.primary_key_field = "id".to_string();
         self.pending_edits.clear();
+        self.view_mode = "table".to_string();
+        self.view_configs.clear();
+        self.view_layout_working = vec![vec![], vec![]];
+        self.view_widths_working = vec![0; self.view_layout_working.len()];
+        self.view_label_widths_working = vec![140; self.view_layout_working.len()];
+        self.view_drag_field = None;
+        self.view_drag_from_column = None;
+        self.view_drag_column = None;
         self.results_count = 0;
         self.processing_time_ms = None;
         self.facet_distribution = None;
@@ -1704,6 +2121,11 @@ impl App {
         }
 
         let mut hits = results.hits.clone();
+        if self.view_mode != "table" {
+            if let Some(cfg) = self.active_view_config() {
+                return self.render_custom_results(ctx, &hits, &cfg);
+            }
+        }
         let columns = self.apply_column_prefs(self.last_base_columns.clone());
         if columns.is_empty() {
             return html! {
@@ -1920,6 +2342,93 @@ impl App {
         html! { for items }
     }
 
+    fn render_custom_results(&self, ctx: &Context<Self>, hits: &[SearchHit], cfg: &ViewConfig) -> Html {
+        let columns = if cfg.columns.is_empty() { vec![vec![]] } else { cfg.columns.clone() };
+        let widths = Self::normalize_view_widths(cfg.widths.clone(), columns.len());
+        let label_widths = Self::normalize_label_widths(cfg.label_widths.clone(), columns.len());
+        let gap_px = 12.0_f32;
+        let gap_each = if columns.len() > 0 {
+            gap_px * (columns.len() as f32 - 1.0) / columns.len() as f32
+        } else {
+            0.0
+        };
+        let grid_cols = widths
+            .iter()
+            .map(|w| format!("calc({}% - {:.2}px)", w, gap_each))
+            .collect::<Vec<_>>()
+            .join(" ");
+        html! {
+            <div class="custom-results">
+                { for hits.iter().map(|hit| {
+                    let id = get_id_string(hit);
+                    html! {
+                        <div class="custom-row">
+                            <div class="custom-row-columns" style={format!("grid-template-columns: {};", grid_cols)}>
+                                { for columns.iter().enumerate().map(|(col_idx, col_fields)| {
+                                    let widths = widths.clone();
+                                    let label_widths = label_widths.clone();
+                                    let label_px = label_widths.get(col_idx).cloned().unwrap_or(140);
+                                    html! {
+                                        <div class="custom-col" style={format!("--label-width: {}px;", label_px)}>
+                                            <span
+                                                class="view-col-resizer"
+                                                title="拖动调整列宽"
+                                                onmousedown={ctx.link().callback(move |e: MouseEvent| {
+                                                    e.prevent_default();
+                                                    e.stop_propagation();
+                                                    let target = e.target().and_then(|t| t.dyn_into::<Element>().ok());
+                                                    let (start_width, container_width) = target
+                                                        .and_then(|el| el.closest(".custom-row-columns").ok().flatten())
+                                                        .and_then(|el| el.dyn_into::<HtmlElement>().ok())
+                                                        .map(|el| {
+                                                            let rect = el.get_bounding_client_rect();
+                                                            (rect.width() as f32, rect.width() as f32)
+                                                        })
+                                                        .unwrap_or((0.0, 0.0));
+                                                    let current_percent = widths.get(col_idx).cloned().unwrap_or(0) as f32;
+                                                    let start_width_px = if container_width > 0.0 { container_width * current_percent / 100.0 } else { start_width };
+                                                    Msg::StartViewColumnResize(col_idx, e.client_x(), start_width_px, container_width)
+                                                })}
+                                            ></span>
+                                            <span
+                                                class="field-width-resizer"
+                                                title="拖动调整字段宽度"
+                                                onmousedown={ctx.link().callback(move |e: MouseEvent| {
+                                                    e.prevent_default();
+                                                    e.stop_propagation();
+                                                    let target = e.target().and_then(|t| t.dyn_into::<Element>().ok());
+                                                    let container_width = target
+                                                        .and_then(|el| el.closest(".custom-col").ok().flatten())
+                                                        .and_then(|el| el.dyn_into::<HtmlElement>().ok())
+                                                        .map(|el| el.get_bounding_client_rect().width() as f32)
+                                                        .unwrap_or(0.0);
+                                                    Msg::StartViewFieldResize(col_idx, e.client_x(), label_px as f32, container_width)
+                                                })}
+                                            ></span>
+                                            { for col_fields.iter().map(|field| {
+                                                let label = self.field_labels.get(field).cloned().unwrap_or_else(|| field.clone());
+                                                let value = hit.get(field).map(value_to_string).unwrap_or_default();
+                                                html! {
+                                                    <div class="custom-field">
+                                                        <span class="custom-label">{ label }</span>
+                                                        <span class="custom-value">{ value }</span>
+                                                    </div>
+                                                }
+                                            }) }
+                                        </div>
+                                    }
+                                }) }
+                            </div>
+                            <div class="custom-row-actions">
+                                <button class="btn btn-secondary" onclick={ctx.link().callback(move |_| Msg::OpenResultModal(Some(id.clone())))}>{ "查看" }</button>
+                            </div>
+                        </div>
+                    }
+                }) }
+            </div>
+        }
+    }
+
     fn render_search_fields(&self, ctx: &Context<Self>) -> Html {
         if self.available_fields.is_empty() {
             return html! { <li style="padding: 12px; color: var(--text-secondary);">{ "暂无搜索字段" }</li> };
@@ -2023,6 +2532,99 @@ impl App {
             items.push(html! { <option value={col.clone()}>{ col.clone() }</option> });
         }
         html! { for items }
+    }
+
+    fn render_view_options(&self) -> Html {
+        let mut items = vec![html! { <option value="table">{ "表格" }</option> }];
+        for cfg in &self.view_configs {
+            items.push(html! { <option value={cfg.name.clone()}>{ cfg.name.clone() }</option> });
+        }
+        html! { for items }
+    }
+
+    fn render_view_field_pool(&self, ctx: &Context<Self>) -> Vec<Html> {
+        let mut used = HashSet::new();
+        for col in &self.view_layout_working {
+            for f in col {
+                used.insert(f.clone());
+            }
+        }
+        let mut nodes = vec![];
+        for field in &self.available_fields {
+            if used.contains(field) {
+                continue;
+            }
+            let label = self.field_labels.get(field).cloned().unwrap_or_else(|| field.clone());
+            let field_name = field.clone();
+            nodes.push(html! {
+                <div
+                    class="view-field-item"
+                    draggable="true"
+                    ondragstart={ctx.link().callback(move |e: DragEvent| {
+                        if let Some(dt) = e.data_transfer() {
+                            let _ = dt.set_data("text/plain", &field_name);
+                        }
+                        Msg::StartViewFieldDrag(field_name.clone())
+                    })}
+                >
+                    <span>{ label }</span>
+                </div>
+            });
+        }
+        nodes
+    }
+
+    fn render_view_column(&self, ctx: &Context<Self>, idx: usize) -> Html {
+        let title = format!("列 {}", idx + 1);
+        let fields = self.view_layout_working.get(idx).cloned().unwrap_or_default();
+        let can_remove = self.view_layout_working.len() > 1;
+        html! {
+            <div
+                class="view-column"
+            >
+                <div
+                    class="view-title-row"
+                    draggable="true"
+                    ondragstart={ctx.link().callback(move |_| Msg::StartViewColumnDrag(idx))}
+                    ondragover={Callback::from(|e: DragEvent| e.prevent_default())}
+                    ondrop={ctx.link().callback(move |e: DragEvent| { e.prevent_default(); Msg::DropViewColumnAt(idx) })}
+                >
+                    <div class="view-title">{ title }</div>
+                    <button
+                        class="btn btn-secondary"
+                        style="padding: 2px 8px; font-size: 0.75rem;"
+                        disabled={!can_remove}
+                        onclick={ctx.link().callback(move |_| Msg::RemoveViewColumnAt(idx))}
+                    >
+                        { "删除" }
+                    </button>
+                </div>
+                <div
+                    class="view-column-body"
+                    ondragover={Callback::from(|e: DragEvent| e.prevent_default())}
+                    ondrop={ctx.link().callback(move |e: DragEvent| { e.prevent_default(); Msg::DropViewField(idx) })}
+                >
+                    { for fields.iter().map(|field| {
+                        let label = self.field_labels.get(field).cloned().unwrap_or_else(|| field.clone());
+                        let drag_field = field.clone();
+                        html! {
+                            <div
+                                class="view-field-item view-field-selected"
+                                draggable="true"
+                                ondragstart={ctx.link().callback(move |e: DragEvent| {
+                                    if let Some(dt) = e.data_transfer() {
+                                        let _ = dt.set_data("text/plain", &drag_field);
+                                    }
+                                    Msg::StartViewFieldDragInColumn(drag_field.clone(), idx)
+                                })}
+                            >
+                                <span>{ label }</span>
+                            </div>
+                        }
+                    }) }
+                </div>
+            </div>
+        }
     }
 
     fn render_facets(&self, ctx: &Context<Self>) -> Html {
@@ -2287,6 +2889,131 @@ impl App {
             if let Ok(map) = serde_json::from_str::<HashMap<String, u32>>(&value) {
                 self.column_widths = map;
             }
+        }
+    }
+
+    fn load_view_configs(&mut self) {
+        let key = format!("viewConfigs:{}", if self.current_index.is_empty() { "default" } else { &self.current_index });
+        self.view_configs = storage_get(&key)
+            .and_then(|value| serde_json::from_str::<Vec<ViewConfig>>(&value).ok())
+            .unwrap_or_default();
+        for cfg in self.view_configs.iter_mut() {
+            let len = cfg.columns.len().max(1);
+            cfg.widths = Self::normalize_view_widths(cfg.widths.clone(), len);
+            cfg.label_widths = Self::normalize_label_widths(cfg.label_widths.clone(), len);
+        }
+        let mode_key = format!("viewMode:{}", if self.current_index.is_empty() { "default" } else { &self.current_index });
+        let mode = storage_get(&mode_key).unwrap_or_else(|| "table".to_string());
+        self.view_mode = if mode.is_empty() { "table".to_string() } else { mode };
+    }
+
+    fn save_view_configs(&self) {
+        let key = format!("viewConfigs:{}", if self.current_index.is_empty() { "default" } else { &self.current_index });
+        if let Ok(value) = serde_json::to_string(&self.view_configs) {
+            storage_set(&key, &value);
+        }
+    }
+
+    fn save_view_mode(&self) {
+        let key = format!("viewMode:{}", if self.current_index.is_empty() { "default" } else { &self.current_index });
+        storage_set(&key, &self.view_mode);
+    }
+
+    fn active_view_config(&self) -> Option<ViewConfig> {
+        self.view_configs.iter().find(|c| c.name == self.view_mode).cloned()
+    }
+
+    fn normalize_view_widths(mut widths: Vec<u32>, len: usize) -> Vec<u32> {
+        if widths.len() < len {
+            widths.resize(len, 0);
+        } else if widths.len() > len {
+            widths.truncate(len);
+        }
+        if len == 0 {
+            return widths;
+        }
+        if widths.iter().any(|w| *w > 100) {
+            let even = 100 / len as u32;
+            let mut result = vec![even; len];
+            let mut remain = 100u32.saturating_sub(even * len as u32);
+            let mut idx = 0usize;
+            while remain > 0 {
+                result[idx] += 1;
+                remain -= 1;
+                idx = (idx + 1) % len;
+            }
+            return result;
+        }
+        let sum: u32 = widths.iter().sum();
+        if sum == 0 {
+            let even = 100 / len as u32;
+            let mut result = vec![even; len];
+            let mut remain = 100u32.saturating_sub(even * len as u32);
+            let mut idx = 0usize;
+            while remain > 0 {
+                result[idx] += 1;
+                remain -= 1;
+                idx = (idx + 1) % len;
+            }
+            return result;
+        }
+        let mut normalized = Vec::with_capacity(len);
+        let mut used = 0u32;
+        for w in widths.iter() {
+            let value = (*w as u64 * 100u64 / sum as u64) as u32;
+            normalized.push(value);
+            used += value;
+        }
+        let mut remain = 100u32.saturating_sub(used);
+        let mut idx = 0usize;
+        while remain > 0 && !normalized.is_empty() {
+            normalized[idx] += 1;
+            remain -= 1;
+            idx = (idx + 1) % normalized.len();
+        }
+        normalized
+    }
+
+    fn normalize_label_widths(mut widths: Vec<u32>, len: usize) -> Vec<u32> {
+        let default_width = 140u32;
+        if widths.len() < len {
+            widths.resize(len, default_width);
+        } else if widths.len() > len {
+            widths.truncate(len);
+        }
+        for item in widths.iter_mut() {
+            if *item < 60 {
+                *item = 60;
+            }
+        }
+        widths
+    }
+
+    fn current_view_widths(&self) -> Vec<u32> {
+        if let Some(cfg) = self.active_view_config() {
+            return Self::normalize_view_widths(cfg.widths.clone(), cfg.columns.len().max(1));
+        }
+        Self::normalize_view_widths(vec![0; self.view_layout_working.len().max(1)], self.view_layout_working.len().max(1))
+    }
+
+    fn set_active_view_widths(&mut self, widths: Vec<u32>) {
+        if let Some(cfg) = self.view_configs.iter_mut().find(|c| c.name == self.view_mode) {
+            cfg.widths = Self::normalize_view_widths(widths, cfg.columns.len().max(1));
+            self.save_view_configs();
+        }
+    }
+
+    fn current_view_label_widths(&self) -> Vec<u32> {
+        if let Some(cfg) = self.active_view_config() {
+            return Self::normalize_label_widths(cfg.label_widths.clone(), cfg.columns.len().max(1));
+        }
+        Self::normalize_label_widths(vec![140; self.view_layout_working.len().max(1)], self.view_layout_working.len().max(1))
+    }
+
+    fn set_active_view_label_widths(&mut self, widths: Vec<u32>) {
+        if let Some(cfg) = self.view_configs.iter_mut().find(|c| c.name == self.view_mode) {
+            cfg.label_widths = Self::normalize_label_widths(widths, cfg.columns.len().max(1));
+            self.save_view_configs();
         }
     }
 
