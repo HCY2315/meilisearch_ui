@@ -1,3 +1,5 @@
+use crate::query_editor;
+use crate::results_table;
 use crate::{checkbox_checked, input_value, select_value, App, Msg};
 use yew::{html, Callback, Context, Html, MouseEvent};
 
@@ -94,7 +96,7 @@ fn render_query_builder(app: &App, ctx: &Context<App>) -> Html {
         <div class="query-builder">
             <h3 style="margin-bottom: 16px; font-size: 1.1rem;">{ "📋 查询条件构建器" }</h3>
             <div>
-                { for app.query_rows.iter().map(|row| app.render_query_row(ctx, row)) }
+                { for app.query_rows.iter().map(|row| query_editor::render_query_row(app, ctx, row)) }
             </div>
             <div class="query-actions" style="margin-top: 16px;">
                 <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::AddQueryRow)}>{ "➕ 添加查询条件" }</button>
@@ -102,7 +104,7 @@ fn render_query_builder(app: &App, ctx: &Context<App>) -> Html {
                 <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::ClearQuery)}>{ "🗑️ 清空查询" }</button>
             </div>
             <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">
-                { "当前过滤: " }{ app.filter_preview_text() }
+                { "当前过滤: " }{ query_editor::filter_preview_text(app) }
             </div>
         </div>
     }
@@ -198,10 +200,10 @@ fn render_results_panel(app: &App, ctx: &Context<App>) -> Html {
                 </div>
             </div>
             <div id="resultsContainer" class={if app.view_mode == "table" { "results-grid" } else { "results-grid custom-grid" }}>
-                { app.render_results(ctx) }
+                { results_table::render_results(app, ctx) }
             </div>
             <div id="pagination" class="pagination">
-                { app.render_pagination(ctx) }
+                { results_table::render_pagination(app, ctx) }
             </div>
         </div>
     }

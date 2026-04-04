@@ -200,7 +200,7 @@ impl Component for App {
             view_field_resize_up_listener: None,
         };
 
-        app.add_query_row();
+        query_editor::add_query_row(&mut app);
         app.initialize_theme();
         index_panel::init();
         query_editor::init();
@@ -282,7 +282,7 @@ impl Component for App {
                         self.load_column_width_prefs();
                         self.load_field_labels();
                         self.load_view_configs();
-                        self.refresh_query_rows();
+                        query_editor::refresh_query_rows(self);
                         self.push_toast(
                             format!("已选择索引: {}", self.current_index),
                             ToastType::Success,
@@ -345,14 +345,14 @@ impl Component for App {
                 }
             }
             Msg::AddQueryRow => {
-                self.add_query_row();
+                query_editor::add_query_row(self);
                 true
             }
             Msg::RemoveQueryRow(id) => {
-                self.sync_query_rows_from_dom();
+                query_editor::sync_query_rows_from_dom(self);
                 self.query_rows.retain(|row| row.id != id);
                 if self.query_rows.is_empty() {
-                    self.add_query_row();
+                    query_editor::add_query_row(self);
                 }
                 true
             }
@@ -402,7 +402,7 @@ impl Component for App {
             }
             Msg::ClearQuery => {
                 self.query_rows.clear();
-                self.add_query_row();
+                query_editor::add_query_row(self);
                 self.push_toast("查询条件已清空".to_string(), ToastType::Success, ctx);
                 self.current_page = 1;
                 ctx.link().send_message(Msg::PerformSearch);
@@ -644,7 +644,7 @@ impl Component for App {
                 self.field_labels = labels.clone();
                 save_field_labels(&labels, Some(&self.current_index));
                 self.update_popular_field();
-                self.refresh_query_rows();
+                query_editor::refresh_query_rows(self);
 
                 let host = self.host_input.trim().to_string();
                 let api_key = self.api_key_input.trim().to_string();
@@ -1141,7 +1141,7 @@ impl Component for App {
                 }
                 self.search_input = "".to_string();
                 self.query_rows.clear();
-                self.add_query_row();
+                query_editor::add_query_row(self);
                 if let Some(row) = self.query_rows.first_mut() {
                     row.field = self.popular_search_field.clone();
                     row.operator = "=".to_string();
@@ -1228,18 +1228,6 @@ impl App {
         self.sortable_attributes.clear();
     }
 
-    fn add_query_row(&mut self) {
-        let id = self.next_query_id;
-        self.next_query_id += 1;
-        self.query_rows.push(QueryRow {
-            id,
-            field: "".to_string(),
-            operator: "=".to_string(),
-            value: "".to_string(),
-            logic: "AND".to_string(),
-        });
-    }
-
     fn render_index_options(&self) -> Html {
         if self.indexes.is_empty() {
             return html! { <option value="">{ "请先连接服务器" }</option> };
@@ -1251,136 +1239,6 @@ impl App {
             options.push(html! { <option value={idx.uid.clone()}>{ label }</option> });
         }
         html! { for options }
-    }
-
-    fn render_query_row(&self, ctx: &Context<Self>, row: &QueryRow) -> Html {
-        let id = row.id;
-        let filter_fields = self.get_filter_fields_for_query();
-        let operator_value = normalize_operator(&row.operator);
-        let logic_value = if row.logic.trim().is_empty() { "AND".to_string() } else { row.logic.clone() };
-        html! {
-            <div class="query-row" key={row.id} data-row-id={row.id.to_string()}>
-                <select
-                    class="form-control query-field"
-                    value={row.field.clone()}
-                    onchange={ctx.link().callback(move |e: yew::events::Event| Msg::UpdateQueryField(id, select_value(e)))}
-                >
-                    <option value="">{ "选择字段" }</option>
-                    { for filter_fields.iter().map(|field| {
-                        let label = self.field_labels.get(field).cloned().unwrap_or_else(|| field.clone());
-                        html! { <option value={field.clone()}>{ label }</option> }
-                    }) }
-                </select>
-                <select
-                    class="form-control query-operator"
-                    value={operator_value}
-                    onchange={ctx.link().callback(move |e: yew::events::Event| Msg::UpdateQueryOperator(id, select_value(e)))}
-                >
-                    <option value="=">{ "等于" }</option>
-                    <option value="!=">{ "不等于" }</option>
-                    <option value=">">{ "大于" }</option>
-                    <option value="<">{ "小于" }</option>
-                    <option value=">=">{ "大于等于" }</option>
-                    <option value="<=">{ "小于等于" }</option>
-                    <option value="IN">{ "包含于" }</option>
-                    <option value="NOT IN">{ "不包含于" }</option>
-                    <option value="EXISTS">{ "存在" }</option>
-                    <option value="NOT EXISTS">{ "不存在" }</option>
-                </select>
-                <input
-                    class="form-control query-value"
-                    value={row.value.clone()}
-                    placeholder="输入值"
-                    oninput={ctx.link().callback(move |e: yew::events::InputEvent| Msg::UpdateQueryValue(id, input_value(e)))}
-                />
-                <select
-                    class="form-control query-logic"
-                    value={logic_value}
-                    onchange={ctx.link().callback(move |e: yew::events::Event| Msg::UpdateQueryLogic(id, select_value(e)))}
-                >
-                    <option value="AND">{ "AND" }</option>
-                    <option value="OR">{ "OR" }</option>
-                </select>
-                <button class="btn remove-btn" onclick={ctx.link().callback(move |_| Msg::RemoveQueryRow(id))}>{ "删除" }</button>
-            </div>
-        }
-    }
-
-    fn filter_preview_text(&self) -> String {
-        let keyword = self.search_input.trim();
-        let filter_expr = build_filter_expression_from_dom();
-        let keyword_part = if keyword.is_empty() {
-            None
-        } else {
-            Some(format!("关键词: \"{}\"", keyword))
-        };
-        match (keyword_part, filter_expr) {
-            (Some(k), Some(f)) => format!("{} AND {}", k, f),
-            (Some(k), None) => k,
-            (None, Some(f)) => f,
-            (None, None) => "（无）".to_string(),
-        }
-    }
-
-    fn get_filter_fields_for_query(&self) -> Vec<String> {
-        if !self.filterable_fields.is_empty() {
-            self.filterable_fields.clone()
-        } else {
-            self.search_fields.clone()
-        }
-    }
-
-    fn refresh_query_rows(&mut self) {
-        let fields = self.get_filter_fields_for_query();
-        for row in &mut self.query_rows {
-            if !fields.contains(&row.field) {
-                row.field = "".to_string();
-            }
-        }
-    }
-
-    fn sync_query_rows_from_dom(&mut self) {
-        let Ok(rows) = web_document().query_selector_all(".query-row") else { return };
-        for i in 0..rows.length() {
-            let Some(node) = rows.item(i) else { continue };
-            let Some(row_el) = node.dyn_ref::<Element>() else { continue };
-            let id_attr = row_el.get_attribute("data-row-id").unwrap_or_default();
-            let Ok(row_id) = id_attr.parse::<u64>() else { continue };
-            let field = row_el
-                .query_selector(".query-field")
-                .ok()
-                .flatten()
-                .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
-                .map(|s| s.value())
-                .unwrap_or_default();
-            let operator = row_el
-                .query_selector(".query-operator")
-                .ok()
-                .flatten()
-                .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
-                .map(|s| s.value())
-                .unwrap_or_else(|| "=".to_string());
-            let value = row_el
-                .query_selector(".query-value")
-                .ok()
-                .flatten()
-                .and_then(|e| e.dyn_into::<web_sys::HtmlInputElement>().ok())
-                .map(|s| s.value())
-                .unwrap_or_default();
-            let logic = row_el
-                .query_selector(".query-logic")
-                .ok()
-                .flatten()
-                .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
-                .map(|s| s.value())
-                .unwrap_or_else(|| "AND".to_string());
-            if let Some(row) = self.query_rows.iter_mut().find(|r| r.id == row_id) {
-                row.field = field;
-                row.operator = operator;
-                row.value = value;
-                row.logic = logic;
-            }
-        }
     }
 
     fn build_search_params(&self) -> Value {
@@ -2262,6 +2120,16 @@ impl App {
 
     fn facets_available(&self) -> bool {
         self.facet_distribution.as_ref().map(|m| !m.is_empty()).unwrap_or(false)
+    }
+
+    fn view_field_pool_is_empty(&self) -> bool {
+        let mut used = HashSet::new();
+        for col in &self.view_layout_working {
+            for f in col {
+                used.insert(f.clone());
+            }
+        }
+        self.available_fields.iter().all(|f| used.contains(f))
     }
 
     fn sortable_attributes(&self) -> Vec<String> {

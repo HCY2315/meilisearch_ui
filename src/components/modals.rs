@@ -99,6 +99,15 @@ pub fn render_view_config_modal(app: &App, ctx: &Context<App>) -> Html {
                             ondrop={ctx.link().callback(|e: yew::events::DragEvent| { e.prevent_default(); Msg::DropViewFieldToPool })}
                         >
                             { for app.render_view_field_pool(ctx) }
+                            { if app.view_field_pool_is_empty() {
+                                html! {
+                                    <div class="view-field-item view-field-drop-placeholder" style="min-height: 40px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 0.8rem; border: 2px dashed var(--border-color); border-radius: 4px;">
+                                        { "拖拽字段到此处" }
+                                    </div>
+                                }
+                            } else {
+                                Html::default()
+                            } }
                         </div>
                     </div>
                     <div class="view-columns" style={format!("grid-template-columns: repeat({}, minmax(0, 1fr));", app.view_layout_working.len().max(1))}>

@@ -5,7 +5,7 @@ use yew::{html, Html};
 pub fn render_toasts(app: &App) -> Html {
     html! {
         <div class="toast-container">
-            { for app.toasts.iter().map(|toast| app.render_toast(toast)) }
+            { for app.toasts.iter().map(|toast| crate::results_table::render_toast(toast)) }
         </div>
     }
 }
