@@ -1,270 +1,35 @@
 use gloo_events::EventListener;
-use gloo_net::http::Request;
 use gloo_timers::callback::Timeout;
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{Document, Element, HtmlElement, Window};
+use web_sys::{Element, HtmlElement};
 use yew::events::{DragEvent, MouseEvent};
-use yew::{html, AttrValue, Callback, Component, Context, Html, TargetCast};
+use yew::{html, Callback, Component, Context, Html};
 
-#[derive(Clone, Debug, Deserialize)]
-struct IndexListResponse {
-    results: Vec<IndexItem>,
-}
+mod types;
+mod storage;
+mod utils;
+mod cell;
+mod sort;
+mod api;
+mod parse;
+mod index_panel;
+mod query_editor;
+mod results_table;
+mod view_config;
+mod ai_config;
+mod history;
+mod field_prefs;
 
-#[derive(Clone, Debug, Deserialize)]
-struct IndexItem {
-    uid: String,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct IndexStats {
-    #[serde(rename = "numberOfDocuments")]
-    number_of_documents: Option<u64>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct IndexSettings {
-    #[serde(rename = "searchableAttributes")]
-    searchable_attributes: Option<Vec<String>>,
-    #[serde(rename = "displayedAttributes")]
-    displayed_attributes: Option<Vec<String>>,
-    #[serde(rename = "filterableAttributes")]
-    filterable_attributes: Option<Vec<String>>,
-    #[serde(rename = "sortableAttributes")]
-    sortable_attributes: Option<Vec<String>>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct DocumentsResponse {
-    results: Vec<Value>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct SearchHit {
-    #[serde(rename = "id")]
-    id: Option<Value>,
-    #[serde(rename = "_formatted")]
-    formatted: Option<HashMap<String, Value>>,
-    #[serde(rename = "_rankingScore")]
-    ranking_score: Option<f64>,
-    #[serde(flatten)]
-    fields: HashMap<String, Value>,
-}
-
-type FacetDistribution = HashMap<String, HashMap<String, u64>>;
-
-#[derive(Clone, Debug, Deserialize)]
-struct SearchResponse {
-    hits: Vec<SearchHit>,
-    #[serde(rename = "estimatedTotalHits")]
-    estimated_total_hits: Option<u64>,
-    #[serde(rename = "processingTimeMs")]
-    processing_time_ms: Option<u64>,
-    #[serde(rename = "facetDistribution")]
-    facet_distribution: Option<FacetDistribution>,
-}
-
-#[derive(Clone, Debug)]
-struct IndexInfo {
-    uid: String,
-    count: Option<u64>,
-}
-
-#[derive(Clone, Debug)]
-struct QueryRow {
-    id: u64,
-    field: String,
-    operator: String,
-    value: String,
-    logic: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct HistoryItem {
-    query: String,
-    timestamp: String,
-}
-
-#[derive(Clone, Debug)]
-struct PopularItem {
-    value: String,
-    count: Option<u64>,
-}
-
-#[derive(Clone, Debug)]
-enum ToastType {
-    Success,
-    Error,
-    Warning,
-}
-
-#[derive(Clone, Debug)]
-struct Toast {
-    id: u64,
-    message: String,
-    kind: ToastType,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct AiConfig {
-    #[serde(rename = "aiWeight")]
-    ai_weight: u32,
-    #[serde(rename = "aiEnabled")]
-    ai_enabled: bool,
-}
-
-#[derive(Clone, Debug)]
-struct ResizeState {
-    col: String,
-    start_x: i32,
-    start_width: i32,
-}
-
-#[derive(Clone, Debug)]
-struct ViewResizeState {
-    col_idx: usize,
-    start_x: i32,
-    start_width_px: f32,
-    container_width_px: f32,
-    base_widths: Vec<u32>,
-}
-
-#[derive(Clone, Debug)]
-struct ViewFieldResizeState {
-    col_idx: usize,
-    start_x: i32,
-    start_width_px: f32,
-    container_width_px: f32,
-    base_widths: Vec<u32>,
-}
-
-#[derive(Clone, Debug)]
-struct FieldConfigItem {
-    field: String,
-    searchable: bool,
-    weight: f64,
-    label: String,
-    highlight: bool,
-    display: bool,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct ViewConfig {
-    name: String,
-    columns: Vec<Vec<String>>,
-    #[serde(default)]
-    widths: Vec<u32>,
-    #[serde(default)]
-    label_widths: Vec<u32>,
-}
-
-#[derive(Clone, Debug)]
-struct ConnectData {
-    indexes: Vec<IndexInfo>,
-}
-
-#[derive(Clone, Debug)]
-struct IndexData {
-    available_fields: Vec<String>,
-    search_fields: Vec<String>,
-    highlight_fields: Vec<String>,
-    display_fields: Vec<String>,
-    filterable_fields: Vec<String>,
-    sortable_attributes: Vec<String>,
-}
-
-#[derive(Clone, Debug)]
-struct PopularSearchData {
-    items: Vec<PopularItem>,
-}
-
-enum Msg {
-    SetHost(String),
-    SetApiKey(String),
-    Connect,
-    ConnectFinished(Result<ConnectData, String>),
-    SelectIndex(String),
-    IndexLoaded(Result<IndexData, String>),
-    SetSearchInput(String),
-    DebouncedSearch,
-    PerformSearch,
-    SearchFinished(Result<SearchResponse, String>),
-    AddQueryRow,
-    RemoveQueryRow(u64),
-    UpdateQueryField(u64, String),
-    UpdateQueryOperator(u64, String),
-    UpdateQueryValue(u64, String),
-    UpdateQueryLogic(u64, String),
-    ApplyQuery,
-    ClearQuery,
-    ToggleSearchField(String, bool),
-    ToggleFacet(String, String, bool),
-    ToggleHighlight(bool),
-    ToggleRanking(bool),
-    UpdateCropLength(String),
-    UpdatePageSize(String),
-    GoToPage(u32),
-    SortSelect(String),
-    OpenFilters(bool),
-    ToggleTheme,
-    ToggleAiDropdown,
-    SetAiEnabled(bool),
-    SetAiWeight(u32),
-    DocumentClick,
-    OpenColumnConfig(bool),
-    SaveColumnConfig(Vec<String>),
-    DragStart(String),
-    DragOver(String),
-    DropOn(String),
-    DragEnd,
-    ToggleTableSort(String),
-    StartResize(String, i32, i32),
-    ResizeMove(i32),
-    EndResize,
-    OpenFieldConfig(bool),
-    SelectAllSearchable(bool),
-    SelectAllHighlight(bool),
-    SelectAllDisplay(bool),
-    SaveFieldConfig(Vec<FieldConfigItem>),
-    SaveFieldConfigResult(Result<(), String>),
-    ToggleEditLock,
-    SetPrimaryKey(String),
-    UpdateCellEdit(String, String, String),
-    SaveEdits,
-    SaveEditsFinished(Result<(), String>),
-    OpenViewConfig(bool),
-    SetViewMode(String),
-    UpdateViewName(String),
-    StartViewFieldDrag(String),
-    DropViewField(usize),
-    AddViewColumn,
-    RemoveViewColumn,
-    RemoveViewColumnAt(usize),
-    StartViewColumnDrag(usize),
-    DropViewColumnAt(usize),
-    StartViewFieldDragInColumn(String, usize),
-    DropViewFieldToPool,
-    StartViewColumnResize(usize, i32, f32, f32),
-    ViewColumnResizeMove(i32),
-    EndViewColumnResize,
-    StartViewFieldResize(usize, i32, f32, f32),
-    ViewFieldResizeMove(i32),
-    EndViewFieldResize,
-    SaveViewConfig,
-    OpenResultModal(Option<String>),
-    ShowResultDetail(SearchHit),
-    CloseResultModal,
-    DismissToast(u64),
-    PerformHistorySearch(String),
-    ClearHistory,
-    SelectPopularField(String),
-    PopularSearchesLoaded(Result<PopularSearchData, String>),
-    PerformPopularSearch(String),
-}
+pub use types::*;
+pub use storage::*;
+pub use utils::*;
+pub use cell::*;
+pub use sort::*;
+pub use api::*;
+pub use parse::*;
 
 struct App {
     host_input: String,
@@ -323,6 +88,7 @@ struct App {
     view_drag_field: Option<String>,
     view_drag_from_column: Option<usize>,
     view_drag_column: Option<usize>,
+    view_drag_over_index: Option<usize>,
     loading: bool,
     toasts: Vec<Toast>,
     toast_seq: u64,
@@ -413,6 +179,7 @@ impl Component for App {
             view_drag_field: None,
             view_drag_from_column: None,
             view_drag_column: None,
+            view_drag_over_index: None,
             loading: false,
             toasts: vec![],
             toast_seq: 1,
@@ -434,6 +201,11 @@ impl Component for App {
 
         app.add_query_row();
         app.initialize_theme();
+        index_panel::init();
+        query_editor::init();
+        results_table::init();
+        view_config::init();
+        ai_config::init();
         app
     }
 
@@ -1163,14 +935,25 @@ impl Component for App {
                 self.view_drag_from_column = Some(column_idx);
                 true
             }
+            Msg::ViewFieldDragOver(_column_idx, item_index) => {
+                self.view_drag_over_index = Some(item_index);
+                true
+            }
             Msg::DropViewField(column_idx) => {
                 if let Some(field) = self.view_drag_field.clone() {
                     self.view_drag_field = None;
                     self.view_drag_from_column = None;
-                    self.view_layout_working.iter_mut().for_each(|col| col.retain(|f| f != &field));
-                    if column_idx < self.view_layout_working.len() {
-                        self.view_layout_working[column_idx].push(field);
+                    // Remove field from all columns first
+                    for col in self.view_layout_working.iter_mut() {
+                        col.retain(|f| f != &field);
                     }
+                    if column_idx < self.view_layout_working.len() {
+                        let insert_index = self.view_drag_over_index
+                            .unwrap_or(self.view_layout_working[column_idx].len())
+                            .min(self.view_layout_working[column_idx].len());
+                        self.view_layout_working[column_idx].insert(insert_index, field);
+                    }
+                    self.view_drag_over_index = None;
                     return true;
                 }
                 false
@@ -1179,6 +962,7 @@ impl Component for App {
                 if let Some(field) = self.view_drag_field.clone() {
                     self.view_drag_field = None;
                     self.view_drag_from_column = None;
+                    self.view_drag_over_index = None;
                     self.view_layout_working.iter_mut().for_each(|col| col.retain(|f| f != &field));
                     return true;
                 }
@@ -2130,7 +1914,7 @@ impl App {
         if columns.is_empty() {
             return html! {
                 <div class="empty-state" style="grid-column: 1 / -1;">
-                    <p>{ "当前列已全部隐藏，请在“列设置”中勾选显示。" }</p>
+                    <p>{ "当前列已全部隐藏，请在列设置中勾选显示。" }</p>
                 </div>
             };
         }
@@ -2604,9 +2388,10 @@ impl App {
                     ondragover={Callback::from(|e: DragEvent| e.prevent_default())}
                     ondrop={ctx.link().callback(move |e: DragEvent| { e.prevent_default(); Msg::DropViewField(idx) })}
                 >
-                    { for fields.iter().map(|field| {
+                    { for fields.iter().enumerate().map(|(item_idx, field)| {
                         let label = self.field_labels.get(field).cloned().unwrap_or_else(|| field.clone());
                         let drag_field = field.clone();
+                        let col_idx = idx;
                         html! {
                             <div
                                 class="view-field-item view-field-selected"
@@ -2615,7 +2400,15 @@ impl App {
                                     if let Some(dt) = e.data_transfer() {
                                         let _ = dt.set_data("text/plain", &drag_field);
                                     }
-                                    Msg::StartViewFieldDragInColumn(drag_field.clone(), idx)
+                                    Msg::StartViewFieldDragInColumn(drag_field.clone(), col_idx)
+                                })}
+                                ondragover={ctx.link().callback(move |e: DragEvent| {
+                                    e.prevent_default();
+                                    Msg::ViewFieldDragOver(col_idx, item_idx)
+                                })}
+                                ondrop={ctx.link().callback(move |e: DragEvent| {
+                                    e.prevent_default();
+                                    Msg::DropViewField(col_idx)
                                 })}
                             >
                                 <span>{ label }</span>
@@ -3132,820 +2925,4 @@ impl App {
 
 fn main() {
     yew::Renderer::<App>::new().render();
-}
-
-fn web_window() -> Window {
-    web_sys::window().expect("no window")
-}
-
-fn web_document() -> Document {
-    web_window().document().expect("no document")
-}
-
-fn storage_get(key: &str) -> Option<String> {
-    web_window()
-        .local_storage()
-        .ok()
-        .flatten()
-        .and_then(|storage| storage.get_item(key).ok().flatten())
-}
-
-fn storage_set(key: &str, value: &str) {
-    if let Ok(Some(storage)) = web_window().local_storage() {
-        let _ = storage.set_item(key, value);
-    }
-}
-
-fn storage_remove(key: &str) {
-    if let Ok(Some(storage)) = web_window().local_storage() {
-        let _ = storage.remove_item(key);
-    }
-}
-
-fn load_search_history() -> Vec<HistoryItem> {
-    storage_get("searchHistory")
-        .and_then(|value| serde_json::from_str::<Vec<HistoryItem>>(&value).ok())
-        .unwrap_or_default()
-}
-
-fn save_search_history(history: &[HistoryItem]) {
-    if let Ok(value) = serde_json::to_string(history) {
-        storage_set("searchHistory", &value);
-    }
-}
-
-fn load_field_labels(index: Option<&str>) -> HashMap<String, String> {
-    let key = format!("fieldLabels:{}", index.unwrap_or("default"));
-    storage_get(&key)
-        .and_then(|value| serde_json::from_str::<HashMap<String, String>>(&value).ok())
-        .unwrap_or_default()
-}
-
-fn save_field_labels(labels: &HashMap<String, String>, index: Option<&str>) {
-    let key = format!("fieldLabels:{}", index.unwrap_or("default"));
-    if let Ok(value) = serde_json::to_string(labels) {
-        storage_set(&key, &value);
-    }
-}
-
-fn load_popular_field(index: Option<&str>) -> String {
-    let key = format!("popularSearchField:{}", index.unwrap_or("default"));
-    storage_get(&key).unwrap_or_default()
-}
-
-fn save_popular_field(field: &str, index: Option<&str>) {
-    let key = format!("popularSearchField:{}", index.unwrap_or("default"));
-    if field.is_empty() {
-        storage_remove(&key);
-    } else {
-        storage_set(&key, field);
-    }
-}
-
-fn load_ai_config() -> AiConfig {
-    let defaults = AiConfig {
-        ai_weight: 40,
-        ai_enabled: true,
-    };
-    if let Some(value) = storage_get("aiSearchConfig") {
-        if let Ok(mut cfg) = serde_json::from_str::<AiConfig>(&value) {
-            if cfg.ai_weight > 100 {
-                cfg.ai_weight = 100;
-            }
-            return cfg;
-        }
-    }
-    defaults
-}
-
-fn save_ai_config(config: &AiConfig) {
-    if let Ok(value) = serde_json::to_string(config) {
-        storage_set("aiSearchConfig", &value);
-    }
-}
-
-fn get_theme() -> String {
-    storage_get("theme").unwrap_or_else(|| "dark".to_string())
-}
-
-fn set_theme(theme: &str) {
-    let next = if theme == "light" { "light" } else { "dark" };
-    if let Some(el) = web_document().document_element() {
-        let _ = el.set_attribute("data-theme", next);
-    }
-    storage_set("theme", next);
-}
-
-fn set_all_checkboxes(selector: &str, checked: bool) {
-    if let Ok(nodes) = web_document().query_selector_all(selector) {
-        for i in 0..nodes.length() {
-            if let Some(node) = nodes.item(i) {
-                if let Some(input) = node.dyn_ref::<web_sys::HtmlInputElement>() {
-                    input.set_checked(checked);
-                }
-            }
-        }
-    }
-}
-
-fn build_filter_expression_from_dom() -> Option<String> {
-    let Ok(rows) = web_document().query_selector_all(".query-row") else { return None };
-    let mut conditions: Vec<(String, String)> = vec![];
-    for i in 0..rows.length() {
-        let Some(node) = rows.item(i) else { continue };
-        let Some(row) = node.dyn_ref::<Element>() else { continue };
-        let field = row
-            .query_selector(".query-field")
-            .ok()
-            .flatten()
-            .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
-            .map(|s| s.value())
-            .unwrap_or_default();
-        if field.trim().is_empty() {
-            continue;
-        }
-        let operator = row
-            .query_selector(".query-operator")
-            .ok()
-            .flatten()
-            .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
-            .map(|s| s.value())
-            .unwrap_or_else(|| "=".to_string());
-        let value = row
-            .query_selector(".query-value")
-            .ok()
-            .flatten()
-            .and_then(|e| e.dyn_into::<web_sys::HtmlInputElement>().ok())
-            .map(|s| s.value())
-            .unwrap_or_default();
-        let logic = row
-            .query_selector(".query-logic")
-            .ok()
-            .flatten()
-            .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
-            .map(|s| s.value())
-            .unwrap_or_else(|| "AND".to_string());
-
-        let operator = normalize_operator(&operator);
-        let filter_condition = match operator.as_str() {
-            "IN" => {
-                let items: Vec<String> = value
-                    .split(',')
-                    .map(|v| v.trim())
-                    .filter(|v| !v.is_empty())
-                    .map(format_filter_value)
-                    .collect();
-                if items.is_empty() {
-                    continue;
-                }
-                format!("{} IN [{}]", field, items.join(", "))
-            }
-            "NOT IN" => {
-                let items: Vec<String> = value
-                    .split(',')
-                    .map(|v| v.trim())
-                    .filter(|v| !v.is_empty())
-                    .map(format_filter_value)
-                    .collect();
-                if items.is_empty() {
-                    continue;
-                }
-                format!("{} NOT IN [{}]", field, items.join(", "))
-            }
-            "EXISTS" => format!("{} EXISTS", field),
-            "NOT EXISTS" => format!("{} NOT EXISTS", field),
-            _ => {
-                if value.trim().is_empty() {
-                    continue;
-                }
-                format!("{} {} {}", field, operator, format_filter_value(&value))
-            }
-        };
-
-        conditions.push((filter_condition, logic));
-    }
-
-    build_filter_expression_from_conditions(&conditions)
-}
-
-fn build_filter_expression_from_conditions(conditions: &[(String, String)]) -> Option<String> {
-    if conditions.is_empty() {
-        return None;
-    }
-    let mut expr = conditions[0].0.clone();
-    for i in 1..conditions.len() {
-        let logic = conditions[i].1.to_uppercase();
-        let joiner = if logic == "OR" { " OR " } else { " AND " };
-        expr = format!("{}{}{}", expr, joiner, conditions[i].0);
-    }
-    Some(expr)
-}
-
-fn collect_hidden_columns() -> Vec<String> {
-    let mut hidden = vec![];
-    if let Ok(inputs) = web_document().query_selector_all(".column-config-item input[type=\"checkbox\"]") {
-        for i in 0..inputs.length() {
-            if let Some(node) = inputs.item(i) {
-                if let Some(input) = node.dyn_ref::<web_sys::HtmlInputElement>() {
-                    if !input.checked() {
-                        if let Some(col) = input.get_attribute("data-col") {
-                            hidden.push(col);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    hidden
-}
-
-fn collect_column_labels() -> HashMap<String, String> {
-    let mut labels = HashMap::new();
-    if let Ok(nodes) = web_document().query_selector_all(".column-label-input") {
-        for i in 0..nodes.length() {
-            if let Some(node) = nodes.item(i) {
-                if let Some(input) = node.dyn_ref::<web_sys::HtmlInputElement>() {
-                    if let Some(col) = input.get_attribute("data-col") {
-                        labels.insert(col, input.value());
-                    }
-                }
-            }
-        }
-    }
-    labels
-}
-
-fn collect_field_config() -> Vec<FieldConfigItem> {
-    let document = web_document();
-    let mut items = vec![];
-    let nodes = match document.query_selector_all(".field-config") {
-        Ok(nodes) => nodes,
-        Err(_) => return items,
-    };
-    for i in 0..nodes.length() {
-        if let Some(node) = nodes.item(i) {
-            let element = node.dyn_into::<Element>().ok();
-            if let Some(el) = element {
-                let field = el
-                    .query_selector(".searchable-check")
-                    .ok()
-                    .flatten()
-                    .and_then(|e| e.get_attribute("data-field"))
-                    .unwrap_or_default();
-                if field.is_empty() {
-                    continue;
-                }
-                let searchable = el
-                    .query_selector(".searchable-check")
-                    .ok()
-                    .flatten()
-                    .and_then(|e| e.dyn_into::<web_sys::HtmlInputElement>().ok())
-                    .map(|i| i.checked())
-                    .unwrap_or(false);
-                let highlight = el
-                    .query_selector(".highlight-check")
-                    .ok()
-                    .flatten()
-                    .and_then(|e| e.dyn_into::<web_sys::HtmlInputElement>().ok())
-                    .map(|i| i.checked())
-                    .unwrap_or(false);
-                let display = el
-                    .query_selector(".display-check")
-                    .ok()
-                    .flatten()
-                    .and_then(|e| e.dyn_into::<web_sys::HtmlInputElement>().ok())
-                    .map(|i| i.checked())
-                    .unwrap_or(false);
-                let weight = el
-                    .query_selector(".field-weight")
-                    .ok()
-                    .flatten()
-                    .and_then(|e| e.dyn_into::<web_sys::HtmlInputElement>().ok())
-                    .and_then(|i| i.value().parse::<f64>().ok())
-                    .unwrap_or(1.0);
-                let label = el
-                    .query_selector(".field-label")
-                    .ok()
-                    .flatten()
-                    .and_then(|e| e.dyn_into::<web_sys::HtmlInputElement>().ok())
-                    .map(|i| i.value())
-                    .unwrap_or_else(|| field.clone());
-                items.push(FieldConfigItem {
-                    field,
-                    searchable,
-                    weight,
-                    label,
-                    highlight,
-                    display,
-                });
-            }
-        }
-    }
-    items
-}
-
-fn input_value(event: yew::events::InputEvent) -> String {
-    let input: web_sys::HtmlInputElement = event.target_unchecked_into();
-    input.value()
-}
-
-fn select_value(event: yew::events::Event) -> String {
-    let select: web_sys::HtmlSelectElement = event.target_unchecked_into();
-    select.value()
-}
-
-fn checkbox_checked(event: yew::events::Event) -> bool {
-    let input: web_sys::HtmlInputElement = event.target_unchecked_into();
-    input.checked()
-}
-
-fn format_number(value: u64) -> String {
-    let mut s = value.to_string();
-    let mut parts = vec![];
-    while s.len() > 3 {
-        let tail = s.split_off(s.len() - 3);
-        parts.push(tail);
-    }
-    parts.push(s);
-    parts.reverse();
-    parts.join(",")
-}
-
-fn format_time(timestamp: &str) -> String {
-    let now = js_sys::Date::new_0().get_time();
-    let then = js_sys::Date::new(&JsValue::from_str(timestamp)).get_time();
-    if !then.is_finite() {
-        return timestamp.to_string();
-    }
-    let diff = now - then;
-    if diff < 60_000.0 {
-        return "刚刚".to_string();
-    }
-    if diff < 3_600_000.0 {
-        return format!("{}分钟前", (diff / 60_000.0).floor() as i64);
-    }
-    if diff < 86_400_000.0 {
-        return format!("{}小时前", (diff / 3_600_000.0).floor() as i64);
-    }
-    js_sys::Date::new(&JsValue::from_f64(then))
-        .to_locale_date_string("zh-CN", &JsValue::undefined())
-        .into()
-}
-
-fn hit_has_id(hit: &SearchHit) -> bool {
-    hit.id.is_some() || hit.fields.get("id").is_some()
-}
-
-fn get_id_string(hit: &SearchHit) -> String {
-    hit.id
-        .as_ref()
-        .or_else(|| hit.fields.get("id"))
-        .and_then(|v| {
-            if v.is_string() {
-                v.as_str().map(|s| s.to_string())
-            } else if v.is_number() || v.is_boolean() {
-                Some(v.to_string())
-            } else {
-                None
-            }
-        })
-        .unwrap_or_default()
-}
-
-fn get_doc_key(hit: &SearchHit, primary_key: &str) -> String {
-    if !primary_key.trim().is_empty() {
-        if let Some(val) = hit.get(primary_key) {
-            return value_to_string(val);
-        }
-    }
-    get_id_string(hit)
-}
-
-fn hit_entries(hit: &SearchHit) -> Vec<(String, Value)> {
-    let mut entries: Vec<(String, Value)> = hit
-        .fields
-        .iter()
-        .map(|(k, v)| (k.clone(), v.clone()))
-        .collect();
-    if let Some(id) = &hit.id {
-        entries.push(("id".to_string(), id.clone()));
-    }
-    entries
-}
-
-impl SearchHit {
-    fn get(&self, key: &str) -> Option<&Value> {
-        if key == "id" {
-            return self.id.as_ref();
-        }
-        self.fields.get(key)
-    }
-}
-
-#[derive(Clone)]
-struct CellValue {
-    html: Html,
-    title: AttrValue,
-}
-
-fn get_cell_value(hit: &SearchHit, col: &str, use_highlight: bool) -> Option<CellValue> {
-    let raw = if use_highlight {
-        hit.formatted
-            .as_ref()
-            .and_then(|f| f.get(col))
-            .cloned()
-            .or_else(|| hit.get(col).cloned())
-    } else {
-        hit.get(col).cloned()
-    }?;
-
-    let (display_html, title_text) = if raw.is_array() {
-        let items = raw
-            .as_array()
-            .unwrap_or(&vec![])
-            .iter()
-            .map(|v| value_to_string(v))
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>();
-        (items.join(", "), items.join(", "))
-    } else if raw.is_object() {
-        let json = serde_json::to_string(&raw).unwrap_or_default();
-        (escape_html(&json), json)
-    } else {
-        let text = raw.as_str().map(|s| s.to_string()).unwrap_or_else(|| raw.to_string());
-        if use_highlight {
-            (text.clone(), strip_html(&text))
-        } else {
-            (escape_html(&text), text)
-        }
-    };
-
-    let html = if use_highlight {
-        Html::from_html_unchecked(AttrValue::from(display_html))
-    } else {
-        html! { display_html.clone() }
-    };
-
-    Some(CellValue {
-        html,
-        title: AttrValue::from(escape_html(&title_text)),
-    })
-}
-
-fn value_to_string(value: &Value) -> String {
-    if let Some(s) = value.as_str() {
-        s.to_string()
-    } else if value.is_object() {
-        serde_json::to_string(value).unwrap_or_default()
-    } else {
-        value.to_string()
-    }
-}
-
-fn value_to_string_for_edit(value: &Value) -> String {
-    if value.is_null() {
-        return "".to_string();
-    }
-    if value.is_object() || value.is_array() {
-        return serde_json::to_string(value).unwrap_or_default();
-    }
-    value_to_string(value)
-}
-
-fn escape_html(input: &str) -> String {
-    input
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#39;")
-}
-
-fn strip_html(input: &str) -> String {
-    let mut out = String::new();
-    let mut inside = false;
-    for ch in input.chars() {
-        match ch {
-            '<' => inside = true,
-            '>' => inside = false,
-            _ if !inside => out.push(ch),
-            _ => {}
-        }
-    }
-    out
-}
-
-fn format_filter_value(raw: &str) -> String {
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return "\"\"".to_string();
-    }
-    if trimmed.eq_ignore_ascii_case("true") || trimmed.eq_ignore_ascii_case("false") {
-        return trimmed.to_lowercase();
-    }
-    if trimmed.parse::<f64>().is_ok() {
-        return trimmed.to_string();
-    }
-    format!("\"{}\"", trimmed.replace('\"', "\\\""))
-}
-
-fn normalize_operator(input: &str) -> String {
-    let op = input.trim();
-    let allowed = [
-        "=", "!=", ">", "<", ">=", "<=", "IN", "NOT IN", "EXISTS", "NOT EXISTS",
-    ];
-    if allowed.iter().any(|v| *v == op) {
-        op.to_string()
-    } else {
-        "=".to_string()
-    }
-}
-
-fn sort_hits(mut hits: Vec<SearchHit>, field: &str, dir: &str) -> Vec<SearchHit> {
-    let factor = if dir == "desc" { -1.0 } else { 1.0 };
-    hits.sort_by(|a, b| {
-        let av = normalize_sort_value(a.get(field));
-        let bv = normalize_sort_value(b.get(field));
-        if av.is_number && bv.is_number {
-            return av.num_value.partial_cmp(&bv.num_value).unwrap_or(std::cmp::Ordering::Equal);
-        }
-        av.str_value.cmp(&bv.str_value)
-    });
-    if factor < 0.0 {
-        hits.reverse();
-    }
-    hits
-}
-
-struct SortValue {
-    is_number: bool,
-    num_value: f64,
-    str_value: String,
-}
-
-fn apply_auth_header(mut builder: gloo_net::http::RequestBuilder, api_key: &str) -> gloo_net::http::RequestBuilder {
-    let key = api_key.trim();
-    if key.is_empty() {
-        return builder;
-    }
-    builder = builder.header("Authorization", &format!("Bearer {}", key));
-    builder.header("X-Meili-API-Key", key)
-}
-
-fn normalize_sort_value(value: Option<&Value>) -> SortValue {
-    if value.is_none() {
-        return SortValue { is_number: false, num_value: 0.0, str_value: "".to_string() };
-    }
-    let value = value.unwrap();
-    if let Some(n) = value.as_f64() {
-        return SortValue { is_number: true, num_value: n, str_value: n.to_string() };
-    }
-    if value.is_array() {
-        if let Some(first) = value.as_array().and_then(|arr| arr.iter().find(|v| !v.is_null())) {
-            return normalize_sort_value(Some(first));
-        }
-    }
-    if value.is_object() {
-        return SortValue { is_number: false, num_value: 0.0, str_value: serde_json::to_string(value).unwrap_or_default() };
-    }
-    SortValue { is_number: false, num_value: 0.0, str_value: value_to_string(value) }
-}
-
-async fn connect_indexes(host: &str, api_key: &str) -> Result<ConnectData, String> {
-    let url = format!("{}/indexes", host.trim_end_matches('/'));
-    let builder = Request::get(&url);
-    let response = apply_auth_header(builder, api_key)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    if !response.ok() {
-        let err = response.text().await.unwrap_or_else(|_| "未知错误".to_string());
-        return Err(err);
-    }
-    let data: IndexListResponse = response.json().await.map_err(|e| e.to_string())?;
-    let mut indexes = vec![];
-    for idx in data.results {
-        let count = get_index_stats(host, api_key, &idx.uid).await.ok().and_then(|s| s.number_of_documents);
-        indexes.push(IndexInfo { uid: idx.uid, count });
-    }
-    Ok(ConnectData { indexes })
-}
-
-async fn get_index_stats(host: &str, api_key: &str, uid: &str) -> Result<IndexStats, String> {
-    let url = format!("{}/indexes/{}/stats", host.trim_end_matches('/'), uid);
-    let builder = Request::get(&url);
-    let response = apply_auth_header(builder, api_key)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    if !response.ok() {
-        return Err(response.text().await.unwrap_or_else(|_| "stats error".to_string()));
-    }
-    response.json().await.map_err(|e| e.to_string())
-}
-
-async fn load_index_data(host: &str, api_key: &str, uid: &str) -> Result<IndexData, String> {
-    let settings_url = format!("{}/indexes/{}/settings", host.trim_end_matches('/'), uid);
-    let builder = Request::get(&settings_url);
-    let settings_resp = apply_auth_header(builder, api_key)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    if !settings_resp.ok() {
-        return Err(settings_resp.text().await.unwrap_or_else(|_| "settings error".to_string()));
-    }
-    let settings: IndexSettings = settings_resp.json().await.map_err(|e| e.to_string())?;
-
-    let docs_url = format!("{}/indexes/{}/documents?limit=1", host.trim_end_matches('/'), uid);
-    let docs_builder = Request::get(&docs_url);
-    let docs_resp = apply_auth_header(docs_builder, api_key)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    let sample_doc = if docs_resp.ok() {
-        let docs: DocumentsResponse = docs_resp.json().await.map_err(|e| e.to_string())?;
-        docs.results.get(0).cloned().unwrap_or_else(|| json!({}))
-    } else {
-        json!({})
-    };
-
-    let mut searchable = settings.searchable_attributes.unwrap_or_default();
-    let mut displayed = settings.displayed_attributes.unwrap_or_default();
-    let mut filterable = settings.filterable_attributes.unwrap_or_default();
-    let mut sortable = settings.sortable_attributes.unwrap_or_default();
-
-    searchable.retain(|f| f != "*");
-    displayed.retain(|f| f != "*");
-    filterable.retain(|f| f != "*");
-    sortable.retain(|f| f != "*");
-
-    let mut available: Vec<String> = vec![];
-    let mut set = HashSet::new();
-    for f in searchable.iter().chain(displayed.iter()) {
-        if set.insert(f.clone()) {
-            available.push(f.clone());
-        }
-    }
-    if let Some(map) = sample_doc.as_object() {
-        for key in map.keys() {
-            if key == "*" {
-                continue;
-            }
-            if set.insert(key.clone()) {
-                available.push(key.clone());
-            }
-        }
-    }
-
-    Ok(IndexData {
-        available_fields: available,
-        search_fields: searchable.clone(),
-        highlight_fields: displayed.clone(),
-        display_fields: displayed,
-        filterable_fields: filterable,
-        sortable_attributes: sortable,
-    })
-}
-
-async fn perform_search(host: &str, api_key: &str, index: &str, query: &str, mut params: Value) -> Result<SearchResponse, String> {
-    let url = format!("{}/indexes/{}/search", host.trim_end_matches('/'), index);
-    params["q"] = json!(query);
-    let builder = Request::post(&url);
-    let req = apply_auth_header(builder, api_key).json(&params).map_err(|e| e.to_string())?;
-    let response = req.send().await.map_err(|e| e.to_string())?;
-    if !response.ok() {
-        return Err(response.text().await.unwrap_or_else(|_| "search error".to_string()));
-    }
-    response.json().await.map_err(|e| e.to_string())
-}
-
-async fn update_index_settings(host: &str, api_key: &str, index: &str, searchable: &[String], filterable: &[String]) -> Result<(), String> {
-    let url = format!("{}/indexes/{}/settings", host.trim_end_matches('/'), index);
-    let body = json!({
-        "searchableAttributes": searchable,
-        "filterableAttributes": filterable
-    });
-    let builder = Request::patch(&url);
-    let req = apply_auth_header(builder, api_key).json(&body).map_err(|e| e.to_string())?;
-    let response = req.send().await.map_err(|e| e.to_string())?;
-    if !response.ok() {
-        return Err(response.text().await.unwrap_or_else(|_| "update settings error".to_string()));
-    }
-    Ok(())
-}
-
-async fn load_popular_searches(host: &str, api_key: &str, index: &str, field: &str) -> Result<PopularSearchData, String> {
-    let url = format!("{}/indexes/{}/search", host.trim_end_matches('/'), index);
-    let body = json!({
-        "q": "",
-        "limit": 0,
-        "facets": [field]
-    });
-    let builder = Request::post(&url);
-    let req = apply_auth_header(builder, api_key).json(&body).map_err(|e| e.to_string())?;
-    let response = req.send().await.map_err(|e| e.to_string())?;
-    if !response.ok() {
-        return Err(response.text().await.unwrap_or_else(|_| "popular search error".to_string()));
-    }
-    let res: SearchResponse = response.json().await.map_err(|e| e.to_string())?;
-    let mut items: Vec<PopularItem> = vec![];
-    if let Some(map) = res.facet_distribution {
-        if let Some(values) = map.get(field) {
-            let mut entries: Vec<(String, u64)> = values.iter().map(|(v, c)| (v.clone(), *c)).collect();
-            entries.sort_by(|a, b| b.1.cmp(&a.1));
-            for (val, count) in entries.into_iter().take(10) {
-                items.push(PopularItem { value: val, count: Some(count) });
-            }
-        }
-    }
-    Ok(PopularSearchData { items })
-}
-
-async fn fetch_by_id(host: &str, api_key: &str, index: &str, id: &str) -> Result<SearchHit, String> {
-    let url = format!("{}/indexes/{}/search", host.trim_end_matches('/'), index);
-    let safe_id = if id.parse::<f64>().is_ok() { id.to_string() } else { format!("\"{}\"", id.replace('"', "\\\"")) };
-    let body = json!({
-        "q": "",
-        "filter": [format!("id = {}", safe_id)]
-    });
-    let builder = Request::post(&url);
-    let req = apply_auth_header(builder, api_key).json(&body).map_err(|e| e.to_string())?;
-    let response = req.send().await.map_err(|e| e.to_string())?;
-    if !response.ok() {
-        return Err(response.text().await.unwrap_or_else(|_| "fetch by id error".to_string()));
-    }
-    let res: SearchResponse = response.json().await.map_err(|e| e.to_string())?;
-    res.hits.into_iter().next().ok_or_else(|| "not found".to_string())
-}
-
-async fn update_documents(
-    host: &str,
-    api_key: &str,
-    index: &str,
-    primary_key: &str,
-    hits: &[SearchHit],
-    edits: &HashMap<String, HashMap<String, Value>>,
-) -> Result<(), String> {
-    let mut docs: Vec<Value> = vec![];
-    for hit in hits {
-        let doc_id = get_doc_key(hit, primary_key);
-        if doc_id.is_empty() {
-            continue;
-        }
-        let Some(fields) = edits.get(&doc_id) else { continue };
-        let mut obj = serde_json::Map::new();
-        for (k, v) in hit.fields.iter() {
-            obj.insert(k.clone(), v.clone());
-        }
-        if let Some(id) = &hit.id {
-            obj.insert("id".to_string(), id.clone());
-        }
-        if !primary_key.trim().is_empty() {
-            if let Some(pk_val) = hit.get(primary_key) {
-                obj.insert(primary_key.to_string(), pk_val.clone());
-            }
-        }
-        for (field, value) in fields.iter() {
-            let parsed = parse_edit_value(value);
-            obj.insert(field.clone(), parsed);
-        }
-        docs.push(Value::Object(obj));
-    }
-    if docs.is_empty() {
-        return Ok(());
-    }
-
-    let url = format!("{}/indexes/{}/documents", host.trim_end_matches('/'), index);
-    let builder = Request::post(&url);
-    let req = apply_auth_header(builder, api_key).json(&docs).map_err(|e| e.to_string())?;
-    let response = req.send().await.map_err(|e| e.to_string())?;
-    if !response.ok() {
-        return Err(response.text().await.unwrap_or_else(|_| "update documents error".to_string()));
-    }
-    Ok(())
-}
-
-fn parse_edit_value(value: &Value) -> Value {
-    match value {
-        Value::String(s) => {
-            let trimmed = s.trim();
-            if trimmed.is_empty() {
-                return Value::String("".to_string());
-            }
-            if let Ok(parsed) = serde_json::from_str::<Value>(trimmed) {
-                return parsed;
-            }
-            if trimmed.eq_ignore_ascii_case("true") {
-                return Value::Bool(true);
-            }
-            if trimmed.eq_ignore_ascii_case("false") {
-                return Value::Bool(false);
-            }
-            if let Ok(num) = trimmed.parse::<f64>() {
-                return Value::Number(serde_json::Number::from_f64(num).unwrap_or_else(|| serde_json::Number::from(0)));
-            }
-            Value::String(s.clone())
-        }
-        other => other.clone(),
-    }
 }

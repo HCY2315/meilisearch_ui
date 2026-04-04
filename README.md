@@ -22,3 +22,5 @@ trunk serve
 
 - 纯前端 WASM，需确保 MeiliSearch 允许 CORS。
 - `Trunk.toml` 提供了构建与本地服务配置。
+- 
+- 快速本地开发文档：请参阅 docs/LOCAL_DEV.md 获取完整步骤、MeiliSearch CORS 配置要点以及 nginx 部署示例。
