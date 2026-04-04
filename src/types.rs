@@ -269,4 +269,8 @@ pub enum Msg {
     SelectPopularField(String),
     PopularSearchesLoaded(Result<PopularSearchData, String>),
     PerformPopularSearch(String),
+    ExportCsv,
+    ExportCsvProgress(u64, u64),
+    ExportCsvFinished(Result<String, String>),
+    UpdateMaxResults(String),
 }

@@ -1,4 +1,4 @@
-use crate::{select_value, App, Msg};
+use crate::{input_value, select_value, App, Msg};
 use wasm_bindgen::JsCast;
 use yew::{html, Callback, Context, Html, MouseEvent};
 
@@ -71,6 +71,24 @@ pub fn render_filter_drawer(app: &App, ctx: &Context<App>) -> Html {
                             <select class="form-control" onchange={ctx.link().callback(|e: yew::events::Event| Msg::SortSelect(select_value(e)))} value={app.sort_value.clone()}>
                                 { app.render_sort_options() }
                             </select>
+                        </div>
+
+                        <div class="filter-section">
+                            <h3 class="filter-title">{ "⚙️ 结果限制" }</h3>
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="font-size: 0.85rem; color: var(--text-secondary);">{ "每页最大结果数" }</label>
+                                <input
+                                    class="form-control"
+                                    type="number"
+                                    min="1"
+                                    max="10000"
+                                    value={app.max_results_per_page.to_string()}
+                                    oninput={ctx.link().callback(|e: yew::events::InputEvent| Msg::UpdateMaxResults(input_value(e)))}
+                                />
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+                                    { "MeiliSearch 默认上限 1000，可自定义最大 10000" }
+                                </div>
+                            </div>
                         </div>
                     </aside>
                 </div>

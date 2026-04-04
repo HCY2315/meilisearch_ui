@@ -167,6 +167,9 @@ fn render_results_panel(app: &App, ctx: &Context<App>) -> Html {
                     <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::OpenFilters(true))}>{ "筛选入口" }</button>
                     <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::OpenColumnConfig(true))}>{ "列设置" }</button>
                     <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::OpenViewConfig(true))}>{ "视图设置" }</button>
+                    <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::ExportCsv)} disabled={app.last_results.is_none() || app.export_downloading}>
+                        { if app.export_downloading { format!("📥 导出中... {}/{}", app.export_progress, app.export_total) } else { "📥 导出 CSV".to_string() } }
+                    </button>
                     <select
                         class="form-control"
                         style="min-width: 140px;"

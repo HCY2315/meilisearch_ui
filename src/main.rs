@@ -22,6 +22,7 @@ mod view_config;
 mod ai_config;
 mod history;
 mod field_prefs;
+mod export;
 mod components;
 
 pub use types::*;
@@ -53,6 +54,7 @@ struct App {
     popular_search_field: String,
     current_page: u32,
     page_size: u32,
+    max_results_per_page: u32,
     results_count: u64,
     processing_time_ms: Option<u64>,
     facet_distribution: Option<FacetDistribution>,
@@ -90,6 +92,9 @@ struct App {
     view_drag_from_column: Option<usize>,
     view_drag_column: Option<usize>,
     view_drag_over_index: Option<usize>,
+    export_downloading: bool,
+    export_progress: u64,
+    export_total: u64,
     loading: bool,
     toasts: Vec<Toast>,
     toast_seq: u64,
@@ -144,6 +149,7 @@ impl Component for App {
             popular_search_field: "".to_string(),
             current_page: 1,
             page_size: 50,
+            max_results_per_page: 1000,
             results_count: 0,
             processing_time_ms: None,
             facet_distribution: None,
@@ -181,6 +187,9 @@ impl Component for App {
             view_drag_from_column: None,
             view_drag_column: None,
             view_drag_over_index: None,
+            export_downloading: false,
+            export_progress: 0,
+            export_total: 0,
             loading: false,
             toasts: vec![],
             toast_seq: 1,
@@ -1150,6 +1159,58 @@ impl Component for App {
                 ctx.link().send_message(Msg::PerformSearch);
                 true
             }
+            Msg::ExportCsv => {
+                if self.export_downloading {
+                    return true;
+                }
+                self.export_downloading = true;
+                self.export_progress = 0;
+                self.export_total = 0;
+                let host = self.host_input.trim().to_string();
+                let api_key = self.api_key_input.trim().to_string();
+                let params = self.build_search_params_for_export();
+                let link = ctx.link().clone();
+                spawn_local(async move {
+                    match export::export_all_csv(&host, &api_key, &params, |progress, total| {
+                        link.send_message(Msg::ExportCsvProgress(progress, total));
+                    }).await {
+                        Ok(filename) => {
+                            link.send_message(Msg::ExportCsvFinished(Ok(filename)));
+                        }
+                        Err(e) => {
+                            link.send_message(Msg::ExportCsvFinished(Err(e)));
+                        }
+                    }
+                });
+                self.push_toast("开始导出 CSV...".to_string(), crate::ToastType::Warning, ctx);
+                true
+            }
+            Msg::ExportCsvProgress(progress, total) => {
+                self.export_progress = progress;
+                self.export_total = total;
+                true
+            }
+            Msg::ExportCsvFinished(Ok(filename)) => {
+                self.export_downloading = false;
+                self.export_progress = 0;
+                self.export_total = 0;
+                self.push_toast(format!("CSV 文件已导出: {}", filename), crate::ToastType::Success, ctx);
+                true
+            }
+            Msg::ExportCsvFinished(Err(e)) => {
+                self.export_downloading = false;
+                self.export_progress = 0;
+                self.export_total = 0;
+                self.push_toast(format!("导出失败: {}", e), crate::ToastType::Error, ctx);
+                true
+            }
+            Msg::UpdateMaxResults(value) => {
+                let v = value.parse::<u32>().unwrap_or(1000);
+                self.max_results_per_page = v.min(10000);
+                // Re-trigger search with the new limit
+                ctx.link().send_message(Msg::PerformSearch);
+                true
+            }
         }
     }
 
@@ -1242,9 +1303,10 @@ impl App {
     }
 
     fn build_search_params(&self) -> Value {
+        let effective_limit = self.page_size.min(self.max_results_per_page);
         let mut params = json!({
-            "limit": self.page_size,
-            "offset": (self.current_page.saturating_sub(1)) * self.page_size,
+            "limit": effective_limit,
+            "offset": (self.current_page.saturating_sub(1)) * effective_limit,
             "matchingStrategy": "last"
         });
 
@@ -1318,6 +1380,85 @@ impl App {
 
         if !self.filterable_fields.is_empty() {
             params["facets"] = json!(self.filterable_fields.clone());
+        }
+
+        params
+    }
+
+    fn build_search_params_for_export(&self) -> export::ExportParams {
+        let mut params = export::ExportParams {
+            index_name: Some(self.current_index.clone()),
+            query: self.search_input.clone(),
+            filter: None,
+            sort: None,
+            attributes_to_retrieve: None,
+            attributes_to_highlight: None,
+            highlight_pre_tag: None,
+            highlight_post_tag: None,
+            hybrid: None,
+            show_ranking_score: None,
+            show_ranking_score_details: None,
+            facets: None,
+        };
+
+        if self.highlight_enabled {
+            let targets = if !self.highlight_fields.is_empty() {
+                self.highlight_fields.clone()
+            } else if !self.search_fields.is_empty() {
+                self.search_fields.clone()
+            } else {
+                vec!["*".to_string()]
+            };
+            params.attributes_to_highlight = Some(json!(targets));
+            params.highlight_pre_tag = Some(json!("<em class=\"highlight\">"));
+            params.highlight_post_tag = Some(json!("</em>"));
+        }
+
+        if self.show_ranking_score {
+            params.show_ranking_score = Some(json!(true));
+            params.show_ranking_score_details = Some(json!(true));
+        }
+
+        if self.ai_config.ai_enabled && self.ai_config.ai_weight > 0 {
+            let ratio = (self.ai_config.ai_weight.min(100) as f64) / 100.0;
+            params.hybrid = Some(json!({
+                "semanticRatio": ratio,
+                "embedder": "bgem3"
+            }));
+        }
+
+        if !self.sort_value.is_empty() {
+            params.sort = Some(json!([self.sort_value.clone()]));
+        }
+
+        let mut filter_expr = build_filter_expression_from_dom();
+        let facet_filters = self.build_facet_filters();
+        if !facet_filters.is_empty() {
+            let facet_expr = facet_filters.join(" AND ");
+            filter_expr = match filter_expr {
+                Some(expr) => Some(format!("({}) AND ({})", expr, facet_expr)),
+                None => Some(facet_expr),
+            };
+        }
+        if let Some(expr) = filter_expr {
+            params.filter = Some(json!(expr));
+        }
+
+        if !self.display_fields.is_empty() {
+            let mut attrs = self.display_fields.clone();
+            if !attrs.contains(&"id".to_string()) {
+                attrs.push("id".to_string());
+            }
+            if !self.primary_key_field.is_empty() && !attrs.contains(&self.primary_key_field) {
+                attrs.push(self.primary_key_field.clone());
+            }
+            params.attributes_to_retrieve = Some(json!(attrs));
+        } else {
+            params.attributes_to_retrieve = Some(json!(["*"]));
+        }
+
+        if !self.filterable_fields.is_empty() {
+            params.facets = Some(json!(self.filterable_fields.clone()));
         }
 
         params
