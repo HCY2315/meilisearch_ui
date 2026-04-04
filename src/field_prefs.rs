@@ -1,9 +1,7 @@
-use std::collections::HashMap;
+// Field preferences module - re-exports from storage.rs where the actual implementation lives
 
-pub fn load_field_labels(_index: Option<&str>) -> HashMap<String, String> {
-    HashMap::new()
-}
+pub use crate::storage::{load_field_labels, save_field_labels};
 
-pub fn save_field_labels(_labels: &HashMap<String, String>, _index: Option<&str>) {
+pub fn init() {
     // no-op for skeleton
 }
