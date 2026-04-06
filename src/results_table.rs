@@ -210,7 +210,7 @@ fn render_table_body(
                     return html! { <td class={class} title={display.clone()}>{ display }</td> };
                 }
 
-                if let Some(cell) = get_cell_value(hit, col, app.highlight_enabled, app.image_preview_enabled, app.image_preview_links_only) {
+                if let Some(cell) = get_cell_value(hit, col, app.highlight_enabled, app.image_preview_enabled, app.image_preview_links_only, app.image_preview_size) {
                     let class = if is_primary_key { "pk-cell" } else { "" };
                     html! { <td class={class} title={cell.title}>{ cell.html }</td> }
                 } else {
@@ -313,7 +313,7 @@ pub fn render_custom_results(
                                         ></span>
                                         { for col_fields.iter().map(|field| {
                                             let label = app.field_labels.get(field).cloned().unwrap_or_else(|| field.clone());
-                                            let cell = get_cell_value(hit, field, app.highlight_enabled, app.image_preview_enabled, app.image_preview_links_only);
+                                            let cell = get_cell_value(hit, field, app.highlight_enabled, app.image_preview_enabled, app.image_preview_links_only, app.image_preview_size);
                                             html! {
                                                 <div class="custom-field">
                                                     <span class="custom-label">{ label }</span>

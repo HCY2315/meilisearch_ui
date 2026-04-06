@@ -65,6 +65,7 @@ pub fn get_cell_value(
     use_highlight: bool,
     image_preview_enabled: bool,
     image_preview_links_only: bool,
+    image_preview_size: u32,
 ) -> Option<CellValue> {
     let raw = if use_highlight {
         hit.formatted
@@ -79,7 +80,7 @@ pub fn get_cell_value(
     // If image preview is enabled, render images or links depending on thumbnail mode flag
     if image_preview_enabled {
         if image_preview_links_only {
-            if let Some(cell) = try_render_image_cell(&raw) {
+            if let Some(cell) = try_render_image_cell(&raw, image_preview_size) {
                 return Some(cell);
             }
         } else if let Some(link_cell) = render_image_links_cell(&raw) {
@@ -137,7 +138,8 @@ pub fn get_cell_value(
     })
 }
 
-fn try_render_image_cell(raw: &Value) -> Option<CellValue> {
+fn try_render_image_cell(raw: &Value, size: u32) -> Option<CellValue> {
+    let size_px = format!("{}px", size);
     if raw.is_array() {
         let urls: Vec<String> = raw
             .as_array()
@@ -161,6 +163,7 @@ fn try_render_image_cell(raw: &Value) -> Option<CellValue> {
                         src={url.clone()}
                         alt={"thumbnail"}
                         loading="lazy"
+                        style={format!("width: {}; height: {};", size_px, size_px)}
                     />
                 }
             })
@@ -188,6 +191,7 @@ fn try_render_image_cell(raw: &Value) -> Option<CellValue> {
                     src={s.to_string()}
                     alt={"thumbnail"}
                     loading="lazy"
+                    style={format!("width: {}; height: {};", size_px, size_px)}
                 />
             },
             title: AttrValue::from(escape_html(s)),

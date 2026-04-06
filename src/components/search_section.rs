@@ -125,14 +125,36 @@ fn render_advanced_settings(app: &App, ctx: &Context<App>) -> Html {
                 </div>
                 {if app.image_preview_enabled {
                     html! {
-                        <div class="checkbox-group" style="margin-left: 20px;">
-                            <input
-                                type="checkbox"
-                                checked={app.image_preview_links_only}
-                                onchange={ctx.link().callback(|e: yew::events::Event| Msg::SetImagePreviewLinksOnly(checkbox_checked(e)))}
-                            />
-                            <label>{ "缩略图模式" }</label>
-                        </div>
+                        <>
+                            <div class="checkbox-group" style="margin-left: 20px;">
+                                <input
+                                    type="checkbox"
+                                    checked={app.image_preview_links_only}
+                                    onchange={ctx.link().callback(|e: yew::events::Event| Msg::SetImagePreviewLinksOnly(checkbox_checked(e)))}
+                                />
+                                <label>{ "缩略图模式" }</label>
+                            </div>
+                            {if app.image_preview_links_only {
+                                html! {
+                                    <div class="checkbox-group" style="margin-left: 20px; display: flex; align-items: center; gap: 8px;">
+                                        <label>{ "图片大小:" }</label>
+                                        <input
+                                            type="range"
+                                            min="40"
+                                            max="400"
+                                            value={app.image_preview_size.to_string()}
+                                            oninput={ctx.link().callback(|e: yew::events::InputEvent| {
+                                                let value = input_value(e).parse::<u32>().unwrap_or(80);
+                                                Msg::SetImagePreviewSize(value)
+                                            })}
+                                        />
+                                        <span style="min-width: 30px;">{ format!("{}px", app.image_preview_size) }</span>
+                                    </div>
+                                }
+                            } else {
+                                html! {}
+                            }}
+                        </>
                     }
                 } else {
                     html! {}

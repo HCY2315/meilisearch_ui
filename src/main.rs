@@ -114,6 +114,7 @@ struct App {
     view_field_resize_up_listener: Option<EventListener>,
     image_preview_enabled: bool,
     image_preview_links_only: bool,
+    image_preview_size: u32,
 }
 
 impl Component for App {
@@ -211,10 +212,12 @@ impl Component for App {
             view_field_resize_up_listener: None,
             image_preview_enabled: false,
             image_preview_links_only: false,
+            image_preview_size: 80,
         };
         // Load image preview settings from storage
         app.image_preview_enabled = storage::load_image_preview_enabled();
         app.image_preview_links_only = storage::load_image_preview_links_only();
+        app.image_preview_size = storage::load_image_preview_size();
 
         query_editor::add_query_row(&mut app);
         app.initialize_theme();
@@ -1226,6 +1229,11 @@ impl Component for App {
                 save_image_preview_links_only(links_only);
                 true
             }
+            Msg::SetImagePreviewSize(size) => {
+                self.image_preview_size = size;
+                save_image_preview_size(size);
+                true
+            }
             Msg::UpdateMaxResults(value) => {
                 let v = value.parse::<u32>().unwrap_or(1000);
                 self.max_results_per_page = v.min(10000);
@@ -1713,7 +1721,7 @@ impl App {
                         return html! { <td class={class} title={display.clone()}>{ display }</td> };
                     }
 
-                    if let Some(cell) = get_cell_value(hit, col, self.highlight_enabled, self.image_preview_enabled, self.image_preview_links_only) {
+                    if let Some(cell) = get_cell_value(hit, col, self.highlight_enabled, self.image_preview_enabled, self.image_preview_links_only, self.image_preview_size) {
                         let class = if is_primary_key { "pk-cell" } else { "" };
                         html! { <td class={class} title={cell.title}>{ cell.html }</td> }
                     } else {

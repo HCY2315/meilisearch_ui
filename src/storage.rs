@@ -129,3 +129,13 @@ pub fn save_image_preview_links_only(enabled: bool) {
         if enabled { "true" } else { "false" },
     );
 }
+
+pub fn load_image_preview_size() -> u32 {
+    storage_get("imagePreviewSize")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(80)
+}
+
+pub fn save_image_preview_size(size: u32) {
+    storage_set("imagePreviewSize", &size.to_string());
+}

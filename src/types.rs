@@ -276,4 +276,5 @@ pub enum Msg {
     UpdateMaxResults(String),
     SetImagePreview(bool),
     SetImagePreviewLinksOnly(bool),
+    SetImagePreviewSize(u32),
 }
