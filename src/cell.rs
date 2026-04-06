@@ -1,5 +1,5 @@
 use crate::types::SearchHit;
-use crate::utils::{escape_html, strip_html, value_to_string};
+use crate::utils::{escape_html, is_image_url, strip_html, value_to_string};
 use serde_json::Value;
 use yew::{html, AttrValue, Html};
 
@@ -93,6 +93,20 @@ pub fn get_cell_value(hit: &SearchHit, col: &str, use_highlight: bool) -> Option
             (escape_html(&text), text)
         }
     };
+
+    // If the cell value is a raw string pointing to an image URL, render an image tag
+    if let Some(s) = raw.as_str() {
+        if is_image_url(s) {
+            let src = s.to_string();
+            let img_html = html! {
+                <img src={src.clone()} alt={"image"} style={"max-width:200px; max-height:200px; object-fit: contain;"} />
+            };
+            return Some(CellValue {
+                html: img_html,
+                title: AttrValue::from(escape_html(&src)),
+            });
+        }
+    }
 
     let html = if use_highlight {
         Html::from_html_unchecked(AttrValue::from(display_html))

@@ -345,3 +345,18 @@ pub fn value_to_string_for_edit(value: &Value) -> String {
     }
     value_to_string(value)
 }
+
+/// Heuristic to detect common image URLs
+pub fn is_image_url(url: &str) -> bool {
+    let s = url.trim().to_lowercase();
+    if s.starts_with("http://") || s.starts_with("https://") {
+        s.ends_with(".png")
+            || s.ends_with(".jpg")
+            || s.ends_with(".jpeg")
+            || s.ends_with(".gif")
+            || s.ends_with(".webp")
+            || s.ends_with(".svg")
+    } else {
+        false
+    }
+}
