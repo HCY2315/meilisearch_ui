@@ -1270,3 +1270,18 @@ body {
     grid-column: 1 / -1;
     overflow-x: auto;
 }
+
+/* Thumbnails horizontal scrolling for image previews */
+.cell-thumbnail-scroll {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 4px 0;
+}
+.cell-thumbnail {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 4px;
+    display: inline-block;
+}

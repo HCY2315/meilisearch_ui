@@ -118,6 +118,28 @@ fn render_advanced_settings(app: &App, ctx: &Context<App>) -> Html {
                 <div class="checkbox-group">
                     <input
                         type="checkbox"
+                        checked={app.image_preview_enabled}
+                        onchange={ctx.link().callback(|e: yew::events::Event| Msg::SetImagePreview(checkbox_checked(e)))}
+                    />
+                    <label>{ "图片预览" }</label>
+                </div>
+                {if app.image_preview_enabled {
+                    html! {
+                        <div class="checkbox-group" style="margin-left: 20px;">
+                            <input
+                                type="checkbox"
+                                checked={app.image_preview_links_only}
+                                onchange={ctx.link().callback(|e: yew::events::Event| Msg::SetImagePreviewLinksOnly(checkbox_checked(e)))}
+                            />
+                            <label>{ "缩略图模式" }</label>
+                        </div>
+                    }
+                } else {
+                    html! {}
+                }}
+                <div class="checkbox-group">
+                    <input
+                        type="checkbox"
                         checked={app.highlight_enabled}
                         onchange={ctx.link().callback(|e: yew::events::Event| Msg::ToggleHighlight(checkbox_checked(e)))}
                     />

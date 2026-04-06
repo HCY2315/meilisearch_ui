@@ -360,3 +360,9 @@ pub fn is_image_url(url: &str) -> bool {
         false
     }
 }
+
+/// Check if string is an HTTP/HTTPS URL
+pub fn is_http_url(url: &str) -> bool {
+    let s = url.trim().to_lowercase();
+    s.starts_with("http://") || s.starts_with("https://")
+}

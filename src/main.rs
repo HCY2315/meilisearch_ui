@@ -112,6 +112,8 @@ struct App {
     view_field_resize_state: Option<ViewFieldResizeState>,
     view_field_resize_move_listener: Option<EventListener>,
     view_field_resize_up_listener: Option<EventListener>,
+    image_preview_enabled: bool,
+    image_preview_links_only: bool,
 }
 
 impl Component for App {
@@ -207,10 +209,17 @@ impl Component for App {
             view_field_resize_state: None,
             view_field_resize_move_listener: None,
             view_field_resize_up_listener: None,
+            image_preview_enabled: false,
+            image_preview_links_only: false,
         };
+        // Load image preview settings from storage
+        app.image_preview_enabled = storage::load_image_preview_enabled();
+        app.image_preview_links_only = storage::load_image_preview_links_only();
 
         query_editor::add_query_row(&mut app);
         app.initialize_theme();
+        // Load image preview setting
+        // We'll call storage function later in init phase after App is constructed
         index_panel::init();
         query_editor::init();
         results_table::init();
@@ -1204,6 +1213,19 @@ impl Component for App {
                 self.push_toast(format!("导出失败: {}", e), crate::ToastType::Error, ctx);
                 true
             }
+            Msg::SetImagePreview(enabled) => {
+                self.image_preview_enabled = enabled;
+                // When enabling previews, show links by default (not thumbnails)
+                self.image_preview_links_only = false;
+                save_image_preview_enabled(enabled);
+                save_image_preview_links_only(false);
+                true
+            }
+            Msg::SetImagePreviewLinksOnly(links_only) => {
+                self.image_preview_links_only = links_only;
+                save_image_preview_links_only(links_only);
+                true
+            }
             Msg::UpdateMaxResults(value) => {
                 let v = value.parse::<u32>().unwrap_or(1000);
                 self.max_results_per_page = v.min(10000);
@@ -1691,7 +1713,7 @@ impl App {
                         return html! { <td class={class} title={display.clone()}>{ display }</td> };
                     }
 
-                    if let Some(cell) = get_cell_value(hit, col, self.highlight_enabled) {
+                    if let Some(cell) = get_cell_value(hit, col, self.highlight_enabled, self.image_preview_enabled, self.image_preview_links_only) {
                         let class = if is_primary_key { "pk-cell" } else { "" };
                         html! { <td class={class} title={cell.title}>{ cell.html }</td> }
                     } else {

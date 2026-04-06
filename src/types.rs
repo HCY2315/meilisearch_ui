@@ -186,6 +186,7 @@ pub struct PopularSearchData {
     pub items: Vec<PopularItem>,
 }
 
+#[derive(Clone, Debug)]
 pub enum Msg {
     SetHost(String),
     SetApiKey(String),
@@ -273,4 +274,6 @@ pub enum Msg {
     ExportCsvProgress(u64, u64),
     ExportCsvFinished(Result<String, String>),
     UpdateMaxResults(String),
+    SetImagePreview(bool),
+    SetImagePreviewLinksOnly(bool),
 }

@@ -103,3 +103,29 @@ pub fn set_theme(theme: &str) {
     }
     storage_set("theme", next);
 }
+
+pub fn load_image_preview_enabled() -> bool {
+    storage_get("imagePreviewEnabled")
+        .map(|v| v == "true")
+        .unwrap_or(false)
+}
+
+pub fn save_image_preview_enabled(enabled: bool) {
+    storage_set(
+        "imagePreviewEnabled",
+        if enabled { "true" } else { "false" },
+    );
+}
+
+pub fn load_image_preview_links_only() -> bool {
+    storage_get("imagePreviewLinksOnly")
+        .map(|v| v == "true")
+        .unwrap_or(false)
+}
+
+pub fn save_image_preview_links_only(enabled: bool) {
+    storage_set(
+        "imagePreviewLinksOnly",
+        if enabled { "true" } else { "false" },
+    );
+}
