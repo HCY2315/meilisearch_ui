@@ -1,3 +1,4 @@
+#![allow(unused)]
 use gloo_events::EventListener;
 use gloo_timers::callback::Timeout;
 use serde_json::{json, Value};
@@ -7,6 +8,7 @@ use wasm_bindgen_futures::spawn_local;
 use web_sys::{Element, HtmlElement};
 use yew::events::{DragEvent, MouseEvent};
 use yew::{html, Callback, Component, Context, Html};
+use yew::TargetCast;
 
 mod types;
 mod storage;
@@ -76,6 +78,8 @@ struct App {
     filters_drawer_open: bool,
     column_config_open: bool,
     field_config_open: bool,
+    new_index_uid: String,
+    new_index_pk: String,
     result_modal_open: bool,
     result_detail: Option<SearchHit>,
     edit_locked: bool,
@@ -115,6 +119,21 @@ struct App {
     image_preview_enabled: bool,
     image_preview_links_only: bool,
     image_preview_size: u32,
+    current_tab: String,
+    asset_form: DeviceAsset,
+    asset_list: Vec<DeviceAsset>,
+    asset_modal_open: bool,
+    asset_detail: Option<DeviceAsset>,
+    assets_loading: bool,
+    upload_modal_open: bool,
+    upload_data: String,
+    file_input_listener: Option<EventListener>,
+    upload_file_name: String,
+    upload_preview_data: Vec<serde_json::Value>,
+    upload_preview_page: usize,
+    upload_preview_page_size: usize,
+    upload_progress: f32,
+    upload_loading: bool,
 }
 
 impl Component for App {
@@ -213,6 +232,23 @@ impl Component for App {
             image_preview_enabled: false,
             image_preview_links_only: false,
             image_preview_size: 80,
+            new_index_uid: String::new(),
+            new_index_pk: String::new(),
+            current_tab: "search".to_string(),
+            asset_form: DeviceAsset::new(String::new(), String::new()),
+            asset_list: vec![],
+            asset_modal_open: false,
+            asset_detail: None,
+            assets_loading: false,
+            upload_modal_open: false,
+            upload_data: String::new(),
+            file_input_listener: None,
+            upload_file_name: String::new(),
+            upload_preview_data: vec![],
+            upload_preview_page: 1,
+            upload_preview_page_size: 10,
+            upload_progress: 0.0,
+            upload_loading: false,
         };
         // Load image preview settings from storage
         app.image_preview_enabled = storage::load_image_preview_enabled();
@@ -1234,13 +1270,339 @@ impl Component for App {
                 save_image_preview_size(size);
                 true
             }
+            Msg::SetCurrentTab(tab) => {
+                self.current_tab = tab;
+                if self.current_tab == "assets" {
+                    self.asset_list = load_device_assets();
+                }
+                true
+            }
+            Msg::OpenAssetModal(open) => {
+                self.asset_modal_open = open;
+                if !open {
+                    let id = js_sys::Math::random().to_string();
+                    self.asset_form = DeviceAsset::new(id, String::new());
+                }
+                true
+            }
+            Msg::SetAssetForm(asset) => {
+                self.asset_form = asset;
+                self.asset_modal_open = true;
+                true
+            }
+            Msg::SaveAsset => {
+                let mut assets = load_device_assets();
+                if let Some(pos) = assets.iter().position(|a| a.id == self.asset_form.id) {
+                    assets[pos] = self.asset_form.clone();
+                } else {
+                    assets.push(self.asset_form.clone());
+                }
+                save_device_assets(&assets);
+                self.asset_list = assets;
+                self.asset_modal_open = false;
+                self.push_toast("设备保存成功".to_string(), ToastType::Success, ctx);
+                true
+            }
+            Msg::DeleteAsset(id) => {
+                let mut assets = load_device_assets();
+                assets.retain(|a| a.id != id);
+                save_device_assets(&assets);
+                self.asset_list = assets;
+                self.push_toast("设备已删除".to_string(), ToastType::Success, ctx);
+                true
+            }
+            Msg::OpenAssetDetail(asset) => {
+                self.asset_detail = Some(asset);
+                true
+            }
+            Msg::CloseAssetDetail => {
+                self.asset_detail = None;
+                true
+            }
+            Msg::ImportAssets(json_str) => {
+                if json_str.trim().is_empty() {
+                    true
+                } else {
+                    // Validate that all items contain the primary key field
+                    let pk = self.primary_key_field.clone();
+                    if pk.is_empty() {
+                        self.push_toast("请先设置主键字段后再导入数据".to_string(), ToastType::Error, ctx);
+                        return true;
+                    }
+                    let items: Vec<Value> = match serde_json::from_str::<Vec<Value>>(&json_str) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            self.push_toast(format!("导入失败: {}", e), ToastType::Error, ctx);
+                            return true;
+                        }
+                    };
+                    if items.iter().any(|v| v.get(&pk).is_none()) {
+                        self.push_toast(format!("导入失败：每个对象都必须包含主键字段 '{}'", pk), ToastType::Error, ctx);
+                        return true;
+                    }
+                    // Deserialize into DeviceAsset, assuming fields exist
+                    let mut assets: Vec<DeviceAsset> = Vec::new();
+                    for v in items {
+                        match serde_json::from_value::<DeviceAsset>(v) {
+                            Ok(a) => assets.push(a),
+                            Err(_) => {
+                                // skip invalid entries but warn
+                                self.push_toast("导入数据包含无效条目，已跳过".to_string(), ToastType::Warning, ctx);
+                            }
+                        }
+                    }
+                    if assets.is_empty() {
+                        self.push_toast("导入失败：无有效设备数据".to_string(), ToastType::Error, ctx);
+                        return true;
+                    }
+                    let mut existing = load_device_assets();
+                    for asset in assets {
+                        if !existing.iter().any(|a| a.id == asset.id) {
+                            existing.push(asset);
+                        }
+                    }
+                    save_device_assets(&existing);
+                    self.asset_list = existing;
+                    self.push_toast("导入成功".to_string(), ToastType::Success, ctx);
+                    true
+                }
+            }
+            Msg::ExportAssets => {
+                let assets = load_device_assets();
+                match serde_json::to_string_pretty(&assets) {
+                    Ok(json) => {
+                        let window = web_sys::window().unwrap();
+                        let document = window.document().unwrap();
+                        let arr = js_sys::Array::new();
+                        arr.push(&wasm_bindgen::JsValue::from_str(&json));
+                        let blob = web_sys::Blob::new_with_str_sequence(&arr).unwrap();
+                        let url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
+                        if let Some(a) = document.create_element("a").ok() {
+                            let _ = a.set_attribute("href", &url);
+                            let _ = a.set_attribute("download", "device_assets.json");
+                            let _ = a.dyn_ref::<web_sys::HtmlElement>().map(|el| el.click());
+                        }
+                        self.push_toast("导出成功".to_string(), ToastType::Success, ctx);
+                    }
+                    Err(e) => {
+                        self.push_toast(format!("导出失败: {}", e), ToastType::Error, ctx);
+                    }
+                }
+                true
+            }
+            Msg::TriggerFileImport(_) => {
+                self.push_toast("请在下方文本框中粘贴JSON数据导入，或先导出模板".to_string(), ToastType::Info, ctx);
+                true
+            }
+            Msg::FileImportTriggered(_) => {
+                true
+            }
+            Msg::SetNewIndexUid(uid) => {
+                self.new_index_uid = uid;
+                true
+            }
+            Msg::SetNewIndexPk(pk) => {
+                self.new_index_pk = pk;
+                true
+            }
+            Msg::CreateIndexLocal => {
+                if self.new_index_uid.trim().is_empty() {
+                    self.push_toast("请提供索引 UID".to_string(), ToastType::Error, ctx);
+                    return true;
+                }
+                
+                let host = self.host_input.trim().to_string();
+                let api_key = self.api_key_input.trim().to_string();
+                let uid = self.new_index_uid.clone();
+                let primary_key = if self.new_index_pk.trim().is_empty() { None } else { Some(self.new_index_pk.clone()) };
+                
+                self.loading = true;
+                let link = ctx.link().clone();
+                spawn_local(async move {
+                    // Create index with optional primary key
+                    let res = create_index(&host, &api_key, &uid, primary_key.as_ref().map(|s| s.as_str())).await;
+                    link.send_message(Msg::IndexCreated(res));
+                });
+                true
+            }
+            Msg::IndexCreated(result) => {
+                self.loading = false;
+                match result {
+                    Ok(_) => {
+                        self.push_toast("索引创建成功".to_string(), ToastType::Success, ctx);
+                        // If a primary key was specified during creation, set it
+                        if !self.new_index_pk.trim().is_empty() {
+                            self.primary_key_field = self.new_index_pk.clone();
+                        }
+                        // Clear the input fields
+                        self.new_index_uid.clear();
+                        self.new_index_pk.clear();
+                    }
+                    Err(e) => {
+                        self.push_toast(format!("创建索引失败: {}", e), ToastType::Error, ctx);
+                    }
+                }
+                true
+            }
             Msg::UpdateMaxResults(value) => {
                 let v = value.parse::<u32>().unwrap_or(1000);
                 self.max_results_per_page = v.min(10000);
-                // Re-trigger search with the new limit
                 ctx.link().send_message(Msg::PerformSearch);
                 true
             }
+            Msg::SaveAssetFinished(_) | Msg::DeleteAssetFinished(_) | Msg::ExportAssetsFinished(_) | Msg::TriggerFileImport(_) | Msg::FileImportTriggered(_) => true,
+            Msg::SetPrimaryKey(_) => true,
+            Msg::OpenUploadModal(open) => {
+                self.upload_modal_open = open;
+                if !open {
+                    self.upload_data.clear();
+                    self.file_input_listener = None;
+                } else {
+                    let link = ctx.link().clone();
+                    let window = web_sys::window().unwrap();
+                    let listener = gloo_events::EventListener::new(&window, "file-selected", move |_event| {
+                        if let (Ok(name), Ok(data)) = (
+                            js_sys::eval("window.__meiliFileName__ || ''"),
+                            js_sys::eval("window.__meiliFileData__ || ''")
+                        ) {
+                            if let (Some(name_str), Some(data_str)) = (name.as_string(), data.as_string()) {
+                                if !name_str.is_empty() && !data_str.is_empty() {
+                                    link.send_message(Msg::SetUploadFile(name_str, data_str));
+                                }
+                            }
+                        }
+                    });
+                    self.file_input_listener = Some(listener);
+                }
+                true
+            }
+            Msg::SetUploadData(data) => {
+                self.upload_data = data;
+                true
+            }
+            Msg::FileInputChanged(_json_content) => {
+                if let (Ok(name), Ok(data)) = (
+                    js_sys::eval("window.__meiliFileName__ || ''"),
+                    js_sys::eval("window.__meiliFileData__ || ''")
+                ) {
+                    if let (Some(name_str), Some(data_str)) = (name.as_string(), data.as_string()) {
+                        if !name_str.is_empty() && !data_str.is_empty() {
+                            self.upload_file_name = name_str;
+                            self.upload_data = data_str.clone();
+                            self.upload_loading = true;
+                            match serde_json::from_str::<Vec<serde_json::Value>>(&data_str) {
+                                Ok(items) => {
+                                    self.upload_preview_data = items;
+                                    self.upload_preview_page = 1;
+                                    self.upload_loading = false;
+                                }
+                                Err(e) => {
+                                    self.push_toast(format!("JSON解析失败: {}", e), ToastType::Error, ctx);
+                                    self.upload_loading = false;
+                                    self.upload_preview_data = vec![];
+                                }
+                            }
+                        }
+                    }
+                }
+                true
+            }
+            Msg::SetUploadFile(name, data) => {
+                self.upload_file_name = name;
+                self.upload_data = data.clone();
+                self.upload_progress = 0.0;
+                self.upload_loading = true;
+                
+                match serde_json::from_str::<Vec<serde_json::Value>>(&data) {
+                    Ok(items) => {
+                        self.upload_preview_data = items;
+                        self.upload_preview_page = 1;
+                        self.upload_preview_page_size = 10;
+                        self.upload_loading = false;
+                        self.upload_progress = 100.0;
+                    }
+                    Err(e) => {
+                        self.push_toast(format!("JSON解析失败: {}", e), ToastType::Error, ctx);
+                        self.upload_loading = false;
+                        self.upload_preview_data = vec![];
+                    }
+                }
+                true
+            }
+            Msg::SetUploadPreviewData(data) => {
+                self.upload_preview_data = data;
+                self.upload_preview_page = 1;
+                true
+            }
+            Msg::SetUploadPage(page) => {
+                self.upload_preview_page = page;
+                true
+            }
+            Msg::BatchImportToMeiliSearch => {
+                if self.current_index.trim().is_empty() {
+                    self.push_toast("请先选择一个索引".to_string(), ToastType::Error, ctx);
+                    return true;
+                }
+                
+                if self.upload_data.trim().is_empty() {
+                    self.push_toast("请先上传JSON文件".to_string(), ToastType::Error, ctx);
+                    return true;
+                }
+                
+                let host = self.host_input.trim().to_string();
+                let api_key = self.api_key_input.trim().to_string();
+                let index = self.current_index.clone();
+                let pk = self.primary_key_field.clone();
+                let json_data = self.upload_data.clone();
+                // Prepare preview data for UI (pagination)
+                if let Ok(preview_vec) = serde_json::from_str::<Vec<serde_json::Value>>(&json_data) {
+                    self.upload_preview_data = preview_vec;
+                    self.upload_preview_page = 1;
+                    self.upload_preview_page_size = 10;
+                }
+                
+                self.loading = true;
+                self.upload_progress = 0.0;
+                let link = ctx.link().clone();
+                let host2 = host.clone();
+                let api_key2 = api_key.clone();
+                let index2 = index.clone();
+                let pk2 = pk.clone();
+                let json_data2 = json_data.clone();
+                spawn_local(async move {
+                    // initial progress update
+                    link.send_message(Msg::BatchImportProgress(40.0));
+                    match batch_import_documents(&host2, &api_key2, &index2, &pk2, &json_data2).await {
+                        Ok(msg) => {
+                            link.send_message(Msg::BatchImportProgress(100.0));
+                            link.send_message(Msg::BatchImportFinished(Ok(msg)));
+                        }
+                        Err(e) => link.send_message(Msg::BatchImportFinished(Err(e))),
+                    }
+                });
+                true
+            }
+            Msg::BatchImportProgress(progress) => {
+                self.upload_progress = progress;
+                true
+            }
+            Msg::BatchImportFinished(result) => {
+                self.loading = false;
+                self.upload_progress = 0.0;
+                match result {
+                    Ok(msg) => {
+                        self.push_toast(msg, ToastType::Success, ctx);
+                        self.upload_data.clear();
+                        // Keep preview data so user can review what was uploaded
+                        self.upload_file_name.clear();
+                    }
+                    Err(e) => {
+                        self.push_toast(format!("批量导入失败: {}", e), ToastType::Error, ctx);
+                    }
+                }
+                true
+            }
+            _ => false
         }
     }
 
@@ -1259,8 +1621,33 @@ impl Component for App {
                     <p>{ "强大的多维度搜索与过滤功能，快速定位您需要的内容" }</p>
                 </header>
 
-                { components::connection_panel::render_connection_panel(self, ctx) }
-                { components::search_section::render_search_section(self, ctx) }
+                <nav class="tab-nav">
+                    <button 
+                        class={if self.current_tab == "search" { "tab-btn active" } else { "tab-btn" }}
+                        onclick={ctx.link().callback(|_| Msg::SetCurrentTab("search".to_string()))}
+                    >
+                        { "🔍 搜索" }
+                    </button>
+                    <button 
+                        class={if self.current_tab == "assets" { "tab-btn active" } else { "tab-btn" }}
+                        onclick={ctx.link().callback(|_| Msg::SetCurrentTab("assets".to_string()))}
+                    >
+                        { "📦 批量新增" }
+                    </button>
+                </nav>
+
+                { if self.current_tab == "search" {
+                    html! {
+                        <>
+                            { components::connection_panel::render_connection_panel(self, ctx) }
+                            { components::search_section::render_search_section(self, ctx) }
+                        </>
+                    }
+                } else {
+                    html! {
+                        { self.render_asset_management(ctx) }
+                    }
+                } }
 
                 <footer class="footer">
                     <p>{ "作者: 冰城拓 Copyright © 2025. 保留所有权利." }</p>
@@ -1273,6 +1660,9 @@ impl Component for App {
                 { components::modals::render_column_config_modal(self, ctx) }
                 { components::modals::render_view_config_modal(self, ctx) }
                 { components::modals::render_result_modal(self, ctx) }
+                { self.render_asset_modal(ctx) }
+                { self.render_asset_detail_modal(ctx) }
+                { self.render_upload_modal(ctx) }
 
                 { components::filter_drawer::render_filter_drawer(self, ctx) }
             </div>
@@ -2133,11 +2523,13 @@ impl App {
             ToastType::Success => "toast success",
             ToastType::Error => "toast error",
             ToastType::Warning => "toast warning",
+            ToastType::Info => "toast info",
         };
         let icon = match toast.kind {
             ToastType::Success => "✅",
             ToastType::Error => "❌",
             ToastType::Warning => "⚠️",
+            ToastType::Info => "ℹ️",
         };
         html! {
             <div class={class}>
@@ -2276,6 +2668,375 @@ impl App {
             }
         } else {
             html! {}
+        }
+    }
+
+    
+    fn render_asset_management(&self, ctx: &Context<Self>) -> Html {
+        let total_pages = (self.upload_preview_data.len() as f64 / self.upload_preview_page_size as f64).ceil() as usize;
+        let start_idx = (self.upload_preview_page.saturating_sub(1)) * self.upload_preview_page_size;
+        let end_idx = (start_idx + self.upload_preview_page_size).min(self.upload_preview_data.len());
+        let page_data = &self.upload_preview_data[start_idx..end_idx];
+        
+        let preview_rows: Vec<Html> = page_data.iter().enumerate().map(|(i, item)| {
+            let json_str = serde_json::to_string_pretty(item).unwrap_or_default();
+            let row_num = start_idx + i + 1;
+            html! {
+                <div style="background:var(--bg-secondary);padding:8px;margin-bottom:8px;border-radius:4px;font-size:12px;">
+                    <div style="color:var(--text-muted);margin-bottom:4px;">{ format!("#{} ", row_num) }</div>
+                    <pre style="margin:0;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow:auto;">{ json_str }</pre>
+                </div>
+            }
+        }).collect();
+        
+        let pagination: Vec<Html> = if total_pages > 1 {
+            let mut items = vec![];
+            let max_buttons = 5;
+            let current_page = self.upload_preview_page;
+            let start_page = ((current_page - 1) / max_buttons) * max_buttons + 1;
+            let end_page = (start_page + max_buttons - 1).min(total_pages);
+            
+            if start_page > 1 {
+                items.push(html! { <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::SetUploadPage(1))}>{ "«" }</button> });
+                items.push(html! { <button class="btn btn-secondary" onclick={ctx.link().callback(move |_| Msg::SetUploadPage(current_page.saturating_sub(1)))}>{ "‹" }</button> });
+            }
+            
+            for p in start_page..=end_page {
+                let is_active = p == current_page;
+                let page_num = p;
+                items.push(html! {
+                    <button 
+                        class={if is_active { "btn btn-primary" } else { "btn btn-secondary" }}
+                        onclick={ctx.link().callback(move |_| Msg::SetUploadPage(page_num))}
+                    >
+                        { p }
+                    </button>
+                });
+            }
+            
+            if end_page < total_pages {
+                let next_page = current_page + 1;
+                let last_page = total_pages;
+                items.push(html! { <button class="btn btn-secondary" onclick={ctx.link().callback(move |_| Msg::SetUploadPage(next_page))}>{ "›" }</button> });
+                items.push(html! { <button class="btn btn-secondary" onclick={ctx.link().callback(move |_| Msg::SetUploadPage(last_page))}>{ "»" }</button> });
+            }
+            items
+        } else {
+            vec![]
+        };
+        
+        let progress_bar = if self.loading && self.upload_progress > 0.0 {
+            html! {
+                <div style="margin-top:12px;">
+                    <div style="background:var(--bg-secondary);height:8px;border-radius:4px;overflow:hidden;">
+                        <div style={format!("width:{}%;height:100%;background:var(--primary-color);transition:width 0.3s;", self.upload_progress)}></div>
+                    </div>
+                    <p style="margin:8px 0 0 0;font-size:12px;color:var(--text-muted);">{ format!("导入进度: {:.0}%", self.upload_progress) }</p>
+                </div>
+            }
+        } else {
+            html! {}
+        };
+        
+        let import_button = if !self.upload_preview_data.is_empty() && !self.loading {
+            html! {
+                <button 
+                    class="btn btn-primary" 
+                    style="padding:12px 24px;font-size:14px;"
+                    onclick={ctx.link().callback(|_| Msg::BatchImportToMeiliSearch)}
+                >
+                    { format!("📤 确认导入 (共 {} 条)", self.upload_preview_data.len()) }
+                </button>
+            }
+        } else if self.loading {
+            html! {
+                <button class="btn btn-primary" disabled={true} style="padding:12px 24px;font-size:14px;">
+                    { "导入中..." }
+                </button>
+            }
+        } else {
+            html! {}
+        };
+        
+        html! {
+            <div class="asset-management">
+                <div class="asset-header">
+                    <h2>{ "📦 批量新增" }</h2>
+                </div>
+                
+                <div style="background:var(--surface);padding:16px;border-radius:var(--radius);margin-bottom:20px;">
+                    <h3 style="margin:0 0 12px 0;font-size:15px;color:var(--text-primary);">{"创建新索引"}</h3>
+                    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+                        <div class="form-group" style="flex:0 0 280px;margin:0;">
+                            <label style="font-size:13px;">{"索引 UID"}</label>
+                            <input 
+                                class="form-control" 
+                                value={self.new_index_uid.clone()} 
+                                placeholder="my_index"
+                                oninput={ctx.link().callback(|e: yew::events::InputEvent| {
+                                    let val = e.target_unchecked_into::<web_sys::HtmlInputElement>().value();
+                                    Msg::SetNewIndexUid(val)
+                                })} 
+                            />
+                        </div>
+                        <div class="form-group" style="flex:0 0 200px;margin:0;">
+                            <label style="font-size:13px;">{"主键字段"}</label>
+                            <input 
+                                class="form-control" 
+                                value={self.new_index_pk.clone()} 
+                                placeholder="id"
+                                oninput={ctx.link().callback(|e: yew::events::InputEvent| {
+                                    let val = e.target_unchecked_into::<web_sys::HtmlInputElement>().value();
+                                    Msg::SetNewIndexPk(val)
+                                })} 
+                            />
+                        </div>
+                        <button 
+                            class="btn btn-primary" 
+                            onclick={ctx.link().callback(|_| Msg::CreateIndexLocal)} 
+                            style="margin-bottom:4px;"
+                        >
+                            { "创建索引" }
+                        </button>
+                    </div>
+                </div>
+                
+                { if self.current_index.trim().is_empty() {
+                    html! {
+                        <div style="background:rgba(245,158,11,0.1);padding:16px;border-radius:var(--radius);border-left:3px solid var(--warning-color);">
+                            <p style="margin:0;font-size:14px;color:var(--text-secondary);">
+                                <strong style="color:var(--warning-color);">{"请选择或创建索引后进行批量导入"}</strong>
+                            </p>
+                        </div>
+                    }
+                } else {
+                    html! {
+                        <>
+                            <div style="background:var(--surface);padding:12px 16px;border-radius:var(--radius);margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+                                <span style="font-weight:600;">{"当前索引:"}</span>
+                                <span style="color:var(--primary-color);font-weight:600;">{ &self.current_index }</span>
+                                <span style="color:var(--text-muted);">{" | "}</span>
+                                <span style="font-weight:600;">{"主键字段:"}</span>
+                                <span style="color:var(--secondary-color);">{ &self.primary_key_field }</span>
+                            </div>
+                            
+                            <div style="background:var(--surface);padding:16px;border-radius:var(--radius);margin-bottom:16px;">
+                                <h3 style="margin:0 0 12px 0;font-size:15px;color:var(--text-primary);">{"选择 JSON 文件"}</h3>
+                                <input 
+                                    type="file" 
+                                    accept=".json"
+                                    id="json-file-input"
+                                    onchange={ctx.link().callback(move |_| {
+                                        let script = r#"
+                                            (function() {
+                                                var input = document.getElementById('json-file-input');
+                                                if (input && input.files[0]) {
+                                                    var file = input.files[0];
+                                                    var reader = new FileReader();
+                                                    reader.onload = function(e) {
+                                                        var content = e.target.result;
+                                                        var jsonData = JSON.parse(content);
+                                                        var count = Array.isArray(jsonData) ? jsonData.length : 1;
+                                                        window.__meiliFileName__ = file.name;
+                                                        window.__meiliFileData__ = JSON.stringify(jsonData);
+                                                        window.__meiliFileCount__ = count;
+                                                        window.dispatchEvent(new CustomEvent('file-selected', {detail: {name: file.name, data: JSON.stringify(jsonData)}}));
+                                                    };
+                                                    reader.readAsText(file);
+                                                }
+                                            })();
+                                        "#;
+                                        let _ = js_sys::eval(script);
+                                        Msg::FileInputChanged(String::new())
+                                    })}
+                                />
+                                <p style="margin:8px 0 0 0;font-size:12px;color:var(--text-muted);">{"支持 JSON 数组格式"}</p>
+                                
+                                { if self.upload_loading {
+                                    html! {
+                                        <div style="margin-top:12px;text-align:center;color:var(--text-muted);">
+                                            <p>{"正在解析文件..."}</p>
+                                        </div>
+                                    }
+                                } else {
+                                    html! {}
+                                } }
+                                
+                                { if !self.upload_file_name.is_empty() {
+                                    html! {
+                                        <div style="margin-top:12px;padding:8px 12px;background:var(--bg-secondary);border-radius:4px;display:flex;align-items:center;gap:8px;">
+                                            <span style="color:var(--success-color);">{"✓"}</span>
+                                            <span>{ format!("已选择: {} ({} 条数据)", self.upload_file_name, self.upload_preview_data.len()) }</span>
+                                        </div>
+                                    }
+                                } else {
+                                    html! {}
+                                } }
+                            </div>
+                            
+                            { progress_bar }
+                            
+                            { if !self.upload_preview_data.is_empty() {
+                                html! {
+                                    <div style="background:var(--surface);padding:16px;border-radius:var(--radius);margin-bottom:16px;">
+                                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                                            <h3 style="margin:0;font-size:15px;color:var(--text-primary);">
+                                                { format!("数据预览 (第 {} 条 - 第 {} 条，共 {} 条)", start_idx + 1, end_idx, self.upload_preview_data.len()) }
+                                            </h3>
+                                        </div>
+                                        <div style="max-height:400px;overflow-y:auto;">
+                                            { for preview_rows }
+                                        </div>
+                                        { if !pagination.is_empty() {
+                                            html! {
+                                                <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
+                                                    { for pagination }
+                                                </div>
+                                            }
+                                        } else {
+                                            html! {}
+                                        } }
+                                    </div>
+                                }
+                            } else {
+                                html! {}
+                            } }
+                            
+                            <div style="margin-top:20px;text-align:center;">
+                                { import_button }
+                            </div>
+                        </>
+                    }
+                } }
+            </div>
+        }
+    }
+
+    fn render_asset_modal(&self, ctx: &Context<Self>) -> Html {
+        if !self.asset_modal_open {
+            return html! {};
+        }
+
+        html! {
+            <div class="modal-overlay" onclick={ctx.link().callback(|_| Msg::OpenAssetModal(false))}>
+                <div class="modal" onclick={ctx.link().callback(|_| Msg::DocumentClick)}>
+                    <div class="modal-header">
+                        <h3>{ "添加设备" }</h3>
+                        <button class="modal-close" onclick={ctx.link().callback(|_| Msg::OpenAssetModal(false))}>{"X"}</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>{ "设备名称" }</label>
+                            <input type="text" class="form-control" value={self.asset_form.name.clone()} />
+                        </div>
+                        <div class="form-group">
+                            <label>{ "品牌" }</label>
+                            <input type="text" class="form-control" value={self.asset_form.brand.clone()} />
+                        </div>
+                        <div class="form-group">
+                            <label>{ "型号" }</label>
+                            <input type="text" class="form-control" value={self.asset_form.model.clone()} />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::OpenAssetModal(false))}>{"取消"}</button>
+                        <button class="btn btn-primary" onclick={ctx.link().callback(|_| Msg::SaveAsset)}>{"保存"}</button>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    fn render_asset_detail_modal(&self, ctx: &Context<Self>) -> Html {
+        if let Some(_asset) = &self.asset_detail {
+            html! {
+                <div class="modal-overlay" onclick={ctx.link().callback(|_| Msg::CloseAssetDetail)}>
+                    <div class="modal modal-lg" onclick={ctx.link().callback(|_| Msg::DocumentClick)}>
+                        <div class="modal-header">
+                            <h3>{ "设备详情" }</h3>
+                            <button class="modal-close" onclick={ctx.link().callback(|_| Msg::CloseAssetDetail)}>{"X"}</button>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick={ctx.link().callback(|_| Msg::CloseAssetDetail)}>{"关闭"}</button>
+                        </div>
+                    </div>
+                </div>
+            }
+        } else {
+            html! {}
+        }
+    }
+
+    fn render_upload_modal(&self, ctx: &Context<Self>) -> Html {
+        if !self.upload_modal_open {
+            return html! {};
+        }
+        
+        let debug_info = format!("upload_modal_open={}", self.upload_modal_open);
+        
+        html! {
+            <div style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.7);
+                z-index: 99999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            " onclick={ctx.link().callback(|_| Msg::OpenUploadModal(false))}>
+                <div style="
+                    background: var(--surface, #1a1a2e);
+                    border-radius: 8px;
+                    width: 600px;
+                    max-width: 90vw;
+                    max-height: 90vh;
+                    overflow: auto;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+                " onclick={ctx.link().callback(|_| Msg::DocumentClick)}>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid #333;">
+                        <h3 style="margin:0;color:#fff;">{ "📤 批量导入 JSON" }</h3>
+                        <button style="
+                            background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px 8px;
+                        " onclick={ctx.link().callback(|_| Msg::OpenUploadModal(false))}>{"×"}</button>
+                    </div>
+                    <div style="padding:20px;">
+                        <p style="color:#888;font-size:12px;margin:0 0 16px 0;">{ debug_info }</p>
+                        <div style="margin-bottom:16px;">
+                            <label style="display:block;margin-bottom:8px;color:#fff;font-weight:600;">{ "目标索引" }</label>
+                            <p style="color:#06b6d4;font-weight:600;margin:0;">{ &self.current_index }{ " (主键: " }{ &self.primary_key_field }{ " )" }</p>
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <label style="display:block;margin-bottom:8px;color:#fff;font-weight:600;">{ "选择 JSON 文件" }</label>
+                            <input 
+                                type="file" 
+                                accept=".json"
+                                id="json-file-input"
+                                style="color:#fff;"
+                            />
+                        </div>
+                        <div id="file-preview" style="background:#16213e;padding:12px;border-radius:4px;min-height:60px;color:#fff;">
+                            <p style="color:#888;margin:0;">{ "请选择文件后预览" }</p>
+                        </div>
+                    </div>
+                    <div style="padding:16px;border-top:1px solid #333;display:flex;gap:12px;justify-content:flex-end;">
+                        <button 
+                            style="padding:8px 16px;border-radius:4px;border:none;background:#555;color:#fff;cursor:pointer;"
+                            onclick={ctx.link().callback(|_| Msg::OpenUploadModal(false))}
+                        >
+                            { "取消" }
+                        </button>
+                        <button 
+                            style="padding:8px 16px;border-radius:4px;border:none;background:#06b6d4;color:#000;font-weight:600;cursor:pointer;"
+                            onclick={ctx.link().callback(|_| Msg::BatchImportToMeiliSearch)}
+                        >
+                            { "确认导入" }
+                        </button>
+                    </div>
+                </div>
+            </div>
         }
     }
 

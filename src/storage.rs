@@ -1,4 +1,4 @@
-use crate::types::{AiConfig, HistoryItem};
+use crate::types::{AiConfig, DeviceAsset, HistoryItem};
 use std::collections::HashMap;
 use web_sys::{Document, Window};
 
@@ -138,4 +138,16 @@ pub fn load_image_preview_size() -> u32 {
 
 pub fn save_image_preview_size(size: u32) {
     storage_set("imagePreviewSize", &size.to_string());
+}
+
+pub fn load_device_assets() -> Vec<DeviceAsset> {
+    storage_get("deviceAssets")
+        .and_then(|value| serde_json::from_str::<Vec<DeviceAsset>>(&value).ok())
+        .unwrap_or_default()
+}
+
+pub fn save_device_assets(assets: &[DeviceAsset]) {
+    if let Ok(value) = serde_json::to_string(assets) {
+        storage_set("deviceAssets", &value);
+    }
 }

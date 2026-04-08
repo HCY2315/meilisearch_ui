@@ -608,6 +608,7 @@ checksum = "b5b646652bf6661599e1da8901b3b9522896f01e736bad5f723fe7a3a27f899d"
 name = "meilisearch_ui"
 version = "0.1.0"
 dependencies = [
+ "gloo-console 0.3.0",
  "gloo-events 0.2.0",
  "gloo-net 0.5.0",
  "gloo-timers 0.3.0",

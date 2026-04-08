@@ -29,6 +29,47 @@ pub struct HistoryItem {
     pub timestamp: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DeviceAsset {
+    pub id: String,
+    pub name: String,
+    pub brand: String,
+    pub model: String,
+    pub purchase_date: Option<String>,
+    pub warranty_end: Option<String>,
+    pub serial_number: Option<String>,
+    pub firmware_version: Option<String>,
+    pub protocol: Option<String>,
+    pub location: Option<String>,
+    pub photo_url: Option<String>,
+    pub price: Option<f64>,
+    pub purchase_link: Option<String>,
+    pub invoice_image: Option<String>,
+    pub notes: Option<String>,
+}
+
+impl DeviceAsset {
+    pub fn new(id: String, name: String) -> Self {
+        Self {
+            id,
+            name,
+            brand: String::new(),
+            model: String::new(),
+            purchase_date: None,
+            warranty_end: None,
+            serial_number: None,
+            firmware_version: None,
+            protocol: None,
+            location: None,
+            photo_url: None,
+            price: None,
+            purchase_link: None,
+            invoice_image: None,
+            notes: None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct IndexListResponse {
     pub results: Vec<IndexItem>,
@@ -104,6 +145,7 @@ pub enum ToastType {
     Success,
     Error,
     Warning,
+    Info,
 }
 
 #[derive(Clone, Debug)]
@@ -274,7 +316,34 @@ pub enum Msg {
     ExportCsvProgress(u64, u64),
     ExportCsvFinished(Result<String, String>),
     UpdateMaxResults(String),
+    SetNewIndexUid(String),
+    SetNewIndexPk(String),
+    CreateIndexLocal, // Local creation (UI only, no remote call)
+    IndexCreated(Result<(), String>),
     SetImagePreview(bool),
     SetImagePreviewLinksOnly(bool),
     SetImagePreviewSize(u32),
+    SetCurrentTab(String),
+    OpenAssetModal(bool),
+    SetAssetForm(DeviceAsset),
+    SaveAsset,
+    SaveAssetFinished(Result<DeviceAsset, String>),
+    DeleteAsset(String),
+    DeleteAssetFinished(Result<String, String>),
+    OpenAssetDetail(DeviceAsset),
+    CloseAssetDetail,
+    ImportAssets(String),
+    ExportAssets,
+    ExportAssetsFinished(Result<String, String>),
+    TriggerFileImport(Option<String>),
+    FileImportTriggered(Option<String>),
+    OpenUploadModal(bool),
+    SetUploadData(String),
+    FileInputChanged(String),
+    SetUploadFile(String, String),
+    SetUploadPreviewData(Vec<serde_json::Value>),
+    SetUploadPage(usize),
+    BatchImportToMeiliSearch,
+    BatchImportFinished(Result<String, String>),
+    BatchImportProgress(f32),
 }

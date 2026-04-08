@@ -385,11 +385,13 @@ pub fn render_toast(toast: &Toast) -> Html {
         ToastType::Success => "toast success",
         ToastType::Error => "toast error",
         ToastType::Warning => "toast warning",
+        ToastType::Info => "toast info",
     };
     let icon = match toast.kind {
         ToastType::Success => "✅",
         ToastType::Error => "❌",
         ToastType::Warning => "⚠️",
+        ToastType::Info => "ℹ️",
     };
     html! {
         <div class={class}>

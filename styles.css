@@ -1035,6 +1035,11 @@ body::before {
     background: linear-gradient(135deg, var(--surface-glass), rgba(245, 158, 11, 0.08));
 }
 
+.toast.info {
+    border-left: 4px solid var(--secondary-color);
+    background: linear-gradient(135deg, var(--surface-glass), rgba(6, 182, 212, 0.08));
+}
+
 @keyframes slideIn {
     from {
         transform: translateX(100%) scale(0.9);
@@ -1627,4 +1632,312 @@ body::before {
     object-fit: cover;
     border-radius: 4px;
     display: inline-block;
+}
+
+/* Tab Navigation */
+.tab-nav {
+    display: flex;
+    gap: 8px;
+    padding: 16px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--background);
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.tab-btn:hover {
+    background: var(--surface);
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow-glow);
+}
+
+/* Asset Management */
+.asset-management {
+    padding: 24px;
+}
+
+.asset-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.asset-header h2 {
+    font-size: 24px;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.asset-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.asset-empty {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 2px dashed var(--border-color);
+}
+
+.asset-empty p {
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+}
+
+.asset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.asset-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.asset-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.asset-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+}
+
+.asset-card-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.badge-success {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success-color);
+}
+
+.badge-danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--error-color);
+}
+
+.asset-card-body {
+    padding: 16px 20px;
+}
+
+.asset-info p {
+    margin: 6px 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.asset-info strong {
+    color: var(--text-primary);
+}
+
+.asset-card-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border-color);
+    background: var(--background);
+}
+
+.asset-card-actions .btn {
+    flex: 1;
+}
+
+/* Warranty Alerts */
+.warranty-alerts {
+    margin-top: 32px;
+    padding: 20px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-color);
+}
+
+.warranty-alerts h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    color: var(--text-primary);
+}
+
+.alert {
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+}
+
+.alert-danger {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--error-color);
+    color: var(--error-color);
+}
+
+.alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid var(--warning-color);
+    color: var(--warning-color);
+}
+
+.alert span {
+    margin-left: 8px;
+}
+
+/* Asset Modal */
+.asset-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.detail-item {
+    padding: 12px;
+    background: var(--background);
+    border-radius: var(--radius-sm);
+}
+
+.detail-item label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.detail-item span {
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.detail-notes {
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--background);
+    border-radius: var(--radius-sm);
+}
+
+.detail-notes label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.detail-notes p {
+    margin: 0;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+}
+
+.modal-lg {
+    max-width: 700px;
+}
+
+/* Asset Import Section */
+.asset-import-section {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.asset-import-section h3 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.asset-import-section p {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.asset-import-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--background);
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 13px;
+    resize: vertical;
+}
+
+.asset-import-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--glow-primary);
+}
+
+/* Upload Modal */
+.upload-preview {
+    margin-top: 16px;
+    padding: 12px;
+    background: var(--background);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+}
+
+.upload-preview p {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.preview-json {
+    max-height: 200px;
+    overflow: auto;
+    background: var(--surface);
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    font-family: monospace;
+    font-size: 12px;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.current-index-info {
+    background: var(--surface) !important;
+}
+
+.asset-tip {
+    background: rgba(6, 182, 212, 0.08) !important;
+    border-left: 3px solid var(--secondary-color) !important;
 }

@@ -228,3 +228,85 @@ pub async fn update_documents(
     }
     Ok(())
 }
+
+// Create a new index with optional primary key
+pub async fn create_index(host: &str, api_key: &str, uid: &str, primary_key: Option<&str>) -> Result<(), String> {
+    let url = format!("{}/indexes", host.trim_end_matches('/'));
+    let mut body = json!({ "uid": uid });
+    if let Some(pk) = primary_key {
+        body = json!({ "uid": uid, "primaryKey": pk });
+    }
+    let builder = Request::post(&url);
+    // Build request progressively to avoid type inference issues
+    let req = apply_auth_header(builder, api_key).json(&body);
+    let req = match req {
+        Ok(r) => r,
+        Err(e) => return Err(e.to_string()),
+    };
+    let resp = match req.send().await {
+        Ok(r) => r,
+        Err(e) => return Err(e.to_string()),
+    };
+    if resp.ok() {
+        Ok(())
+    } else {
+        Err(resp.text().await.unwrap_or_else(|_| "create index failed".to_string()))
+    }
+}
+
+// Set primary key for an existing index
+pub async fn set_index_primary_key(host: &str, api_key: &str, uid: &str, primary_key: &str) -> Result<(), String> {
+    let url = format!("{}/indexes/{}/primaryKey", host.trim_end_matches('/'), uid);
+    let body = json!({ "primaryKey": primary_key });
+    let builder = Request::put(&url);
+    let req = apply_auth_header(builder, api_key).json(&body);
+    let req = match req {
+        Ok(r) => r,
+        Err(e) => return Err(e.to_string()),
+    };
+    let resp = match req.send().await {
+        Ok(r) => r,
+        Err(e) => return Err(e.to_string()),
+    };
+    if resp.ok() {
+        Ok(())
+    } else {
+        Err(resp.text().await.unwrap_or_else(|_| "set primaryKey failed".to_string()))
+    }
+}
+
+pub async fn batch_import_documents(
+    host: &str,
+    api_key: &str,
+    index: &str,
+    primary_key: &str,
+    json_data: &str,
+) -> Result<String, String> {
+    let docs: Vec<serde_json::Value> = serde_json::from_str(json_data)
+        .map_err(|e| format!("JSON解析失败: {}", e))?;
+    
+    if docs.is_empty() {
+        return Err("JSON数组为空".to_string());
+    }
+    
+    let count = docs.len();
+    
+    let url = format!("{}/indexes/{}/documents", host.trim_end_matches('/'), index);
+    let builder = Request::post(&url);
+    let req = apply_auth_header(builder, api_key).json(&docs);
+    let req = match req {
+        Ok(r) => r,
+        Err(e) => return Err(e.to_string()),
+    };
+    let resp = match req.send().await {
+        Ok(r) => r,
+        Err(e) => return Err(e.to_string()),
+    };
+    
+    if resp.ok() {
+        Ok(format!("成功导入 {} 条数据到索引 {}", count, index))
+    } else {
+        let err_text = resp.text().await.unwrap_or_else(|_| "批量导入失败".to_string());
+        Err(format!("批量导入失败: {}", err_text))
+    }
+}
