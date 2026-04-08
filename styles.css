@@ -1300,14 +1300,21 @@ body::before {
     table-layout: fixed;
     border-radius: var(--radius-sm);
     overflow: hidden;
+    border: 1px solid var(--border-color);
 }
 
 .results-table th, .results-table td {
     border: none;
+    border-right: 1px solid var(--border-light);
     padding: 14px 16px;
     text-align: left;
     word-break: break-word;
     background: var(--surface);
+}
+
+.results-table th:last-child,
+.results-table td:last-child {
+    border-right: none;
 }
 
 .results-table th {
