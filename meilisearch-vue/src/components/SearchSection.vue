@@ -2,7 +2,7 @@
   <div class="search-section">
     <!-- 搜索框 -->
     <div class="search-bar">
-      <div class="search-box-wrap">
+      <div class="search-box-wrap" ref="searchBoxWrapRef">
         <span class="search-icon">🔍</span>
         <input
           class="search-input"
@@ -142,18 +142,18 @@ const store = useAppStore()
 
 const aiBadgeRef = ref<HTMLElement | null>(null)
 const aiDropdownRef = ref<HTMLElement | null>(null)
+const searchBoxWrapRef = ref<HTMLElement | null>(null)
 
 const baseWeight = computed(() => 100 - store.aiConfig.aiWeight)
 
 const dropdownStyle = computed(() => {
-  const badge = aiBadgeRef.value
-  if (!badge) return {}
-  const rect = badge.getBoundingClientRect()
+  const wrap = searchBoxWrapRef.value
+  if (!wrap) return {}
+  const rect = wrap.getBoundingClientRect()
   return {
-    position: 'fixed' as const,
-    top: `${rect.bottom + 8}px`,
-    right: `${window.innerWidth - rect.right}px`,
-    zIndex: 9999,
+    top: `${rect.height + 4}px`,
+    left: '0px',
+    right: '0px',
   }
 })
 
@@ -196,9 +196,9 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.search-section { display: flex; flex-direction: column; gap: 16px; position: relative; z-index: 100; }
+.search-section { display: flex; flex-direction: column; gap: 16px; }
 .search-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; position: relative; }
-.search-box-wrap { position: relative; flex: 1; }
+.search-box-wrap { position: relative; flex: 1; z-index: 10; }
 .search-input {
   width: 100%;
   padding: 16px 70px 16px 50px;
@@ -272,12 +272,16 @@ onBeforeUnmount(() => {
 }
 .ai-badge:hover { transform: translateY(-50%) scale(1.05); }
 .ai-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--shadow-lg);
   padding: 16px;
-  min-width: 280px;
+  z-index: 100;
 }
 .dropdown-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 12px; }
 .dropdown-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-secondary); }
