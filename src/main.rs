@@ -17,13 +17,8 @@ mod cell;
 mod sort;
 mod api;
 mod parse;
-mod index_panel;
 mod query_editor;
 mod results_table;
-mod view_config;
-mod ai_config;
-mod history;
-mod field_prefs;
 mod export;
 mod components;
 
@@ -259,11 +254,8 @@ impl Component for App {
         app.initialize_theme();
         // Load image preview setting
         // We'll call storage function later in init phase after App is constructed
-        index_panel::init();
         query_editor::init();
         results_table::init();
-        view_config::init();
-        ai_config::init();
         app
     }
 
