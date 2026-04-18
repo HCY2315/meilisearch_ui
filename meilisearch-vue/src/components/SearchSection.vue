@@ -62,7 +62,7 @@
           <span v-else class="logic-label"></span>
           <select class="form-control field-select" v-model="row.field" @change="store.scheduleDebouncedSearch()">
             <option value="">选择字段</option>
-            <option v-for="f in store.availableFields" :key="f" :value="f">{{ f }}</option>
+            <option v-for="f in store.visibleAvailableFields" :key="f" :value="f">{{ store.fieldLabels[f] || f }}</option>
           </select>
           <select class="form-control op-select" v-model="row.operator" @change="store.scheduleDebouncedSearch()">
             <option value="=">=</option>

@@ -8,9 +8,9 @@
         </div>
         <div class="drawer-body">
           <!-- Facet 筛选 -->
-          <div v-if="store.facetDistribution">
-            <div v-for="(values, facet) in store.facetDistribution" :key="facet" class="filter-section">
-              <h4>{{ facet }}</h4>
+          <div v-if="store.visibleFacetDistribution">
+            <div v-for="(values, facet) in store.visibleFacetDistribution" :key="facet" class="filter-section">
+              <h4>{{ store.fieldLabels[facet] || facet }}</h4>
               <div class="filter-list">
                 <div
                   v-for="[val, count] in sortedFacets(values)"
@@ -35,14 +35,14 @@
           <div class="filter-section">
             <h4>搜索字段</h4>
             <div class="filter-list">
-              <div v-for="field in store.availableFields" :key="field" class="filter-item">
+              <div v-for="field in store.visibleAvailableFields" :key="field" class="filter-item">
                 <label>
                   <input
                     type="checkbox"
                     :checked="store.searchFields.includes(field)"
                     @change="store.toggleSearchField(field, ($event.target as HTMLInputElement).checked)"
                   />
-                  <span>{{ field }}</span>
+                  <span>{{ store.fieldLabels[field] || field }}</span>
                 </label>
               </div>
             </div>
@@ -66,8 +66,8 @@
           <div v-if="store.popularSearches.length" class="filter-section">
             <div class="section-header">
               <h4>热门搜索</h4>
-              <select v-if="store.filterableFields.length" class="form-control" v-model="store.popularSearchField" @change="store.loadPopularSearches()">
-                <option v-for="f in store.filterableFields" :key="f" :value="f">{{ f }}</option>
+              <select v-if="store.visibleFilterableFields.length" class="form-control" v-model="store.popularSearchField" @change="store.loadPopularSearches()">
+                <option v-for="f in store.visibleFilterableFields" :key="f" :value="f">{{ store.fieldLabels[f] || f }}</option>
               </select>
             </div>
             <div class="filter-list">

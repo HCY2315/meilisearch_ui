@@ -160,6 +160,25 @@ export const useAppStore = defineStore('app', () => {
     return cols.filter(c => !hiddenColumns.value.includes(c))
   })
 
+  const visibleAvailableFields = computed(() => {
+    return availableFields.value.filter(f => !hiddenColumns.value.includes(f))
+  })
+
+  const visibleFilterableFields = computed(() => {
+    return filterableFields.value.filter(f => !hiddenColumns.value.includes(f))
+  })
+
+  const visibleFacetDistribution = computed(() => {
+    if (!facetDistribution.value) return null
+    const result: FacetDistribution = {}
+    for (const [key, val] of Object.entries(facetDistribution.value)) {
+      if (!hiddenColumns.value.includes(key)) {
+        result[key] = val
+      }
+    }
+    return result
+  })
+
   const totalPages = computed(() => Math.ceil(resultsCount.value / pageSize.value))
 
   const getHost = () => hostInput.value.trim()
@@ -991,7 +1010,7 @@ export const useAppStore = defineStore('app', () => {
     imagePreviewSize, currentTab, assetForm, assetList, assetModalOpen,
     assetDetail, assetsLoading, uploadModalOpen, uploadData, uploadFileName,
     uploadPreviewData, uploadPreviewPage, uploadPreviewPageSize, uploadProgress,
-    uploadLoading, newIndexUid, newIndexPk, visibleColumns, totalPages,
+    uploadLoading, newIndexUid, newIndexPk, visibleColumns, visibleAvailableFields, visibleFilterableFields, visibleFacetDistribution, totalPages,
     draggingCol, dragOverCol, isResizingColumns,
     viewLayoutWorking, viewWidthsWorking, viewLabelWidthsWorking,
     startViewColumnResize, viewColumnResizeMove, endViewColumnResize,
