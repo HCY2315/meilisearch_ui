@@ -51,7 +51,7 @@ func seedData() {
 		testInstance := model.MeiliInstance{
 			Name: "Default Local",
 			Host: "http://localhost:7700",
-			APIKey: "masterKey",
+			APIKey: "insur132",
 		}
 		DB.Create(&testInstance)
 
