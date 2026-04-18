@@ -35,12 +35,23 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
     }
   })
   const results: IndexInfo[] = []
-  for (const idx of resp.data.results) {
+  for (const idx of resp.data.results as any[]) {
     try {
       const statsResp = await client.get<IndexStats>(`/indexes/${idx.uid}/stats`)
-      results.push({ uid: idx.uid, count: statsResp.data.numberOfDocuments })
+      results.push({ 
+        uid: idx.uid, 
+        count: statsResp.data.numberOfDocuments,
+        isLocked: idx.isLocked,
+        isUnlocked: idx.isUnlocked,
+        displayName: idx.displayName
+      })
     } catch {
-      results.push({ uid: idx.uid })
+      results.push({ 
+        uid: idx.uid,
+        isLocked: idx.isLocked,
+        isUnlocked: idx.isUnlocked,
+        displayName: idx.displayName
+      })
     }
   }
   return { indexes: results }
