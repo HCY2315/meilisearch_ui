@@ -38,6 +38,9 @@ export interface IndexItem {
   isLocked?: boolean
   isUnlocked?: boolean
   displayName?: string
+  fieldConfigs?: string
+  viewConfigs?: string
+  canEdit?: boolean
 }
 
 export interface IndexStats {
@@ -78,6 +81,9 @@ export interface IndexInfo {
   isLocked?: boolean
   isUnlocked?: boolean
   displayName?: string
+  fieldConfigs?: string
+  viewConfigs?: string
+  canEdit?: boolean
 }
 
 export interface PopularItem {

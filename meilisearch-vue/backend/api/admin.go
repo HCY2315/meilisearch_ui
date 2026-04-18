@@ -55,13 +55,24 @@ func HandleSaveIndexConfig(c *gin.Context) {
 	var config model.IndexConfig
 	if err := repository.DB.Where("uid = ?", req.Uid).First(&config).Error; err != nil {
 		// Create new
-		config = model.IndexConfig{Uid: req.Uid, Alias: req.Alias, Description: req.Description, IsLocked: req.IsLocked}
+		config = model.IndexConfig{
+			Uid:          req.Uid,
+			Alias:        req.Alias,
+			Description:  req.Description,
+			IsLocked:     req.IsLocked,
+			FieldConfigs: req.FieldConfigs,
+			ViewConfigs:  req.ViewConfigs,
+			CanEdit:      req.CanEdit,
+		}
 		repository.DB.Create(&config)
 	} else {
 		// Update
 		config.Alias = req.Alias
 		config.Description = req.Description
 		config.IsLocked = req.IsLocked
+		config.FieldConfigs = req.FieldConfigs
+		config.ViewConfigs = req.ViewConfigs
+		config.CanEdit = req.CanEdit
 		repository.DB.Save(&config)
 	}
 	c.JSON(http.StatusOK, config)
@@ -89,6 +100,24 @@ func HandleCreateAccessToken(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token already exists"})
 		return
 	}
+	c.JSON(http.StatusOK, tok)
+}
+
+func HandleUpdateAccessToken(c *gin.Context) {
+	var req schema.AccessTokenUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
+		return
+	}
+	var tok model.AccessToken
+	if err := repository.DB.First(&tok, req.ID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Token not found"})
+		return
+	}
+	tok.Token = req.Token
+	tok.AllowIndexes = req.AllowIndexes
+	tok.Description = req.Description
+	repository.DB.Save(&tok)
 	c.JSON(http.StatusOK, tok)
 }
 

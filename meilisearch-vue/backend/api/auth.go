@@ -171,6 +171,16 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 		idx["isUnlocked"] = isUnlocked
 		idx["displayName"] = alias
 
+		if exists {
+			idx["fieldConfigs"] = dbConf.FieldConfigs
+			idx["viewConfigs"] = dbConf.ViewConfigs
+			idx["canEdit"] = dbConf.CanEdit
+		} else {
+			idx["fieldConfigs"] = ""
+			idx["viewConfigs"] = ""
+			idx["canEdit"] = false
+		}
+
 		enhancedResults = append(enhancedResults, idx)
 	}
 

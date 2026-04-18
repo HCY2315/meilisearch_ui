@@ -90,7 +90,7 @@
     <div v-if="store.lastResults" class="results-panel">
       <div class="results-stats">
         <span class="results-count">找到 <strong>{{ formatNumber(store.resultsCount) }}</strong> 条结果</span>
-        <div class="results-actions">
+        <div v-if="userRole === 'admin'" class="results-actions">
           <span>{{ store.processingTimeMs ? `耗时 ${store.processingTimeMs}ms` : '' }}</span>
           <button class="btn btn-secondary btn-sm" @click="store.advancedSettingsOpen = true">⚙️ 高级设置</button>
           <button class="btn btn-secondary btn-sm" @click="store.columnConfigOpen = true">列设置</button>
@@ -126,6 +126,14 @@
           >
             💾 保存修改
           </button>
+          <button class="btn btn-primary btn-sm" @click="saveAllUISettingsToBackend">推送同步配置</button>
+        </div>
+        <div v-else class="results-actions">
+           <!-- 普通用户只能选择视图 -->
+           <select class="form-control" style="min-width: 120px; padding: 6px 10px;" v-model="store.viewMode">
+            <option value="table">表格</option>
+            <option v-for="cfg in store.viewConfigs" :key="cfg.name" :value="cfg.name">{{ cfg.name }}</option>
+          </select>
         </div>
       </div>
     </div>
@@ -157,6 +165,47 @@ const dropdownStyle = computed(() => {
   }
 })
 
+const userRole = ref('user')
+onMounted(() => {
+  const authUserStr = localStorage.getItem('authUser')
+  if (authUserStr) {
+    try {
+      const authUser = JSON.parse(authUserStr)
+      userRole.value = authUser.role || 'user'
+    } catch {}
+  }
+  document.addEventListener('click', onDocumentClick)
+})
+
+async function saveAllUISettingsToBackend() {
+  const token = localStorage.getItem('authToken')
+  if (!token) return alert('未获得登录凭证')
+
+  const currentIdx = store.indexes.find(i => i.uid === store.currentIndex)
+
+  // 整理数据
+  const payload = {
+    uid: store.currentIndex,
+    alias: currentIdx?.displayName || store.currentIndex,
+    isLocked: currentIdx?.isLocked || false,
+    fieldConfigs: JSON.stringify(store.currentFieldConfigsForSync()),
+    viewConfigs: JSON.stringify(store.viewConfigs),
+    canEdit: !store.editLocked
+  }
+
+  try {
+     const res = await fetch('/api/v1/admin/index_configs', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+     })
+     if(res.ok) alert('前台视图/列配置已同步至后端，永久保存成功！')
+     else alert('同步失败：' + res.status)
+  } catch (e) {
+     alert('请求发生错误')
+  }
+}
+
 const filterPreviewText = computed(() => {
   const expr = buildFilterExpression(store.queryRows)
   return expr || '无'
@@ -187,9 +236,6 @@ function onDocumentClick(e: MouseEvent) {
   store.aiDropdownOpen = false
 }
 
-onMounted(() => {
-  document.addEventListener('click', onDocumentClick)
-})
 onBeforeUnmount(() => {
   document.removeEventListener('click', onDocumentClick)
 })

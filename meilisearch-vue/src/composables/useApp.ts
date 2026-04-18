@@ -196,6 +196,9 @@ export const useAppStore = defineStore('app', () => {
       popularSearches.value = []
       return
     }
+
+    const idxMeta = indexes.value.find(i => i.uid === uid)
+
     loading.value = true
     try {
       const data = await api.loadIndexData(getHost(), getApiKey(), uid)
@@ -207,11 +210,49 @@ export const useAppStore = defineStore('app', () => {
       sortableAttributes.value = data.sortableAttributes
       aiEmbedder.value = data.embedder
       sortValue.value = ''
+      
+      // ---- 重要：应用后端同步过来的持久化配置 ----
+      if (idxMeta) {
+        // 1. 字段与权限设置
+        if (idxMeta.fieldConfigs) {
+          try {
+            const configs: FieldConfigItem[] = JSON.parse(idxMeta.fieldConfigs)
+            const searchable: string[] = []
+            const highlight: string[] = []
+            const display: string[] = []
+            const weights: Record<string, number> = {}
+            const labels: Record<string, string> = {}
+            for (const item of configs) {
+               if (item.searchable) searchable.push(item.field)
+               if (item.highlight) highlight.push(item.field)
+               if (item.display) display.push(item.field)
+               weights[item.field] = item.weight
+               labels[item.field] = item.label
+            }
+            searchFields.value = searchable
+            highlightFields.value = highlight
+            displayFields.value = display
+            searchFieldWeights.value = weights
+            fieldLabels.value = labels
+          } catch (e) { console.error('Parse fieldConfigs failed', e) }
+        }
+        // 2. 视图设置
+        if (idxMeta.viewConfigs) {
+          try { viewConfigs.value = JSON.parse(idxMeta.viewConfigs) } catch(e) { console.error('Parse viewConfigs failed', e) }
+        }
+        // 3. 编辑权限
+        if (idxMeta.canEdit !== undefined) {
+          editLocked.value = !idxMeta.canEdit
+        }
+      }
+
       updatePopularField()
       loadColumnPrefs()
       loadColumnWidthPrefs()
-      loadFieldLabels()
-      loadViewConfigs()
+      // 如果没有后端配置，再尝试加载本地(兼容逻辑)
+      if (!idxMeta?.fieldConfigs) loadFieldLabels()
+      if (!idxMeta?.viewConfigs) loadViewConfigs()
+
       if (filterableFields.value.length > 0) {
         popularSearchField.value = filterableFields.value[0]
         await loadPopularSearches()
@@ -223,6 +264,17 @@ export const useAppStore = defineStore('app', () => {
     } finally {
       loading.value = false
     }
+  }
+
+  function currentFieldConfigsForSync(): FieldConfigItem[] {
+    return availableFields.value.map(f => ({
+      field: f,
+      searchable: searchFields.value.includes(f),
+      highlight: highlightFields.value.includes(f),
+      display: displayFields.value.includes(f),
+      weight: searchFieldWeights.value[f] || 0,
+      label: fieldLabels.value[f] || f
+    }))
   }
 
   function resetIndexState() {
@@ -944,5 +996,6 @@ export const useAppStore = defineStore('app', () => {
     openResultModal, createIndex, parseUploadData, batchImport, exportCsv,
     saveAsset, deleteAsset, applySearchHistory, applyPopularSearch,
     saveViewConfig, openViewConfig, setAiEnabled, setAiWeight, setCurrentTab,
+    currentFieldConfigsForSync,
   }
 })

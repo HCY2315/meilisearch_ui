@@ -18,8 +18,8 @@
            <label style="margin-right: 12px; font-size: 14px;">
                <input type="checkbox" v-model="newIndex.isLocked"> 设置为私有锁定
            </label>
-           <button class="btn btn-secondary btn-sm" @click="saveIndexConfig">保存配置</button>
-           <button class="btn btn-secondary btn-sm" @click="showAddIndexConf = false" style="margin-left: 8px;">取消</button>
+            <button class="btn btn-secondary btn-sm" @click="saveIndexConfig">{{ editingIndexId ? '更新配置' : '保存配置' }}</button>
+            <button class="btn btn-secondary btn-sm" @click="cancelIndexEdit" style="margin-left: 8px;">取消</button>
         </div>
 
         <table class="data-table">
@@ -45,7 +45,8 @@
                 </span>
               </td>
               <td>
-                <button class="btn btn-primary btn-sm" @click="toggleIndexLock(cfg)">切换锁定状态</button>
+                <button class="btn btn-primary btn-sm" @click="editIndex(cfg)" style="margin-right: 8px;">编辑</button>
+                <button class="btn btn-secondary btn-sm" @click="toggleIndexLock(cfg)">切换锁定</button>
               </td>
             </tr>
           </tbody>
@@ -64,8 +65,8 @@
            <input v-model="newToken.token" placeholder="自定义 Token 字符串" class="form-control" style="width: 200px; display: inline-block; margin-right: 8px;">
            <input v-model="newToken.allowIndexes" placeholder='解锁目标 (例如: ["movies", "books"])' class="form-control" style="width: 250px; display: inline-block; margin-right: 8px;">
            <input v-model="newToken.description" placeholder="拥有者备注" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
-           <button class="btn btn-secondary btn-sm" @click="createToken">生成</button>
-           <button class="btn btn-secondary btn-sm" @click="showAddToken = false" style="margin-left: 8px;">取消</button>
+           <button class="btn btn-secondary btn-sm" @click="handleSaveToken">{{ editingTokenId ? '更新' : '生成' }}</button>
+           <button class="btn btn-secondary btn-sm" @click="cancelTokenEdit" style="margin-left: 8px;">取消</button>
         </div>
 
         <table class="data-table">
@@ -85,6 +86,7 @@
               <td><code>{{ tok.allowIndexes }}</code></td>
               <td>{{ tok.description }}</td>
               <td>
+                <button class="btn btn-primary btn-sm" @click="editToken(tok)" style="margin-right: 8px;">编辑</button>
                 <button class="btn btn-danger btn-sm" @click="deleteToken(tok.id)">吊销</button>
               </td>
             </tr>
@@ -131,9 +133,11 @@ const apps = ref<any[]>([])
 const availableIndexes = ref<string[]>([])
 
 const showAddIndexConf = ref(false)
+const editingIndexId = ref<number | null>(null)
 const newIndex = ref({ uid: '', alias: '', description: '', isLocked: false })
 
 const showAddToken = ref(false)
+const editingTokenId = ref<number | null>(null)
 const newToken = ref({ token: '', allowIndexes: '[]', description: '' })
 
 async function loadAdminData() {
@@ -153,22 +157,53 @@ async function loadAdminData() {
     if (resTok.ok) accessTokens.value = await resTok.json()
     if (resApps.ok) apps.value = await resApps.json()
     if (resActual.ok) {
-       const body = await resActual.json()
-       if(body && body.results) {
-         availableIndexes.value = body.results.map((r: any) => r.uid)
-       }
-    } else {
-       console.error('Fetch actual indexes failed:', resActual.status)
+        const body = await resActual.json()
+        if (body && body.results) {
+          actualIndexes.value = body.results
+          availableIndexes.value = body.results.map((r: any) => r.uid)
+        }
     }
   } catch (e) {
     console.error('Admin Data Load Error:', e)
   }
 }
 
+const showUIConfig = ref(false)
+const currentConfig = ref<any>(null)
+const actualIndexes = ref<any[]>([])
+
+function openUIConfig(cfg: any) {
+  currentConfig.value = { ...cfg }
+  showUIConfig.value = true
+}
+
+async function saveUIConfig() {
+  const token = localStorage.getItem('authToken')
+  await fetch(`/api/v1/admin/index_configs`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentConfig.value)
+  })
+  showUIConfig.value = false
+  loadAdminData()
+}
+
 async function saveIndexConfig() {
     if (!newIndex.value.uid) return alert('请先从下拉列表中选择一个索引')
-    submitIndexConfig(newIndex.value)
-    showAddIndexConf.value = false
+    await submitIndexConfig(newIndex.value)
+    cancelIndexEdit()
+}
+
+function editIndex(cfg: any) {
+  editingIndexId.value = cfg.id
+  newIndex.value = { uid: cfg.uid, alias: cfg.alias, description: cfg.description, isLocked: cfg.isLocked }
+  showAddIndexConf.value = true
+}
+
+function cancelIndexEdit() {
+  showAddIndexConf.value = false
+  editingIndexId.value = null
+  newIndex.value = { uid: '', alias: '', description: '', isLocked: false }
 }
 
 function toggleIndexLock(cfg: any) {
@@ -185,6 +220,14 @@ async function submitIndexConfig(payload: any) {
     loadAdminData()
 }
 
+async function handleSaveToken() {
+  if (editingTokenId.value) {
+    updateToken()
+  } else {
+    createToken()
+  }
+}
+
 async function createToken() {
   if (!newToken.value.token) return alert('请填入Token字符串')
   const token = localStorage.getItem('authToken')
@@ -195,10 +238,35 @@ async function createToken() {
   })
   if (res.ok) {
       alert('令牌下发成功')
-      showAddToken.value = false
-      newToken.value = { token: '', allowIndexes: '[]', description: '' }
+      cancelTokenEdit()
       loadAdminData()
   }
+}
+
+async function updateToken() {
+  const token = localStorage.getItem('authToken')
+  const res = await fetch(`/api/v1/admin/access_tokens`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editingTokenId.value, ...newToken.value })
+  })
+  if (res.ok) {
+      alert('令牌更新成功')
+      cancelTokenEdit()
+      loadAdminData()
+  }
+}
+
+function editToken(tok: any) {
+  editingTokenId.value = tok.id
+  newToken.value = { token: tok.token, allowIndexes: tok.allowIndexes, description: tok.description }
+  showAddToken.value = true
+}
+
+function cancelTokenEdit() {
+  showAddToken.value = false
+  editingTokenId.value = null
+  newToken.value = { token: '', allowIndexes: '[]', description: '' }
 }
 
 async function deleteToken(id: number) {

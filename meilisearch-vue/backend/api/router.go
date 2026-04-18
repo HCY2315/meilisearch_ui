@@ -29,6 +29,7 @@ func InitRouter() *gin.Engine {
 
 			adminGroup.GET("/access_tokens", HandleGetAccessTokens)
 			adminGroup.POST("/access_tokens", HandleCreateAccessToken)
+			adminGroup.PUT("/access_tokens", HandleUpdateAccessToken)
 			adminGroup.DELETE("/access_tokens/:id", HandleDeleteAccessToken)
 		}
 

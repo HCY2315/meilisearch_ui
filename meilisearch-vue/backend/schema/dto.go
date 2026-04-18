@@ -13,15 +13,25 @@ type AppUpdateRequest struct {
 
 // IndexConfigRequest 索引加密配置
 type IndexConfigRequest struct {
-	Uid         string `json:"uid" binding:"required"`
-	Alias       string `json:"alias"`
-	Description string `json:"description"`
-	IsLocked    bool   `json:"isLocked"`
+	Uid          string `json:"uid" binding:"required"`
+	Alias        string `json:"alias"`
+	Description  string `json:"description"`
+	IsLocked     bool   `json:"isLocked"`
+	FieldConfigs string `json:"fieldConfigs"`
+	ViewConfigs  string `json:"viewConfigs"`
+	CanEdit      bool   `json:"canEdit"`
 }
 
 // AccessTokenRequest 新建数据访问Token
 type AccessTokenRequest struct {
 	Token        string `json:"token" binding:"required"`
 	AllowIndexes string `json:"allowIndexes" binding:"required"` // '["docs", "finance"]'
+	Description  string `json:"description"`
+}
+
+type AccessTokenUpdateRequest struct {
+	ID           uint   `json:"id" binding:"required"`
+	Token        string `json:"token"`
+	AllowIndexes string `json:"allowIndexes"`
 	Description  string `json:"description"`
 }

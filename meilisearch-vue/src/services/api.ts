@@ -43,14 +43,20 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
         count: statsResp.data.numberOfDocuments,
         isLocked: idx.isLocked,
         isUnlocked: idx.isUnlocked,
-        displayName: idx.displayName
+        displayName: idx.displayName,
+        fieldConfigs: idx.fieldConfigs,
+        viewConfigs: idx.viewConfigs,
+        canEdit: idx.canEdit
       })
     } catch {
       results.push({ 
         uid: idx.uid,
         isLocked: idx.isLocked,
         isUnlocked: idx.isUnlocked,
-        displayName: idx.displayName
+        displayName: idx.displayName,
+        fieldConfigs: idx.fieldConfigs,
+        viewConfigs: idx.viewConfigs,
+        canEdit: idx.canEdit
       })
     }
   }
