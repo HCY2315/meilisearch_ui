@@ -62,6 +62,7 @@ func HandleSaveIndexConfig(c *gin.Context) {
 			IsLocked:     req.IsLocked,
 			FieldConfigs: req.FieldConfigs,
 			ViewConfigs:  req.ViewConfigs,
+			TableConfigs: req.TableConfigs,
 			CanEdit:      req.CanEdit,
 		}
 		repository.DB.Create(&config)
@@ -72,6 +73,7 @@ func HandleSaveIndexConfig(c *gin.Context) {
 		config.IsLocked = req.IsLocked
 		config.FieldConfigs = req.FieldConfigs
 		config.ViewConfigs = req.ViewConfigs
+		config.TableConfigs = req.TableConfigs
 		config.CanEdit = req.CanEdit
 		repository.DB.Save(&config)
 	}

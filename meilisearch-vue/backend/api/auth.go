@@ -174,10 +174,12 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 		if exists {
 			idx["fieldConfigs"] = dbConf.FieldConfigs
 			idx["viewConfigs"] = dbConf.ViewConfigs
+			idx["tableConfigs"] = dbConf.TableConfigs
 			idx["canEdit"] = dbConf.CanEdit
 		} else {
 			idx["fieldConfigs"] = ""
 			idx["viewConfigs"] = ""
+			idx["tableConfigs"] = ""
 			idx["canEdit"] = false
 		}
 

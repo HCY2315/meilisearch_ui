@@ -19,6 +19,7 @@ type IndexConfigRequest struct {
 	IsLocked     bool   `json:"isLocked"`
 	FieldConfigs string `json:"fieldConfigs"`
 	ViewConfigs  string `json:"viewConfigs"`
+	TableConfigs string `json:"tableConfigs"`
 	CanEdit      bool   `json:"canEdit"`
 }
 

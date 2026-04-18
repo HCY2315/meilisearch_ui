@@ -23,6 +23,7 @@ type IndexConfig struct {
 	IsLocked     bool   `gorm:"default:false" json:"isLocked"`
 	FieldConfigs string `gorm:"type:text" json:"fieldConfigs"` // JSON: Field settings
 	ViewConfigs  string `gorm:"type:text" json:"viewConfigs"`  // JSON: Custom views
+	TableConfigs string `gorm:"type:text" json:"tableConfigs"` // JSON: Table order/hidden
 	CanEdit      bool   `gorm:"default:false" json:"canEdit"`  // Whether front-end can edit docs
 }
 

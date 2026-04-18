@@ -15,14 +15,16 @@
         <div v-for="hit in sortedHits" :key="getId(hit)" class="custom-row">
           <div class="custom-row-columns" :style="gridStyle">
             <div v-for="(colFields, ci) in store.activeViewConfig()!.columns" :key="ci" class="custom-col">
-              <div v-for="field in colFields" :key="field" class="custom-field">
-                <span class="custom-label" :style="getLabelWidthStyle(ci)">{{ store.fieldLabels[field] || field }}</span>
-                <span
-                  class="field-width-resizer"
-                  @mousedown.prevent.stop="onViewFieldResizeStart($event, ci)"
-                ></span>
-                <span class="custom-value">{{ getFieldValue(hit, field) }}</span>
-              </div>
+              <template v-for="field in colFields" :key="field">
+                <div v-if="!store.hiddenColumns.includes(field)" class="custom-field">
+                  <span class="custom-label" :style="getLabelWidthStyle(ci)">{{ store.fieldLabels[field] || field }}</span>
+                  <span
+                    class="field-width-resizer"
+                    @mousedown.prevent.stop="onViewFieldResizeStart($event, ci)"
+                  ></span>
+                  <span class="custom-value">{{ getFieldValue(hit, field) }}</span>
+                </div>
+              </template>
               <span
                 v-if="ci < store.activeViewConfig()!.columns.length - 1"
                 class="view-col-resizer"
