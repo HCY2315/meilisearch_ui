@@ -137,6 +137,16 @@ onMounted(async () => {
         store.hostInput = data.meili.host
         store.apiKeyInput = data.meili.searchToken
         await store.connect()
+
+        // 索引权限隔离过滤
+        let allowed: string[] = []
+        try { 
+            allowed = JSON.parse(data.allowIndexes || "[]") 
+        } catch {}
+        
+        if (allowed.length > 0 && !allowed.includes('*')) {
+            store.indexes = store.indexes.filter((idx: any) => allowed.includes(idx.uid))
+        }
       }
     }
   } catch (err) {
