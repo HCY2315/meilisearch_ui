@@ -46,6 +46,7 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
         displayName: idx.displayName,
         fieldConfigs: idx.fieldConfigs,
         viewConfigs: idx.viewConfigs,
+        tableConfigs: idx.tableConfigs,
         canEdit: idx.canEdit
       })
     } catch {
@@ -56,6 +57,7 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
         displayName: idx.displayName,
         fieldConfigs: idx.fieldConfigs,
         viewConfigs: idx.viewConfigs,
+        tableConfigs: idx.tableConfigs,
         canEdit: idx.canEdit
       })
     }

@@ -190,6 +190,10 @@ async function saveAllUISettingsToBackend() {
     isLocked: currentIdx?.isLocked || false,
     fieldConfigs: JSON.stringify(store.currentFieldConfigsForSync()),
     viewConfigs: JSON.stringify(store.viewConfigs),
+    tableConfigs: JSON.stringify({
+       hidden: store.hiddenColumns,
+       order: store.columnOrder
+    }),
     canEdit: !store.editLocked
   }
 

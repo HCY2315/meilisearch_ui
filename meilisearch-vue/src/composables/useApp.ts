@@ -240,14 +240,25 @@ export const useAppStore = defineStore('app', () => {
         if (idxMeta.viewConfigs) {
           try { viewConfigs.value = JSON.parse(idxMeta.viewConfigs) } catch(e) { console.error('Parse viewConfigs failed', e) }
         }
-        // 3. 编辑权限
+        // 3. 表格布局设置 (顺序与隐藏)
+        if (idxMeta.tableConfigs) {
+          try {
+            const tConf = JSON.parse(idxMeta.tableConfigs)
+            if (tConf.order) columnOrder.value = tConf.order
+            if (tConf.hidden) hiddenColumns.value = tConf.hidden
+          } catch (e) { console.error('Parse tableConfigs failed', e) }
+        }
+        // 4. 编辑权限
         if (idxMeta.canEdit !== undefined) {
           editLocked.value = !idxMeta.canEdit
         }
       }
 
       updatePopularField()
-      loadColumnPrefs()
+      // 如果有后端配置，则不再从本地加载
+      if (!idxMeta?.tableConfigs) {
+        loadColumnPrefs()
+      }
       loadColumnWidthPrefs()
       // 如果没有后端配置，再尝试加载本地(兼容逻辑)
       if (!idxMeta?.fieldConfigs) loadFieldLabels()

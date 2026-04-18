@@ -40,6 +40,7 @@ export interface IndexItem {
   displayName?: string
   fieldConfigs?: string
   viewConfigs?: string
+  tableConfigs?: string
   canEdit?: boolean
 }
 
@@ -83,6 +84,7 @@ export interface IndexInfo {
   displayName?: string
   fieldConfigs?: string
   viewConfigs?: string
+  tableConfigs?: string
   canEdit?: boolean
 }
 
