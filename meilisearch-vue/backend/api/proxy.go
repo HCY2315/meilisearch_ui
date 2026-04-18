@@ -11,42 +11,71 @@ import (
 	"backend/repository"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // HandleProxy 拦截并转发所有发往 Meilisearch 的请求
 func HandleProxy(c *gin.Context) {
-	// 目前简易取第一台实例，多实例可根据前台 App 或 User 绑定关联查询
 	var instance model.MeiliInstance
 	repository.DB.First(&instance)
 
 	proxyPath := c.Param("proxyPath")
-	// 鉴权：拦截 URL 路径进行安全审查 (如 /indexes/books/search)
 	parts := strings.Split(strings.TrimPrefix(proxyPath, "/"), "/")
-	if len(parts) >= 2 && parts[0] == "indexes" {
-		requestedIndex := parts[1]
-		role, _ := c.Get("role")
-		if role != "admin" {
-			userId, _ := c.Get("userId")
-			var user model.User
-			repository.DB.First(&user, userId)
 
-			allowed := false
-			var allowedArr []string
-			json.Unmarshal([]byte(user.AllowIndexes), &allowedArr)
-			for _, a := range allowedArr {
-				if a == requestedIndex || a == "*" {
-					allowed = true
-					break
+	// 尝试解析可选的系统管理员 JWT 以便让管理员无视锁限制
+	isAdmin := false
+	authHdr := c.GetHeader("Authorization")
+	if strings.HasPrefix(authHdr, "Bearer ") {
+		tokenStr := strings.TrimPrefix(authHdr, "Bearer ")
+		token, _ := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) { return JwtSecret, nil })
+		if token != nil && token.Valid {
+			if claims, ok := token.Claims.(jwt.MapClaims); ok {
+				if role, _ := claims["role"].(string); role == "admin" {
+					isAdmin = true
 				}
-			}
-			if !allowed {
-				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "You do not have access to index: " + requestedIndex})
-				return
 			}
 		}
 	}
 
-	// 转发到真实的 Meilisearch 节点
+	// 安全鉴权：拦截请求验证其对目标索引的访问权限
+	if len(parts) >= 2 && parts[0] == "indexes" {
+		requestedIndex := parts[1]
+
+		if !isAdmin {
+			// 普通访客，检查该 Index 是否被上锁
+			var indexConf model.IndexConfig
+			isLocked := false
+			if err := repository.DB.Where("uid = ?", requestedIndex).First(&indexConf).Error; err == nil {
+				isLocked = indexConf.IsLocked
+			}
+
+			if isLocked {
+				// 如果被上锁，需要验证 App-Token 是否拥有权限
+				userToken := c.GetHeader("App-Token")
+				hasAccess := false
+
+				if userToken != "" {
+					var tok model.AccessToken
+					if err := repository.DB.Where("token = ?", userToken).First(&tok).Error; err == nil {
+						var allowedArr []string
+						json.Unmarshal([]byte(tok.AllowIndexes), &allowedArr)
+						for _, a := range allowedArr {
+							if a == requestedIndex || a == "*" {
+								hasAccess = true
+								break
+							}
+						}
+					}
+				}
+
+				if !hasAccess {
+					c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "该库已被锁定，请输入正确的访问凭证(Token)"})
+					return
+				}
+			}
+		}
+	}
+
 	target, _ := url.Parse(instance.Host)
 	proxy := httputil.NewSingleHostReverseProxy(target)
 
@@ -54,7 +83,6 @@ func HandleProxy(c *gin.Context) {
 	proxy.Director = func(req *http.Request) {
 		originalDirector(req)
 		req.Host = target.Host
-		// 剥离请求携带的 JWT Token，换成真实的 Meilisearch Master_Key
 		req.Header.Set("Authorization", "Bearer "+instance.APIKey)
 		req.Header.Set("X-Meili-API-Key", instance.APIKey)
 	}

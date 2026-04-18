@@ -8,24 +8,20 @@ import (
 	"backend/schema"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
-// HandleGetInstances 获取所有实例信息
 func HandleGetInstances(c *gin.Context) {
 	var instances []model.MeiliInstance
 	repository.DB.Find(&instances)
 	c.JSON(http.StatusOK, instances)
 }
 
-// HandleGetApps 获取所有前台项目
 func HandleGetApps(c *gin.Context) {
 	var apps []model.Application
 	repository.DB.Find(&apps)
 	c.JSON(http.StatusOK, apps)
 }
 
-// HandleUpdateApp 更新应用UI配置
 func HandleUpdateApp(c *gin.Context) {
 	id := c.Param("id")
 	var req schema.AppUpdateRequest
@@ -33,62 +29,70 @@ func HandleUpdateApp(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid fields"})
 		return
 	}
-
 	var app model.Application
 	if err := repository.DB.First(&app, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "App not found"})
 		return
 	}
-
 	app.UIConfig = req.UIConfig
 	repository.DB.Save(&app)
 	c.JSON(http.StatusOK, app)
 }
 
-// HandleGetUsers 获取系统用户
-func HandleGetUsers(c *gin.Context) {
-	var users []model.User
-	repository.DB.Find(&users)
-	c.JSON(http.StatusOK, users)
+// ---- Index Settings ----
+func HandleGetIndexConfigs(c *gin.Context) {
+	var configs []model.IndexConfig
+	repository.DB.Find(&configs)
+	c.JSON(http.StatusOK, configs)
 }
 
-// HandleCreateUser 创建普通用户
-func HandleCreateUser(c *gin.Context) {
-	var req schema.UserCreateRequest
+func HandleSaveIndexConfig(c *gin.Context) {
+	var req schema.IndexConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
+	var config model.IndexConfig
+	if err := repository.DB.Where("uid = ?", req.Uid).First(&config).Error; err != nil {
+		// Create new
+		config = model.IndexConfig{Uid: req.Uid, Alias: req.Alias, IsLocked: req.IsLocked}
+		repository.DB.Create(&config)
+	} else {
+		// Update
+		config.Alias = req.Alias
+		config.IsLocked = req.IsLocked
+		repository.DB.Save(&config)
+	}
+	c.JSON(http.StatusOK, config)
+}
 
-	hash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	user := model.User{
-		Username:     req.Username,
-		PasswordHash: string(hash),
-		Role:         req.Role,
+// ---- Access Tokens ----
+func HandleGetAccessTokens(c *gin.Context) {
+	var tokens []model.AccessToken
+	repository.DB.Find(&tokens)
+	c.JSON(http.StatusOK, tokens)
+}
+
+func HandleCreateAccessToken(c *gin.Context) {
+	var req schema.AccessTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
+		return
+	}
+	tok := model.AccessToken{
+		Token:        req.Token,
 		AllowIndexes: req.AllowIndexes,
+		Description:  req.Description,
 	}
-	if err := repository.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Username might exist"})
+	if err := repository.DB.Create(&tok).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token already exists"})
 		return
 	}
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, tok)
 }
 
-// HandleUpdateUserPermissions 更新用户权限
-func HandleUpdateUserPermissions(c *gin.Context) {
+func HandleDeleteAccessToken(c *gin.Context) {
 	id := c.Param("id")
-	var req schema.UserPermRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
-		return
-	}
-	var user model.User
-	if err := repository.DB.First(&user, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-	user.Role = req.Role
-	user.AllowIndexes = req.AllowIndexes
-	repository.DB.Save(&user)
-	c.JSON(http.StatusOK, user)
+	repository.DB.Delete(&model.AccessToken{}, id)
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }

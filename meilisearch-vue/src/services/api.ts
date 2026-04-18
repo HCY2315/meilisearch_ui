@@ -19,14 +19,16 @@ function createClient(host: string, apiKey: string): AxiosInstance {
     baseURL: trimmed,
     headers: {
       'Content-Type': 'application/json',
-      ...(apiKey.trim() ? { 'Authorization': `Bearer ${apiKey.trim()}`, 'X-Meili-API-Key': apiKey.trim() } : {}),
+      ...(apiKey.trim() ? { 'App-Token': apiKey.trim() } : {}),
     },
   })
 }
 
 export async function connectIndexes(host: string, apiKey: string): Promise<ConnectData> {
   const client = createClient(host, apiKey)
-  const resp = await client.get<IndexListResponse>('/indexes')
+  const isProxy = host.includes('/api/v1/proxy')
+  const fetchUrl = isProxy ? host.replace('/api/v1/proxy', '/api/v1/public/indexes') : '/indexes'
+  const resp = await client.get<IndexListResponse>(fetchUrl)
   const results: IndexInfo[] = []
   for (const idx of resp.data.results) {
     try {

@@ -1,4 +1,5 @@
-import { createRouter, createWebHistory } from 'vue-router'
+/// <reference types="vite/client" />
+import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 import Login from '../views/Login.vue'
 import SearchMain from '../views/SearchMain.vue'
 

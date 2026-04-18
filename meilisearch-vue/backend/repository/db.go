@@ -25,6 +25,8 @@ func InitDB() {
 		&model.User{},
 		&model.MeiliInstance{},
 		&model.Application{},
+		&model.IndexConfig{},
+		&model.AccessToken{},
 	)
 	if err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
@@ -43,7 +45,6 @@ func seedData() {
 			Username:     "admin",
 			PasswordHash: string(hash),
 			Role:         "admin",
-            AllowIndexes: `["*"]`,
 		}
 		DB.Create(&admin)
 

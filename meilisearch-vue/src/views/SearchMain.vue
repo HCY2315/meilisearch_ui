@@ -30,6 +30,11 @@
         :class="['tab-btn', store.currentTab === 'admin' && 'active']"
         @click="store.setCurrentTab('admin')"
       >⚙️ 系统管理</button>
+
+      <div class="unlock-box" v-if="store.currentTab === 'search'">
+         <input v-model="lockToken" placeholder="输入访问密钥解锁私有库" class="form-control" style="width: 200px; padding: 4px 8px;">
+         <button class="btn btn-secondary btn-sm" @click="applyLockToken" style="margin-left: 8px;">🚀 解锁</button>
+      </div>
     </nav>
 
     <div v-if="initLoading" style="padding: 20px; text-align: center;">
@@ -82,6 +87,12 @@ const uiConfig = ref<any>({})
 const userRole = ref('user')
 const isLoggedIn = ref(false)
 const initLoading = ref(true)
+const lockToken = ref(localStorage.getItem('App-Token') || '')
+
+function applyLockToken() {
+  localStorage.setItem('App-Token', lockToken.value)
+  window.location.reload()
+}
 
 function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
@@ -135,18 +146,8 @@ onMounted(async () => {
       // 这里的 meili 配置自动注入 store 并执行连接
       if (data.meili && data.meili.host) {
         store.hostInput = data.meili.host
-        store.apiKeyInput = token || '' // 去除非必须的包裹，使用最纯净的 token
+        store.apiKeyInput = lockToken.value || token || ''
         await store.connect()
-
-        // 索引权限隔离过滤
-        let allowed: string[] = []
-        try { 
-            allowed = JSON.parse(data.allowIndexes || "[]") 
-        } catch {}
-        
-        if (allowed.length > 0 && !allowed.includes('*')) {
-            store.indexes = store.indexes.filter((idx: any) => allowed.includes(idx.uid))
-        }
       }
     }
   } catch (err) {

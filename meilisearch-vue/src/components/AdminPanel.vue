@@ -3,44 +3,43 @@
 
     <div class="card">
       <div class="card-header">
-        <h3>用户与权限管理 (Users)</h3>
+        <h3>1. 索引锁库配置 (Index Security)</h3>
+        <p style="font-size: 12px; color: #888; margin-top: 4px;">配置哪些索引是公开可见的，哪些是被加锁隐藏的。</p>
       </div>
       <div class="card-body">
-        <button class="btn btn-primary" style="margin-bottom: 12px;" @click="showAddUser = true">新增用户</button>
-        <div v-if="showAddUser" class="edit-box" style="margin-bottom: 15px;">
-           <input v-model="newUser.username" placeholder="登录用户名" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
-           <input v-model="newUser.password" type="password" placeholder="密码" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
-           <select v-model="newUser.role" class="form-control" style="width: 100px; display: inline-block; margin-right: 8px;">
-             <option value="user">普通用户</option>
-             <option value="admin">管理员</option>
-           </select>
-           <input v-model="newUser.allowIndexes" placeholder='允许的索引(如: ["movies", "books"])' class="form-control" style="width: 250px; display: inline-block; margin-right: 8px;">
-           <button class="btn btn-secondary btn-sm" @click="createUser">确认新建</button>
-           <button class="btn btn-secondary btn-sm" @click="showAddUser = false" style="margin-left: 8px;">取消</button>
+        <button class="btn btn-primary" style="margin-bottom: 12px;" @click="showAddIndexConf = true">配置指定索引加密</button>
+        <div v-if="showAddIndexConf" class="edit-box" style="margin-bottom: 15px;">
+           <input v-model="newIndex.uid" placeholder="索引 UID (如 movies)" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
+           <input v-model="newIndex.alias" placeholder="别名备注" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
+           <label style="margin-right: 12px; font-size: 14px;">
+               <input type="checkbox" v-model="newIndex.isLocked"> 设置为私有锁定
+           </label>
+           <button class="btn btn-secondary btn-sm" @click="saveIndexConfig">保存配置</button>
+           <button class="btn btn-secondary btn-sm" @click="showAddIndexConf = false" style="margin-left: 8px;">取消</button>
         </div>
 
         <table class="data-table">
           <thead>
             <tr>
               <th>ID</th>
-              <th>用户名</th>
-              <th>角色</th>
-              <th>数据源(Index)权限范围</th>
+              <th>索引标识 (UID)</th>
+              <th>别名/备注</th>
+              <th>对外状态</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="u in users" :key="u.id">
-              <td>{{ u.id }}</td>
-              <td>{{ u.username }}</td>
+            <tr v-for="cfg in indexConfigs" :key="cfg.id">
+              <td>{{ cfg.id }}</td>
+              <td><b>{{ cfg.uid }}</b></td>
+              <td>{{ cfg.alias || '-' }}</td>
               <td>
-                <span :class="['status-badge', u.role === 'admin' ? 'status-ok' : '']">
-                  {{ u.role === 'admin' ? '超级管理员' : '普通用户' }}
+                <span :class="['status-badge', cfg.isLocked ? 'status-err' : 'status-ok']">
+                  {{ cfg.isLocked ? '🔒 已加锁 (凭证可见)' : '🌐 完全公开' }}
                 </span>
               </td>
-              <td><code>{{ u.allowIndexes || '[]' }}</code></td>
               <td>
-                <button class="btn btn-primary btn-sm" @click="editUserPerms(u)" :disabled="u.username === 'admin'">修改权限</button>
+                <button class="btn btn-primary btn-sm" @click="toggleIndexLock(cfg)">切换锁定状态</button>
               </td>
             </tr>
           </tbody>
@@ -50,27 +49,37 @@
 
     <div class="card" style="margin-top: 20px;">
       <div class="card-header">
-        <h3>平台实例管理 (Instances)</h3>
+        <h3>2. 访问凭证分发 (Access Tokens)</h3>
+        <p style="font-size: 12px; color: #888; margin-top: 4px;">为“已加锁”的私有库派发解锁令牌。访问者在前台输入令牌即可跨越屏障。</p>
       </div>
       <div class="card-body">
+        <button class="btn btn-primary" style="margin-bottom: 12px;" @click="showAddToken = true">派发新 Token</button>
+        <div v-if="showAddToken" class="edit-box" style="margin-bottom: 15px;">
+           <input v-model="newToken.token" placeholder="自定义 Token 字符串" class="form-control" style="width: 200px; display: inline-block; margin-right: 8px;">
+           <input v-model="newToken.allowIndexes" placeholder='解锁目标 (例如: ["movies", "books"])' class="form-control" style="width: 250px; display: inline-block; margin-right: 8px;">
+           <input v-model="newToken.description" placeholder="拥有者备注" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
+           <button class="btn btn-secondary btn-sm" @click="createToken">生成</button>
+           <button class="btn btn-secondary btn-sm" @click="showAddToken = false" style="margin-left: 8px;">取消</button>
+        </div>
+
         <table class="data-table">
           <thead>
             <tr>
               <th>ID</th>
-              <th>名称</th>
-              <th>主机地址</th>
-              <th>状态</th>
+              <th>凭证口令 (Token)</th>
+              <th>解锁的私密库 (UIDs)</th>
+              <th>备注下发对象</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="inst in instances" :key="inst.id">
-              <td>{{ inst.id }}</td>
-              <td>{{ inst.name }}</td>
-              <td>{{ inst.host }}</td>
+            <tr v-for="tok in accessTokens" :key="tok.id">
+              <td>{{ tok.id }}</td>
+              <td><code style="color: #ffb86c">{{ tok.token }}</code></td>
+              <td><code>{{ tok.allowIndexes }}</code></td>
+              <td>{{ tok.description }}</td>
               <td>
-                <span :class="['status-badge', inst.status === 1 ? 'status-ok' : 'status-err']">
-                  {{ inst.status === 1 ? '正常' : '已停用' }}
-                </span>
+                <button class="btn btn-danger btn-sm" @click="deleteToken(tok.id)">吊销</button>
               </td>
             </tr>
           </tbody>
@@ -80,47 +89,45 @@
 
     <div class="card" style="margin-top: 20px;">
       <div class="card-header">
-        <h3>前台应用配置 (Applications)</h3>
+        <h3>3. 基础页面设置 (App Config)</h3>
       </div>
       <div class="card-body">
         <table class="data-table">
           <thead>
             <tr>
-              <th>ID</th>
               <th>应用名称</th>
-              <th>App Key (调用凭证)</th>
-              <th>UI配置</th>
-              <th>全局允许的Index</th>
+              <th>全局 UI 配置</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="app in apps" :key="app.id">
-              <td>{{ app.id }}</td>
               <td>{{ app.name }}</td>
-              <td><code>{{ app.appKey }}</code></td>
               <td class="code-cell" :title="app.uiConfig">{{ app.uiConfig }}</td>
-              <td class="code-cell">{{ app.allowIndexes }}</td>
               <td>
-                <button class="btn btn-primary btn-sm" @click="editApp(app)">更新UI配置</button>
+                <button class="btn btn-primary btn-sm" @click="editApp(app)">更新皮肤/名称</button>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
-const instances = ref<any[]>([])
+const indexConfigs = ref<any[]>([])
+const accessTokens = ref<any[]>([])
 const apps = ref<any[]>([])
-const users = ref<any[]>([])
 
-const showAddUser = ref(false)
-const newUser = ref({ username: '', password: '', role: 'user', allowIndexes: '[]' })
+const showAddIndexConf = ref(false)
+const newIndex = ref({ uid: '', alias: '', isLocked: false })
+
+const showAddToken = ref(false)
+const newToken = ref({ token: '', allowIndexes: '[]', description: '' })
 
 async function loadAdminData() {
   const token = localStorage.getItem('authToken')
@@ -128,61 +135,64 @@ async function loadAdminData() {
 
   try {
     const headers = { 'Authorization': `Bearer ${token}` }
-    const [resInst, resApps, resUsers] = await Promise.all([
-      fetch('http://localhost:8080/api/v1/admin/instances', { headers }),
-      fetch('http://localhost:8080/api/v1/admin/apps', { headers }),
-      fetch('http://localhost:8080/api/v1/admin/users', { headers })
+    const [resIdx, resTok, resApps] = await Promise.all([
+      fetch('http://localhost:8080/api/v1/admin/index_configs', { headers }),
+      fetch('http://localhost:8080/api/v1/admin/access_tokens', { headers }),
+      fetch('http://localhost:8080/api/v1/admin/apps', { headers })
     ])
 
-    if (resInst.ok) instances.value = await resInst.json()
+    if (resIdx.ok) indexConfigs.value = await resIdx.json()
+    if (resTok.ok) accessTokens.value = await resTok.json()
     if (resApps.ok) apps.value = await resApps.json()
-    if (resUsers.ok) users.value = await resUsers.json()
-
   } catch (e) {
-    console.error('加载管理数据失败', e)
+    console.error('Failed', e)
   }
 }
 
-async function createUser() {
-  if (!newUser.value.username || !newUser.value.password) {
-      alert("请填写完整信息")
-      return
-  }
-  const token = localStorage.getItem('authToken')
-  try {
-      const res = await fetch(`http://localhost:8080/api/v1/admin/users`, {
+async function saveIndexConfig() {
+    if (!newIndex.value.uid) return alert('必须指定索引 UID')
+    submitIndexConfig(newIndex.value)
+    showAddIndexConf.value = false
+}
+
+function toggleIndexLock(cfg: any) {
+    submitIndexConfig({ uid: cfg.uid, alias: cfg.alias, isLocked: !cfg.isLocked })
+}
+
+async function submitIndexConfig(payload: any) {
+    const token = localStorage.getItem('authToken')
+    await fetch(`http://localhost:8080/api/v1/admin/index_configs`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser.value)
-      })
-      if (res.ok) {
-          alert('用户新建成功！')
-          showAddUser.value = false
-          newUser.value = { username: '', password: '', role: 'user', allowIndexes: '[]' }
-          loadAdminData()
-      } else {
-          alert('新建失败，可能是用户名重复')
-      }
-  } catch (e) { alert('网络错误') }
+        body: JSON.stringify(payload)
+    })
+    loadAdminData()
 }
 
-function editUserPerms(u: any) {
-  const newPerms = prompt(`修改用户 ${u.username} 允许访问的索引(JSON Array):`, u.allowIndexes || '[]')
-  if (newPerms !== null) {
-      updateUserPerms(u.id, u.role, newPerms)
+async function createToken() {
+  if (!newToken.value.token) return alert('请填入Token字符串')
+  const token = localStorage.getItem('authToken')
+  const res = await fetch(`http://localhost:8080/api/v1/admin/access_tokens`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(newToken.value)
+  })
+  if (res.ok) {
+      alert('令牌下发成功')
+      showAddToken.value = false
+      newToken.value = { token: '', allowIndexes: '[]', description: '' }
+      loadAdminData()
   }
 }
 
-async function updateUserPerms(id: number, role: string, allowIndexes: string) {
-  const token = localStorage.getItem('authToken')
-  try {
-     const res = await fetch(`http://localhost:8080/api/v1/admin/users/${id}/permissions`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, allowIndexes })
-     })
-     if (res.ok) { loadAdminData(); alert('修改成功') }
-  } catch (e) {}
+async function deleteToken(id: number) {
+   if(!confirm('确定吊销该令牌？前台正在使用该令牌的用户将立即失去访问权。')) return
+   const token = localStorage.getItem('authToken')
+   await fetch(`http://localhost:8080/api/v1/admin/access_tokens/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+   })
+   loadAdminData()
 }
 
 function editApp(app: any) {
@@ -194,19 +204,12 @@ function editApp(app: any) {
 
 async function updateApp(id: number, uiConfig: string) {
   const token = localStorage.getItem('authToken')
-  try {
-     const res = await fetch(`http://localhost:8080/api/v1/admin/apps/${id}`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uiConfig })
-     })
-     if (res.ok) {
-         alert('配置更新成功，刷新页面生效！')
-         loadAdminData()
-     } else {
-         alert('更新失败！')
-     }
-  } catch (e) { alert('网络错误') }
+  await fetch(`http://localhost:8080/api/v1/admin/apps/${id}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uiConfig })
+  })
+  loadAdminData()
 }
 
 onMounted(() => {
@@ -269,7 +272,7 @@ onMounted(() => {
   color: #ff4a4a;
 }
 .code-cell {
-  max-width: 200px;
+  max-width: 300px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -283,6 +286,12 @@ onMounted(() => {
 .btn-sm {
   padding: 4px 10px;
   font-size: 12px;
+}
+.btn-danger {
+  background: #ff4a4a;
+  color: white;
+  border: none;
+  cursor: pointer;
 }
 .form-control {
   padding: 8px 12px;

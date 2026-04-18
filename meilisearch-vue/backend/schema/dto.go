@@ -1,26 +1,26 @@
 package schema
 
-// LoginRequest 表示登录请求
+// LoginRequest 表示超级后台登录请求
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
-// UserCreateRequest 用户创建
-type UserCreateRequest struct {
-	Username     string `json:"username" binding:"required"`
-	Password     string `json:"password" binding:"required"`
-	Role         string `json:"role"`
-	AllowIndexes string `json:"allowIndexes"`
-}
-
-// UserPermRequest 权限更新
-type UserPermRequest struct {
-	Role         string `json:"role"`
-	AllowIndexes string `json:"allowIndexes"`
-}
-
 // AppUpdateRequest UI修改
 type AppUpdateRequest struct {
 	UIConfig string `json:"uiConfig"`
+}
+
+// IndexConfigRequest 索引加密配置
+type IndexConfigRequest struct {
+	Uid      string `json:"uid" binding:"required"`
+	Alias    string `json:"alias"`
+	IsLocked bool   `json:"isLocked"`
+}
+
+// AccessTokenRequest 新建数据访问Token
+type AccessTokenRequest struct {
+	Token        string `json:"token" binding:"required"`
+	AllowIndexes string `json:"allowIndexes" binding:"required"` // '["docs", "finance"]'
+	Description  string `json:"description"`
 }
