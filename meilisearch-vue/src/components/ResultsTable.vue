@@ -22,7 +22,7 @@
                     class="field-width-resizer"
                     @mousedown.prevent.stop="onViewFieldResizeStart($event, ci)"
                   ></span>
-                  <span class="custom-value">{{ getFieldValue(hit, field) }}</span>
+                  <span class="custom-value" v-html="getCellHtml(hit, field)" :title="getCellTitle(hit, field)"></span>
                 </div>
               </template>
               <span
@@ -33,6 +33,10 @@
             </div>
           </div>
           <div class="custom-row-actions">
+            <div v-if="hit._rankingScore" style="margin-bottom: 8px; text-align: center;">
+              <small class="rank-score" style="display: block; opacity: 0.8;">相关度评分</small>
+              <span class="rank-score" style="font-weight: bold; color: var(--primary-color);">{{ ((hit._rankingScore as number) * 100).toFixed(1) }}%</span>
+            </div>
             <button class="btn btn-secondary" @click="store.openResultModal(getId(hit))">查看</button>
           </div>
         </div>
@@ -86,12 +90,11 @@
                 <template v-else>
                   <span v-html="getCellHtml(hit, col)" :title="getCellTitle(hit, col)"></span>
                 </template>
-                <!-- 评分显示（仅第一列） -->
-                <template v-if="col === store.visibleColumns[0] && hit._rankingScore">
-                  <br /><small class="rank-score">评分: {{ ((hit._rankingScore as number) * 100).toFixed(1) }}%</small>
-                </template>
               </td>
               <td>
+                <div v-if="hit._rankingScore" style="margin-bottom: 4px;">
+                  <small class="rank-score">评分: {{ ((hit._rankingScore as number) * 100).toFixed(1) }}%</small>
+                </div>
                 <button class="btn btn-secondary btn-sm" @click="store.openResultModal(getId(hit))">查看</button>
               </td>
             </tr>

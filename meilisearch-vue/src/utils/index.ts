@@ -145,6 +145,17 @@ export function getCellValue(
 function tryRenderImageCell(raw: unknown, size: number): CellValue | null {
   const sizePx = `${size}px`
 
+  function renderOne(url: string) {
+    const esc = escapeHtml(url)
+    const display = url.split('/').pop() ?? url
+    return `
+      <div class="thumb-container" style="display:inline-flex; flex-direction:column; align-items:center; margin-right:8px; vertical-align:top;">
+        <img class="cell-thumbnail" src="${esc}" alt="thumbnail" loading="lazy" style="width:${sizePx};height:${sizePx}; object-fit:cover; border-radius:4px; margin-bottom:4px;" />
+        <a href="${esc}" target="_blank" rel="noopener noreferrer" style="font-size:11px; max-width:${sizePx}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--primary-color); text-decoration:none;">${escapeHtml(display)}</a>
+      </div>
+    `
+  }
+
   if (Array.isArray(raw)) {
     const urls: string[] = []
     for (const v of raw) {
@@ -152,19 +163,15 @@ function tryRenderImageCell(raw: unknown, size: number): CellValue | null {
     }
     if (!urls.length) return null
 
-    const imgs = urls.slice(0, 3).map(url => {
-      const esc = escapeHtml(url)
-      return `<img class="cell-thumbnail" src="${esc}" alt="thumbnail" loading="lazy" style="width:${sizePx};height:${sizePx};" />`
-    }).join('')
-    return { title: urls.join(', '), html: `<div class="cell-thumbnail-scroll">${imgs}</div>` }
+    const imgs = urls.slice(0, 5).map(url => renderOne(url)).join('')
+    return { title: urls.join(', '), html: `<div class="cell-thumbnail-scroll" style="display:flex; overflow-x:auto; padding-bottom:4px;">${imgs}</div>` }
   }
 
   if (typeof raw === 'string') {
     if (!raw.trim() || !isHttpUrl(raw)) return null
-    const esc = escapeHtml(raw)
     return {
-      title: esc,
-      html: `<img class="cell-thumbnail" src="${esc}" alt="thumbnail" loading="lazy" style="width:${sizePx};height:${sizePx};" />`,
+      title: raw,
+      html: renderOne(raw),
     }
   }
 
