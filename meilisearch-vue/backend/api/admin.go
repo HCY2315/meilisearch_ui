@@ -55,11 +55,12 @@ func HandleSaveIndexConfig(c *gin.Context) {
 	var config model.IndexConfig
 	if err := repository.DB.Where("uid = ?", req.Uid).First(&config).Error; err != nil {
 		// Create new
-		config = model.IndexConfig{Uid: req.Uid, Alias: req.Alias, IsLocked: req.IsLocked}
+		config = model.IndexConfig{Uid: req.Uid, Alias: req.Alias, Description: req.Description, IsLocked: req.IsLocked}
 		repository.DB.Create(&config)
 	} else {
 		// Update
 		config.Alias = req.Alias
+		config.Description = req.Description
 		config.IsLocked = req.IsLocked
 		repository.DB.Save(&config)
 	}

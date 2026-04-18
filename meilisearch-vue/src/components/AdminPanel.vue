@@ -13,7 +13,8 @@
               <option disabled value="">-- 选择要加密的索引 --</option>
               <option v-for="uid in availableIndexes" :key="uid" :value="uid">{{ uid }}</option>
            </select>
-           <input v-model="newIndex.alias" placeholder="别名备注" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
+           <input v-model="newIndex.alias" placeholder="显示别名" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
+           <input v-model="newIndex.description" placeholder="后台备注" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
            <label style="margin-right: 12px; font-size: 14px;">
                <input type="checkbox" v-model="newIndex.isLocked"> 设置为私有锁定
            </label>
@@ -26,7 +27,8 @@
             <tr>
               <th>ID</th>
               <th>索引标识 (UID)</th>
-              <th>别名/备注</th>
+              <th>显示别名</th>
+              <th>后台备注</th>
               <th>对外状态</th>
               <th>操作</th>
             </tr>
@@ -36,9 +38,10 @@
               <td>{{ cfg.id }}</td>
               <td><b>{{ cfg.uid }}</b></td>
               <td>{{ cfg.alias || '-' }}</td>
+              <td>{{ cfg.description || '-' }}</td>
               <td>
                 <span :class="['status-badge', cfg.isLocked ? 'status-err' : 'status-ok']">
-                  {{ cfg.isLocked ? '🔒 已加锁 (凭证可见)' : '🌐 完全公开' }}
+                  {{ cfg.isLocked ? '🔒 已加锁' : '🌐 完全公开' }}
                 </span>
               </td>
               <td>
@@ -128,7 +131,7 @@ const apps = ref<any[]>([])
 const availableIndexes = ref<string[]>([])
 
 const showAddIndexConf = ref(false)
-const newIndex = ref({ uid: '', alias: '', isLocked: false })
+const newIndex = ref({ uid: '', alias: '', description: '', isLocked: false })
 
 const showAddToken = ref(false)
 const newToken = ref({ token: '', allowIndexes: '[]', description: '' })
@@ -169,7 +172,7 @@ async function saveIndexConfig() {
 }
 
 function toggleIndexLock(cfg: any) {
-    submitIndexConfig({ uid: cfg.uid, alias: cfg.alias, isLocked: !cfg.isLocked })
+    submitIndexConfig({ uid: cfg.uid, alias: cfg.alias, description: cfg.description, isLocked: !cfg.isLocked })
 }
 
 async function submitIndexConfig(payload: any) {

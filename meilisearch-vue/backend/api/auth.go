@@ -111,9 +111,9 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 	// Load DB config map
 	var configs []model.IndexConfig
 	repository.DB.Find(&configs)
-	lockedMap := make(map[string]bool)
+	configMap := make(map[string]model.IndexConfig)
 	for _, conf := range configs {
-		lockedMap[conf.Uid] = conf.IsLocked
+		configMap[conf.Uid] = conf
 	}
 
 	// 1. 直连 Meilisearch 获取真实全部的 indexes
@@ -135,34 +135,47 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 	bodyBytes, _ := io.ReadAll(res.Body)
 	json.Unmarshal(bodyBytes, &payload)
 
-	// 2. 过滤
-	filteredResults := []map[string]interface{}{}
+	// 2. 增强逻辑：合并配置，标记锁定状态
+	enhancedResults := []map[string]interface{}{}
 	for _, idx := range payload.Results {
 		uid, _ := idx["uid"].(string)
 
-		isLocked := lockedMap[uid]
-		canView := false
-
-		if isAdmin || !isLocked {
-			// 如果是管理员或者该索引没上锁
-			canView = true
-		} else {
-			// 加锁了，检查 token 是否有权访问该 UID
-			for _, allowed := range allowedByToken {
-				if allowed == uid || allowed == "*" {
-					canView = true
-					break
-				}
+		dbConf, exists := configMap[uid]
+		isLocked := false
+		alias := uid
+		if exists {
+			isLocked = dbConf.IsLocked
+			if dbConf.Alias != "" {
+				alias = dbConf.Alias
 			}
 		}
 
-		if canView {
-			filteredResults = append(filteredResults, idx)
+		isUnlocked := false
+		if isAdmin {
+			isUnlocked = true
+		} else if isLocked {
+			// 加锁了，检查 token 是否有权访问该 UID
+			for _, allowed := range allowedByToken {
+				if allowed == uid || allowed == "*" {
+					isUnlocked = true
+					break
+				}
+			}
+		} else {
+			// 未上锁的默认即为已解锁状态
+			isUnlocked = true
 		}
+
+		// 注入前台所需状态
+		idx["isLocked"] = isLocked
+		idx["isUnlocked"] = isUnlocked
+		idx["displayName"] = alias
+
+		enhancedResults = append(enhancedResults, idx)
 	}
 
-	payload.Results = filteredResults
-	payload.Total = len(filteredResults)
+	payload.Results = enhancedResults
+	payload.Total = len(enhancedResults)
 
 	c.JSON(http.StatusOK, payload)
 }
