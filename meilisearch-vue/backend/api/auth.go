@@ -3,7 +3,9 @@ package api
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"backend/model"
@@ -81,12 +83,30 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 
 	userToken := c.GetHeader("App-Token")
 	var allowedByToken []string
+
+	// ---- 特权检查：如果是系统管理员登录，无视一切锁，显示全部 ----
+	isAdmin := false
+	authHdr := c.GetHeader("Authorization")
+	if strings.HasPrefix(authHdr, "Bearer ") {
+		tStr := strings.TrimPrefix(authHdr, "Bearer ")
+		t, _ := jwt.Parse(tStr, func(token *jwt.Token) (interface{}, error) { return JwtSecret, nil })
+		if t != nil && t.Valid {
+			if claims, ok := t.Claims.(jwt.MapClaims); ok {
+				if r, _ := claims["role"].(string); r == "admin" {
+					isAdmin = true
+				}
+			}
+		}
+	}
+
 	if userToken != "" {
 		var tok model.AccessToken
 		if err := repository.DB.Where("token = ?", userToken).First(&tok).Error; err == nil {
 			json.Unmarshal([]byte(tok.AllowIndexes), &allowedByToken)
+		} else {
+			log.Printf("[Auth] Token [%s] not found in DB", userToken)
 		}
-	} // 就算 token 为空，也不报错，只下发公开项
+	}
 
 	// Load DB config map
 	var configs []model.IndexConfig
@@ -102,20 +122,14 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 	req.Header.Set("Authorization", "Bearer "+instance.APIKey)
 	res, err := client.Do(req)
 	if err != nil {
+		log.Printf("[Proxy Error] Failed to connect to Meilisearch: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法连接到底层 Meilisearch"})
 		return
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
-		c.Status(res.StatusCode)
-		return
-	}
-
 	var payload struct {
 		Results []map[string]interface{} `json:"results"`
-		Offset  int                      `json:"offset"`
-		Limit   int                      `json:"limit"`
 		Total   int                      `json:"total"`
 	}
 	bodyBytes, _ := io.ReadAll(res.Body)
@@ -124,19 +138,16 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 	// 2. 过滤
 	filteredResults := []map[string]interface{}{}
 	for _, idx := range payload.Results {
-		uid, ok := idx["uid"].(string)
-		if !ok {
-			continue
-		}
+		uid, _ := idx["uid"].(string)
 
 		isLocked := lockedMap[uid]
 		canView := false
 
-		if !isLocked {
-			// 公开的
+		if isAdmin || !isLocked {
+			// 如果是管理员或者该索引没上锁
 			canView = true
 		} else {
-			// 加锁了，检查 token
+			// 加锁了，检查 token 是否有权访问该 UID
 			for _, allowed := range allowedByToken {
 				if allowed == uid || allowed == "*" {
 					canView = true
