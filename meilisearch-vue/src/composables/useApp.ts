@@ -43,7 +43,7 @@ export const useAppStore = defineStore('app', () => {
   const hostInput = ref('http://localhost:7700')
   const apiKeyInput = ref('123456')
   const indexes = ref<IndexInfo[]>([])
-  const currentIndex = ref('')
+  const currentIndex = ref(storage.storageGet('currentIndex') || '')
   const searchInput = ref('')
   const queryRows = ref<QueryRow[]>([createQueryRow()])
 
@@ -200,6 +200,9 @@ export const useAppStore = defineStore('app', () => {
     try {
       const data = await api.connectIndexes(getHost(), getApiKey())
       indexes.value = data.indexes
+      if (currentIndex.value && indexes.value.some(i => i.uid === currentIndex.value)) {
+        await selectIndex(currentIndex.value)
+      }
       pushToast('连接成功！', 'success')
     } catch (e) {
       pushToast(`连接失败: ${e}`, 'error')
@@ -210,6 +213,7 @@ export const useAppStore = defineStore('app', () => {
 
   async function selectIndex(uid: string) {
     currentIndex.value = uid
+    if (uid) storage.storageSet('currentIndex', uid)
     resetIndexState()
     if (!uid) {
       popularSearches.value = []
@@ -257,7 +261,16 @@ export const useAppStore = defineStore('app', () => {
         }
         // 2. 视图设置
         if (idxMeta.viewConfigs) {
-          try { viewConfigs.value = JSON.parse(idxMeta.viewConfigs) } catch(e) { console.error('Parse viewConfigs failed', e) }
+          try { 
+            const parsed = JSON.parse(idxMeta.viewConfigs)
+            if (Array.isArray(parsed)) {
+              for (const cfg of parsed) {
+                cfg.widths = normalizeViewWidths(cfg.widths, Math.max(cfg.columns.length, 1))
+                cfg.labelWidths = normalizeLabelWidths(cfg.labelWidths, Math.max(cfg.columns.length, 1))
+              }
+              viewConfigs.value = parsed
+            }
+          } catch(e) { console.error('Parse viewConfigs failed', e) }
         }
         // 3. 表格布局设置 (顺序与隐藏)
         if (idxMeta.tableConfigs) {
@@ -282,6 +295,11 @@ export const useAppStore = defineStore('app', () => {
       // 如果没有后端配置，再尝试加载本地(兼容逻辑)
       if (!idxMeta?.fieldConfigs) loadFieldLabels()
       if (!idxMeta?.viewConfigs) loadViewConfigs()
+      else {
+        // 后端有配置时，尝试恢复该 index 下上次选中的 viewMode
+        const modeKey = `viewMode:${currentIndex.value || 'default'}`
+        viewMode.value = localStorage.getItem(modeKey) || 'table'
+      }
 
       if (filterableFields.value.length > 0) {
         popularSearchField.value = filterableFields.value[0]

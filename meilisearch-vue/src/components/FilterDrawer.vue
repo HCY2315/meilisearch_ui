@@ -20,7 +20,7 @@
                   <label>
                     <input
                       type="checkbox"
-                      :checked="isFacetChecked(facet, val)"
+                      :checked="isFacetChecked(facet as string, val)"
                       @change="store.toggleFacet(facet, val, ($event.target as HTMLInputElement).checked)"
                     />
                     <span>{{ val }}</span>

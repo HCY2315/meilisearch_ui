@@ -263,7 +263,7 @@ const newInstance = ref({ name: '', host: '', apiKey: '' })
 
 const showAddIndexConf = ref(false)
 const editingIndexId = ref<number | null>(null)
-const newIndex = ref({ uid: '', alias: '', description: '', isLocked: false })
+const newIndex = ref({ uid: '', alias: '', description: '', isLocked: false, fieldConfigs: '', viewConfigs: '', tableConfigs: '', canEdit: false })
 
 const showAddToken = ref(false)
 const editingTokenId = ref<number | null>(null)
@@ -387,14 +387,23 @@ async function saveIndexConfig() {
 
 function editIndex(cfg: any) {
   editingIndexId.value = cfg.id
-  newIndex.value = { uid: cfg.uid, alias: cfg.alias, description: cfg.description, isLocked: cfg.isLocked }
+  newIndex.value = {
+    uid: cfg.uid,
+    alias: cfg.alias,
+    description: cfg.description,
+    isLocked: cfg.isLocked,
+    fieldConfigs: cfg.fieldConfigs || '',
+    viewConfigs: cfg.viewConfigs || '',
+    tableConfigs: cfg.tableConfigs || '',
+    canEdit: cfg.canEdit ?? false
+  }
   showAddIndexConf.value = true
 }
 
 function cancelIndexEdit() {
   showAddIndexConf.value = false
   editingIndexId.value = null
-  newIndex.value = { uid: '', alias: '', description: '', isLocked: false }
+  newIndex.value = { uid: '', alias: '', description: '', isLocked: false, fieldConfigs: '', viewConfigs: '', tableConfigs: '', canEdit: false }
 }
 
 async function submitIndexConfig(payload: any) {
