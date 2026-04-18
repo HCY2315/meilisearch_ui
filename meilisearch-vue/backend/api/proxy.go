@@ -83,6 +83,7 @@ func HandleProxy(c *gin.Context) {
 	proxy.Director = func(req *http.Request) {
 		originalDirector(req)
 		req.Host = target.Host
+		req.URL.Path = proxyPath
 		req.Header.Set("Authorization", "Bearer "+instance.APIKey)
 		req.Header.Set("X-Meili-API-Key", instance.APIKey)
 	}
