@@ -2,6 +2,7 @@ package repository
 
 import (
 	"log"
+	"os"
 
 	"backend/model"
 
@@ -48,10 +49,23 @@ func seedData() {
 		}
 		DB.Create(&admin)
 
+		meiliName := os.Getenv("MEILI_NAME")
+		if meiliName == "" {
+			meiliName = "Default Local"
+		}
+		meiliHost := os.Getenv("MEILI_HOST")
+		if meiliHost == "" {
+			meiliHost = "http://localhost:7700"
+		}
+		meiliKey := os.Getenv("MEILI_API_KEY")
+		if meiliKey == "" {
+			meiliKey = "123456"
+		}
+
 		testInstance := model.MeiliInstance{
-			Name: "Default Local",
-			Host: "http://localhost:7700",
-			APIKey: "insur132",
+			Name:   meiliName,
+			Host:   meiliHost,
+			APIKey: meiliKey,
 		}
 		DB.Create(&testInstance)
 

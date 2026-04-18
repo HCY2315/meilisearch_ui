@@ -145,6 +145,7 @@ import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useAppStore } from '@/composables/useApp'
 import { formatNumber, buildFilterExpression } from '@/utils'
 import * as storage from '@/services/storage'
+import type { IndexInfo } from '@/types'
 
 const store = useAppStore()
 
@@ -181,7 +182,7 @@ async function saveAllUISettingsToBackend() {
   const token = localStorage.getItem('authToken')
   if (!token) return alert('未获得登录凭证')
 
-  const currentIdx = store.indexes.find(i => i.uid === store.currentIndex)
+  const currentIdx = store.indexes.find((i: IndexInfo) => i.uid === store.currentIndex)
 
   // 整理数据
   const payload = {

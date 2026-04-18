@@ -21,6 +21,9 @@ func InitRouter() *gin.Engine {
 		adminGroup.Use(AuthMiddleware())
 		{
 			adminGroup.GET("/instances", HandleGetInstances)
+			adminGroup.POST("/instances", HandleCreateInstance)
+			adminGroup.PUT("/instances", HandleUpdateInstance)
+			adminGroup.DELETE("/instances/:id", HandleDeleteInstance)
 			adminGroup.GET("/apps", HandleGetApps)
 			adminGroup.PUT("/apps/:id", HandleUpdateApp)
 

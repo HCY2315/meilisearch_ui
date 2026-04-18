@@ -36,3 +36,17 @@ type AccessTokenUpdateRequest struct {
 	AllowIndexes string `json:"allowIndexes"`
 	Description  string `json:"description"`
 }
+
+// MeiliInstanceRequest 新建实例
+type MeiliInstanceRequest struct {
+	Name   string `json:"name" binding:"required"`
+	Host   string `json:"host" binding:"required"`
+	APIKey string `json:"apiKey"`
+}
+
+type MeiliInstanceUpdateRequest struct {
+	ID     uint   `json:"id" binding:"required"`
+	Name   string `json:"name"`
+	Host   string `json:"host"`
+	APIKey string `json:"apiKey"`
+}

@@ -40,8 +40,8 @@ function createQueryRow(): QueryRow {
 }
 
 export const useAppStore = defineStore('app', () => {
-  const hostInput = ref('http://192.168.2.27:7700')
-  const apiKeyInput = ref('insur132')
+  const hostInput = ref('http://localhost:7700')
+  const apiKeyInput = ref('123456')
   const indexes = ref<IndexInfo[]>([])
   const currentIndex = ref('')
   const searchInput = ref('')

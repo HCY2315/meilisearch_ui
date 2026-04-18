@@ -164,8 +164,8 @@ const gridStyle = computed(() => {
   const widths = store.viewWidthsWorking.length > 0 ? store.viewWidthsWorking : (activeCfg.widths ?? [])
   
   // 如果有明确配置的有效宽度，使用百分比
-  if (widths.length === colCount && widths.some(w => w > 0)) {
-    return `grid-template-columns: ${widths.map(w => `${w}%`).join(' ')};`
+  if (widths.length === colCount && widths.some((w: number) => w > 0)) {
+    return `grid-template-columns: ${widths.map((w: number) => `${w}%`).join(' ')};`
   }
   
   // 否则均分宽度 (1fr)

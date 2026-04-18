@@ -2,7 +2,7 @@
   <div class="toast-container">
     <TransitionGroup name="toast">
       <div v-for="toast in store.toasts" :key="toast.id" :class="['toast', toast.kind]">
-        <span class="toast-icon">{{ icons[toast.kind] }}</span>
+        <span class="toast-icon">{{ icons[toast.kind as ToastType] }}</span>
         <span>{{ toast.message }}</span>
       </div>
     </TransitionGroup>

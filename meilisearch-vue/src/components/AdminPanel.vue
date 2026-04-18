@@ -1,5 +1,43 @@
 <template>
   <div class="admin-panel">
+    <div class="card" style="margin-bottom: 20px;">
+      <div class="card-header">
+        <h3>0. 搜索引擎实例配置 (Meilisearch Instances)</h3>
+        <p style="font-size: 12px; color: #888; margin-top: 4px;">配置后端连接的 Meilisearch 节点，支持多实例管理。</p>
+      </div>
+      <div class="card-body">
+        <button class="btn btn-primary" style="margin-bottom: 12px;" @click="showAddInstance = true">添加新实例</button>
+        <div v-if="showAddInstance" class="edit-box" style="margin-bottom: 15px;">
+           <input v-model="newInstance.name" placeholder="实例名称 (如: 生产环境)" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
+           <input v-model="newInstance.host" placeholder="Host (如: http://localhost:7700)" class="form-control" style="width: 250px; display: inline-block; margin-right: 8px;">
+           <input v-model="newInstance.apiKey" placeholder="API Key" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
+           <button class="btn btn-secondary btn-sm" @click="handleSaveInstance">{{ editingInstanceId ? '更新' : '添加' }}</button>
+           <button class="btn btn-secondary btn-sm" @click="cancelInstanceEdit" style="margin-left: 8px;">取消</button>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>名称</th>
+              <th>地址 (Host)</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="ins in instances" :key="ins.id">
+              <td>{{ ins.id }}</td>
+              <td><b>{{ ins.name }}</b></td>
+              <td><code>{{ ins.host }}</code></td>
+              <td>
+                <button class="btn btn-primary btn-sm" @click="editInstance(ins)" style="margin-right: 8px;">编辑</button>
+                <button class="btn btn-danger btn-sm" @click="deleteInstance(ins.id)">删除</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
     <div class="card">
       <div class="card-header">
@@ -130,7 +168,12 @@ import { ref, onMounted } from 'vue'
 const indexConfigs = ref<any[]>([])
 const accessTokens = ref<any[]>([])
 const apps = ref<any[]>([])
+const instances = ref<any[]>([])
 const availableIndexes = ref<string[]>([])
+
+const showAddInstance = ref(false)
+const editingInstanceId = ref<number | null>(null)
+const newInstance = ref({ name: '', host: '', apiKey: '' })
 
 const showAddIndexConf = ref(false)
 const editingIndexId = ref<number | null>(null)
@@ -146,16 +189,18 @@ async function loadAdminData() {
 
   try {
     const headers = { 'Authorization': `Bearer ${token}` }
-    const [resIdx, resTok, resApps, resActual] = await Promise.all([
+    const [resIdx, resTok, resApps, resActual, resIns] = await Promise.all([
       fetch('/api/v1/admin/index_configs', { headers }),
       fetch('/api/v1/admin/access_tokens', { headers }),
       fetch('/api/v1/admin/apps', { headers }),
-      fetch('/api/v1/proxy/indexes', { headers })
+      fetch('/api/v1/proxy/indexes', { headers }),
+      fetch('/api/v1/admin/instances', { headers })
     ])
 
     if (resIdx.ok) indexConfigs.value = await resIdx.json()
     if (resTok.ok) accessTokens.value = await resTok.json()
     if (resApps.ok) apps.value = await resApps.json()
+    if (resIns.ok) instances.value = await resIns.json()
     if (resActual.ok) {
         const body = await resActual.json()
         if (body && body.results) {
@@ -166,6 +211,65 @@ async function loadAdminData() {
   } catch (e) {
     console.error('Admin Data Load Error:', e)
   }
+}
+
+async function handleSaveInstance() {
+  if (editingInstanceId.value) {
+    updateInstance()
+  } else {
+    createInstance()
+  }
+}
+
+async function createInstance() {
+  if (!newInstance.value.name || !newInstance.value.host) return alert('请填入名称和地址')
+  const token = localStorage.getItem('authToken')
+  const res = await fetch(`/api/v1/admin/instances`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(newInstance.value)
+  })
+  if (res.ok) {
+      alert('实例添加成功')
+      cancelInstanceEdit()
+      loadAdminData()
+  }
+}
+
+async function updateInstance() {
+  const token = localStorage.getItem('authToken')
+  const res = await fetch(`/api/v1/admin/instances`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editingInstanceId.value, ...newInstance.value })
+  })
+  if (res.ok) {
+      alert('实例更新成功')
+      cancelInstanceEdit()
+      loadAdminData()
+  }
+}
+
+function editInstance(ins: any) {
+  editingInstanceId.value = ins.id
+  newInstance.value = { name: ins.name, host: ins.host, apiKey: ins.apiKey || '' }
+  showAddInstance.value = true
+}
+
+function cancelInstanceEdit() {
+  showAddInstance.value = false
+  editingInstanceId.value = null
+  newInstance.value = { name: '', host: '', apiKey: '' }
+}
+
+async function deleteInstance(id: number) {
+   if(!confirm('确定删除该实例配置？')) return
+   const token = localStorage.getItem('authToken')
+   await fetch(`/api/v1/admin/instances/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+   })
+   loadAdminData()
 }
 
 const showUIConfig = ref(false)

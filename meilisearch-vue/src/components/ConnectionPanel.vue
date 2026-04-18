@@ -37,14 +37,15 @@
 import { ref, watch, computed } from 'vue'
 import { useAppStore } from '@/composables/useApp'
 import { formatNumber } from '@/utils'
+import type { IndexInfo } from '@/types'
 
 const store = useAppStore()
 const selectedIndex = ref('')
 
 // 分组逻辑
-const publicIndexes = computed(() => store.indexes.filter(idx => !idx.isLocked))
-const unlockedIndexes = computed(() => store.indexes.filter(idx => idx.isLocked && idx.isUnlocked))
-const lockedIndexes = computed(() => store.indexes.filter(idx => idx.isLocked && !idx.isUnlocked))
+const publicIndexes = computed(() => store.indexes.filter((idx: IndexInfo) => !idx.isLocked))
+const unlockedIndexes = computed(() => store.indexes.filter((idx: IndexInfo) => idx.isLocked && idx.isUnlocked))
+const lockedIndexes = computed(() => store.indexes.filter((idx: IndexInfo) => idx.isLocked && !idx.isUnlocked))
 
 // 当后端推送了初始连接后，可能已有 currentIndex
 watch(() => store.currentIndex, (newVal) => {

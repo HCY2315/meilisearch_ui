@@ -13,17 +13,17 @@
               <h4>{{ facet }}</h4>
               <div class="filter-list">
                 <div
-                  v-for="(count, value) in sortedFacets(values)"
-                  :key="value"
+                  v-for="[val, count] in sortedFacets(values)"
+                  :key="val"
                   class="filter-item"
                 >
                   <label>
                     <input
                       type="checkbox"
-                      :checked="isFacetChecked(facet, String(value))"
-                      @change="store.toggleFacet(facet, String(value), ($event.target as HTMLInputElement).checked)"
+                      :checked="isFacetChecked(facet, val)"
+                      @change="store.toggleFacet(facet, val, ($event.target as HTMLInputElement).checked)"
                     />
-                    <span>{{ value }}</span>
+                    <span>{{ val }}</span>
                     <span class="filter-count">{{ count }}</span>
                   </label>
                 </div>
