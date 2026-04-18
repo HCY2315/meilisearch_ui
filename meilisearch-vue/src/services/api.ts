@@ -27,8 +27,13 @@ function createClient(host: string, apiKey: string): AxiosInstance {
 export async function connectIndexes(host: string, apiKey: string): Promise<ConnectData> {
   const client = createClient(host, apiKey)
   const isProxy = host.includes('/api/v1/proxy')
-  const fetchUrl = isProxy ? host.replace('/api/v1/proxy', '/api/v1/public/indexes') : '/indexes'
-  const resp = await client.get<IndexListResponse>(fetchUrl)
+  // 如果是代理模式，直接请求后端的 public 接口，注意这里不使用 client.get 以免 baseURL 导致 URL 嵌套错误
+  const fetchUrl = isProxy ? '/api/v1/public/indexes' : `${host}/indexes`
+  const resp = await axios.get<IndexListResponse>(fetchUrl, {
+    headers: {
+      'App-Token': apiKey
+    }
+  })
   const results: IndexInfo[] = []
   for (const idx of resp.data.results) {
     try {

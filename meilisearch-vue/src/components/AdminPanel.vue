@@ -140,10 +140,10 @@ async function loadAdminData() {
   try {
     const headers = { 'Authorization': `Bearer ${token}` }
     const [resIdx, resTok, resApps, resActual] = await Promise.all([
-      fetch('http://localhost:8080/api/v1/admin/index_configs', { headers }),
-      fetch('http://localhost:8080/api/v1/admin/access_tokens', { headers }),
-      fetch('http://localhost:8080/api/v1/admin/apps', { headers }),
-      fetch('http://localhost:8080/api/v1/proxy/indexes', { headers })
+      fetch('/api/v1/admin/index_configs', { headers }),
+      fetch('/api/v1/admin/access_tokens', { headers }),
+      fetch('/api/v1/admin/apps', { headers }),
+      fetch('/api/v1/proxy/indexes', { headers })
     ])
 
     if (resIdx.ok) indexConfigs.value = await resIdx.json()
@@ -154,14 +154,16 @@ async function loadAdminData() {
        if(body && body.results) {
          availableIndexes.value = body.results.map((r: any) => r.uid)
        }
+    } else {
+       console.error('Fetch actual indexes failed:', resActual.status)
     }
   } catch (e) {
-    console.error('Failed', e)
+    console.error('Admin Data Load Error:', e)
   }
 }
 
 async function saveIndexConfig() {
-    if (!newIndex.value.uid) return alert('必须指定索引 UID')
+    if (!newIndex.value.uid) return alert('请先从下拉列表中选择一个索引')
     submitIndexConfig(newIndex.value)
     showAddIndexConf.value = false
 }
@@ -172,7 +174,7 @@ function toggleIndexLock(cfg: any) {
 
 async function submitIndexConfig(payload: any) {
     const token = localStorage.getItem('authToken')
-    await fetch(`http://localhost:8080/api/v1/admin/index_configs`, {
+    await fetch(`/api/v1/admin/index_configs`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -183,7 +185,7 @@ async function submitIndexConfig(payload: any) {
 async function createToken() {
   if (!newToken.value.token) return alert('请填入Token字符串')
   const token = localStorage.getItem('authToken')
-  const res = await fetch(`http://localhost:8080/api/v1/admin/access_tokens`, {
+  const res = await fetch(`/api/v1/admin/access_tokens`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(newToken.value)
@@ -199,7 +201,7 @@ async function createToken() {
 async function deleteToken(id: number) {
    if(!confirm('确定吊销该令牌？前台正在使用该令牌的用户将立即失去访问权。')) return
    const token = localStorage.getItem('authToken')
-   await fetch(`http://localhost:8080/api/v1/admin/access_tokens/${id}`, {
+   await fetch(`/api/v1/admin/access_tokens/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
    })
@@ -215,7 +217,7 @@ function editApp(app: any) {
 
 async function updateApp(id: number, uiConfig: string) {
   const token = localStorage.getItem('authToken')
-  await fetch(`http://localhost:8080/api/v1/admin/apps/${id}`, {
+  await fetch(`/api/v1/admin/apps/${id}`, {
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ uiConfig })
@@ -308,7 +310,25 @@ onMounted(() => {
   padding: 8px 12px;
   border: 1px solid var(--border-color, #444);
   border-radius: var(--radius, 4px);
-  background: var(--input-bg, #1a1a1a);
+  background: var(--input-bg, #2a2a2e);
   color: var(--text, #fff);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-control:focus {
+  border-color: var(--primary, #6366f1);
+}
+select.form-control {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  padding-right: 32px;
+}
+option {
+  background: #2a2a2e;
+  color: #fff;
 }
 </style>

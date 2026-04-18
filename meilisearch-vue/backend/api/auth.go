@@ -68,7 +68,7 @@ func HandleAppConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"uiConfig": app.UIConfig,
 		"meili": gin.H{
-			"host":        "http://localhost:8080/api/v1/proxy",
+			"host":        "/api/v1/proxy",
 			"searchToken": c.GetHeader("Authorization"),
 		},
 	})

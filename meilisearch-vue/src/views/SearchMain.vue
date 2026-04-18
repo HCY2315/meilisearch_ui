@@ -126,7 +126,7 @@ onMounted(async () => {
   // 从后端获取配置
   const token = localStorage.getItem('authToken')
   try {
-    const res = await fetch('http://localhost:8080/api/v1/app/config', {
+    const res = await fetch('/api/v1/app/config', {
       headers: {
         'Authorization': `Bearer ${token}`
       }

@@ -36,7 +36,7 @@ async function handleLogin() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const res = await fetch('http://localhost:8080/api/v1/auth/login', {
+    const res = await fetch('/api/v1/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: username.value, password: password.value })
