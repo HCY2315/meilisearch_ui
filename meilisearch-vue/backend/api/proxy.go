@@ -37,11 +37,20 @@ func HandleProxy(c *gin.Context) {
 		}
 	}
 
-	// 安全鉴权：拦截请求验证其对目标索引的访问权限
-	if len(parts) >= 2 && parts[0] == "indexes" {
-		requestedIndex := parts[1]
+	// 安全鉴权与只读(Read-Only)限制
+	if !isAdmin {
+		// 阻断普通的写入/删除请求 (只允许 GET/OPTIONS 或者 POST查询)
+		method := c.Request.Method
+		pathSuffix := c.Request.URL.Path
+		isSearchPost := method == "POST" && (strings.HasSuffix(pathSuffix, "/search") || strings.HasSuffix(pathSuffix, "/multi-search"))
+		if method != "GET" && method != "OPTIONS" && !isSearchPost {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "只读模式 (Read-Only Mode): 缺乏系统管理员权限，禁止写入或修改索引配置。"})
+			return
+		}
 
-		if !isAdmin {
+		if len(parts) >= 2 && parts[0] == "indexes" {
+			requestedIndex := parts[1]
+
 			// 普通访客，检查该 Index 是否被上锁
 			var indexConf model.IndexConfig
 			isLocked := false
