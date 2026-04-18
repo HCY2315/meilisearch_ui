@@ -133,9 +133,9 @@ onMounted(async () => {
       }
       
       // 这里的 meili 配置自动注入 store 并执行连接
-      if (data.meili && data.meili.host && data.meili.searchToken) {
+      if (data.meili && data.meili.host) {
         store.hostInput = data.meili.host
-        store.apiKeyInput = data.meili.searchToken
+        store.apiKeyInput = token || '' // 去除非必须的包裹，使用最纯净的 token
         await store.connect()
 
         // 索引权限隔离过滤
