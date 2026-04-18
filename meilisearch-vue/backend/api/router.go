@@ -33,7 +33,6 @@ func InitRouter() *gin.Engine {
 		}
 
 		proxyGroup := v1.Group("/proxy")
-		proxyGroup.Use(AuthMiddleware())
 		proxyGroup.Any("/*proxyPath", HandleProxy)
 	}
 
