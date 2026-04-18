@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // AuthMiddleware 校验 JWT token
@@ -80,3 +81,60 @@ func handleUpdateApp(c *gin.Context) {
     repository.DB.Save(&app)
     c.JSON(http.StatusOK, app)
 }
+
+// handleGetUsers 获取系统用户
+func handleGetUsers(c *gin.Context) {
+	var users []model.User
+	repository.DB.Find(&users)
+	c.JSON(http.StatusOK, users)
+}
+
+// handleCreateUser 创建普通用户
+func handleCreateUser(c *gin.Context) {
+	var req struct {
+		Username     string `json:"username"`
+		Password     string `json:"password"`
+		Role         string `json:"role"`
+		AllowIndexes string `json:"allowIndexes"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	hash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	user := model.User{
+		Username:     req.Username,
+		PasswordHash: string(hash),
+		Role:         req.Role,
+		AllowIndexes: req.AllowIndexes,
+	}
+	if err := repository.DB.Create(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Username might exist"})
+		return
+	}
+	c.JSON(http.StatusOK, user)
+}
+
+// handleUpdateUserPermissions 更新用户权限
+func handleUpdateUserPermissions(c *gin.Context) {
+	id := c.Param("id")
+	var req struct {
+		Role         string `json:"role"`
+		AllowIndexes string `json:"allowIndexes"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		return
+	}
+	var user model.User
+	if err := repository.DB.First(&user, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+	user.Role = req.Role
+	user.AllowIndexes = req.AllowIndexes
+	repository.DB.Save(&user)
+	c.JSON(http.StatusOK, user)
+}
+

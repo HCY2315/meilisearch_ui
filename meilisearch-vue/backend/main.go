@@ -47,7 +47,12 @@ func main() {
 		{
 			adminGroup.GET("/instances", handleGetInstances)
 			adminGroup.GET("/apps", handleGetApps)
-            adminGroup.PUT("/apps/:id", handleUpdateApp)
+			adminGroup.PUT("/apps/:id", handleUpdateApp)
+			
+			// User management endpoints
+			adminGroup.GET("/users", handleGetUsers)
+			adminGroup.POST("/users", handleCreateUser)
+			adminGroup.PUT("/users/:id/permissions", handleUpdateUserPermissions)
 		}
 	}
 
@@ -113,6 +118,30 @@ func handleAppConfig(c *gin.Context) {
 		return
 	}
 
+	// Default allowIndexes limit from the Application config itself
+	allowIndexes := app.AllowIndexes
+
+	// Check if a user is logged in
+	authHeader := c.GetHeader("Authorization")
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		tokenStr := authHeader[7:]
+		// try parse and get userId
+		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) { return jwtSecret, nil })
+		if err == nil && token.Valid {
+			if claims, ok := token.Claims.(jwt.MapClaims); ok {
+				var user model.User
+				if err := repository.DB.First(&user, claims["userId"]).Error; err == nil {
+					// User's own allowance overrides app level definition
+					if user.Role == "admin" {
+						allowIndexes = `["*"]` // Admin can see all indexes natively
+					} else if user.AllowIndexes != "" {
+						allowIndexes = user.AllowIndexes
+					}
+				}
+			}
+		}
+	}
+
 	var instance model.MeiliInstance
 	if err := repository.DB.Where("id = ?", app.InstanceID).First(&instance).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Instance not properly configured"})
@@ -124,7 +153,7 @@ func handleAppConfig(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, gin.H{
 		"uiConfig": app.UIConfig,
-		"allowIndexes": app.AllowIndexes,
+		"allowIndexes": allowIndexes,
 		"meili": gin.H{
 			"host": instance.Host,
 			// HACK: 暂时返回 apiKey 给前端测试连接，后续应替换为 Tenant Token

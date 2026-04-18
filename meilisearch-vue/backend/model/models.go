@@ -10,6 +10,7 @@ type User struct {
 	Username     string    `gorm:"uniqueIndex;size:128;not null" json:"username"`
 	PasswordHash string    `gorm:"not null" json:"-"` // 不返回密码哈希
 	Role         string    `gorm:"size:32;default:'user'" json:"role"` // admin / user
+	AllowIndexes string    `gorm:"type:text" json:"allowIndexes"`      // JSON 数组，记录该用户允许访问的 index
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
