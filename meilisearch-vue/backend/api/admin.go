@@ -8,7 +8,28 @@ import (
 	"backend/schema"
 
 	"github.com/gin-gonic/gin"
+	"github.com/meilisearch/meilisearch-go"
 )
+
+func HandleDeleteIndex(c *gin.Context) {
+	uid := c.Param("uid")
+	if uid == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "UID is required"})
+		return
+	}
+
+	// 1. 从数据库中删除配置
+	repository.DB.Where("uid = ?", uid).Delete(&model.IndexConfig{})
+
+	// 2. 尝试从 Meilisearch 中删除 (使用第一个实例)
+	var instance model.MeiliInstance
+	if err := repository.DB.First(&instance).Error; err == nil {
+		client := meilisearch.New(instance.Host, meilisearch.WithAPIKey(instance.APIKey))
+		client.DeleteIndex(uid)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Index deleted successfully from DB and Meilisearch"})
+}
 
 func HandleGetInstances(c *gin.Context) {
 	var instances []model.MeiliInstance

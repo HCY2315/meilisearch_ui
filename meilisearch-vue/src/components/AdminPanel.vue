@@ -84,7 +84,8 @@
               </td>
               <td>
                 <button class="btn btn-primary btn-sm" @click="editIndex(cfg)" style="margin-right: 8px;">编辑</button>
-                <button class="btn btn-secondary btn-sm" @click="toggleIndexLock(cfg)">切换锁定</button>
+                <button class="btn btn-secondary btn-sm" @click="toggleIndexLock(cfg)" style="margin-right: 8px;">切换锁定</button>
+                <button class="btn btn-danger btn-sm" @click="deleteIndex(cfg.uid)">彻底删除</button>
               </td>
             </tr>
           </tbody>
@@ -433,6 +434,22 @@ function cancelTokenEdit() {
   showAddToken.value = false
   editingTokenId.value = null
   newToken.value = { token: '', allowIndexes: [], description: '', validDays: null }
+}
+
+async function deleteIndex(uid: string) {
+  if (!confirm(`确定要彻底删除索引 [${uid}] 吗？此操作将同时删除本地配置及 Meilisearch 中的原始数据，不可恢复！`)) return
+  const token = localStorage.getItem('authToken')
+  const res = await fetch(`/api/v1/admin/index_configs/${uid}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+  })
+  if (res.ok) {
+      alert('索引已成功删除')
+      loadAdminData()
+  } else {
+      const err = await res.json()
+      alert('删除失败: ' + (err.error || '未知错误'))
+  }
 }
 
 async function deleteToken(id: number) {

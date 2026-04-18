@@ -29,6 +29,7 @@ func InitRouter() *gin.Engine {
 
 			adminGroup.GET("/index_configs", HandleGetIndexConfigs)
 			adminGroup.POST("/index_configs", HandleSaveIndexConfig)
+			adminGroup.DELETE("/index_configs/:uid", HandleDeleteIndex)
 
 			adminGroup.GET("/access_tokens", HandleGetAccessTokens)
 			adminGroup.POST("/access_tokens", HandleCreateAccessToken)
