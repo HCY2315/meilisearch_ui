@@ -25,6 +25,11 @@
         :class="['tab-btn', store.currentTab === 'assets' && 'active']"
         @click="store.setCurrentTab('assets')"
       >📦 批量新增</button>
+      <button
+        v-if="userRole === 'admin'"
+        :class="['tab-btn', store.currentTab === 'admin' && 'active']"
+        @click="store.setCurrentTab('admin')"
+      >⚙️ 系统管理</button>
     </nav>
 
     <div v-if="initLoading" style="padding: 20px; text-align: center;">
@@ -36,8 +41,11 @@
         <SearchSection />
         <ResultsTable />
       </template>
-      <template v-else>
+      <template v-else-if="store.currentTab === 'assets'">
         <AssetManagement />
+      </template>
+      <template v-else-if="store.currentTab === 'admin'">
+        <AdminPanel />
       </template>
     </template>
 
@@ -65,6 +73,7 @@ import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import Modals from '@/components/Modals.vue'
 import FilterDrawer from '@/components/FilterDrawer.vue'
 import AssetManagement from '@/components/AssetManagement.vue'
+import AdminPanel from '@/components/AdminPanel.vue'
 
 const store = useAppStore()
 const router = useRouter()
