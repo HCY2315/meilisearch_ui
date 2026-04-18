@@ -1,194 +1,255 @@
 <template>
-  <div class="admin-panel">
-    <div class="card" style="margin-bottom: 20px;">
-      <div class="card-header">
-        <h3>0. 搜索引擎实例配置 (Meilisearch Instances)</h3>
-        <p style="font-size: 12px; color: #888; margin-top: 4px;">配置后端连接的 Meilisearch 节点，支持多实例管理。</p>
+  <div class="admin-layout animate-fade-in">
+    <!-- 侧边导航 -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">🛡️</div>
+        <h2>控制台</h2>
       </div>
-      <div class="card-body">
-        <button class="btn btn-primary" style="margin-bottom: 12px;" @click="showAddInstance = true">添加新实例</button>
-        <div v-if="showAddInstance" class="edit-box" style="margin-bottom: 15px;">
-           <input v-model="newInstance.name" placeholder="实例名称 (如: 生产环境)" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
-           <input v-model="newInstance.host" placeholder="Host (如: http://localhost:7700)" class="form-control" style="width: 250px; display: inline-block; margin-right: 8px;">
-           <input v-model="newInstance.apiKey" placeholder="API Key" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
-           <button class="btn btn-secondary btn-sm" @click="handleSaveInstance">{{ editingInstanceId ? '更新' : '添加' }}</button>
-           <button class="btn btn-secondary btn-sm" @click="cancelInstanceEdit" style="margin-left: 8px;">取消</button>
+      <nav class="sidebar-nav">
+        <button 
+          v-for="tab in tabs" 
+          :key="tab.id" 
+          :class="['nav-item', { active: activeTab === tab.id }]"
+          @click="activeTab = tab.id"
+        >
+          <span class="nav-icon">{{ tab.icon }}</span>
+          <span class="nav-label">{{ tab.label }}</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        v1.2.0-pro
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="admin-main">
+      <!-- 0. 搜索引擎实例配置 -->
+      <section v-if="activeTab === 'instances'" class="content-section">
+        <header class="section-header">
+          <h1>搜索引擎实例 <span>Instances</span></h1>
+          <p>管理多节点连接，支持分布式部署配置。</p>
+          <button class="btn btn-primary" @click="showAddInstance = true">+ 添加新实例</button>
+        </header>
+
+        <div v-if="showAddInstance" class="glass-editor">
+          <h3>{{ editingInstanceId ? '📝 编辑实例' : '✨ 新建实例' }}</h3>
+          <div class="grid-inputs">
+            <div class="input-group">
+              <label>实例名称</label>
+              <input v-model="newInstance.name" placeholder="生产环境 / 测试集群" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>Host 地址</label>
+              <input v-model="newInstance.host" placeholder="http://77.0.0.1:7700" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>API Key</label>
+              <input v-model="newInstance.apiKey" placeholder="Master Key (可选)" class="form-control">
+            </div>
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" @click="handleSaveInstance">{{ editingInstanceId ? '保存更改' : '立即创建' }}</button>
+            <button class="btn btn-secondary" @click="cancelInstanceEdit">取消</button>
+          </div>
+        </div>
+
+        <div class="data-grid">
+          <div v-for="ins in instances" :key="ins.id" class="data-card">
+            <div class="card-info">
+              <div class="ins-avatar">{{ ins.name.charAt(0) }}</div>
+              <div>
+                <h4>{{ ins.name }}</h4>
+                <code>{{ ins.host }}</code>
+              </div>
+            </div>
+            <div class="card-ops">
+              <button class="btn btn-secondary btn-sm" @click="editInstance(ins)">编辑</button>
+              <button class="btn btn-danger btn-sm" @click="deleteInstance(ins.id)">移除</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1. 索引锁库配置 -->
+      <section v-if="activeTab === 'security'" class="content-section">
+        <header class="section-header">
+          <h1>索引权限配置 <span>Index Security</span></h1>
+          <p>控制索引的可见性，为敏感数据设置访问屏障。</p>
+          <button class="btn btn-primary" @click="showAddIndexConf = true">🔒 配置加密索引</button>
+        </header>
+
+        <div v-if="showAddIndexConf" class="glass-editor">
+          <h3>{{ editingIndexId ? '📝 编辑权限' : '🔒 新建加密策略' }}</h3>
+          <div class="grid-inputs">
+            <div class="input-group">
+              <label>目标索引 (UID)</label>
+              <select v-model="newIndex.uid" class="form-control">
+                <option disabled value="">-- 选择可用索引 --</option>
+                <option v-for="uid in availableIndexes" :key="uid" :value="uid">{{ uid }}</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>显示别名</label>
+              <input v-model="newIndex.alias" placeholder="如：秘密文档库" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>私有状态</label>
+              <div class="toggle-group">
+                <input type="checkbox" v-model="newIndex.isLocked" id="lock-toggle">
+                <label for="lock-toggle">启用锁定 (需要 Token 访问)</label>
+              </div>
+            </div>
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" @click="saveIndexConfig">保存策略</button>
+            <button class="btn btn-secondary" @click="cancelIndexEdit">取消</button>
+          </div>
         </div>
 
         <table class="data-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>名称</th>
-              <th>地址 (Host)</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="ins in instances" :key="ins.id">
-              <td>{{ ins.id }}</td>
-              <td><b>{{ ins.name }}</b></td>
-              <td><code>{{ ins.host }}</code></td>
-              <td>
-                <button class="btn btn-primary btn-sm" @click="editInstance(ins)" style="margin-right: 8px;">编辑</button>
-                <button class="btn btn-danger btn-sm" @click="deleteInstance(ins.id)">删除</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <h3>1. 索引锁库配置 (Index Security)</h3>
-        <p style="font-size: 12px; color: #888; margin-top: 4px;">配置哪些索引是公开可见的，哪些是被加锁隐藏的。</p>
-      </div>
-      <div class="card-body">
-        <button class="btn btn-primary" style="margin-bottom: 12px;" @click="showAddIndexConf = true">配置指定索引加密</button>
-        <div v-if="showAddIndexConf" class="edit-box" style="margin-bottom: 15px;">
-           <select v-model="newIndex.uid" class="form-control" style="width: 180px; display: inline-block; margin-right: 8px;">
-              <option disabled value="">-- 选择要加密的索引 --</option>
-              <option v-for="uid in availableIndexes" :key="uid" :value="uid">{{ uid }}</option>
-           </select>
-           <input v-model="newIndex.alias" placeholder="显示别名" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
-           <input v-model="newIndex.description" placeholder="后台备注" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
-           <label style="margin-right: 12px; font-size: 14px;">
-               <input type="checkbox" v-model="newIndex.isLocked"> 设置为私有锁定
-           </label>
-            <button class="btn btn-secondary btn-sm" @click="saveIndexConfig">{{ editingIndexId ? '更新配置' : '保存配置' }}</button>
-            <button class="btn btn-secondary btn-sm" @click="cancelIndexEdit" style="margin-left: 8px;">取消</button>
-        </div>
-
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>索引标识 (UID)</th>
-              <th>显示别名</th>
-              <th>后台备注</th>
+              <th>索引标识</th>
+              <th>别名 / 备注</th>
               <th>对外状态</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="cfg in indexConfigs" :key="cfg.id">
-              <td>{{ cfg.id }}</td>
-              <td><b>{{ cfg.uid }}</b></td>
-              <td>{{ cfg.alias || '-' }}</td>
-              <td>{{ cfg.description || '-' }}</td>
+              <td><strong>{{ cfg.uid }}</strong></td>
+              <td>
+                <div class="alias-info">
+                  <span class="alias">{{ cfg.alias || '-' }}</span>
+                  <span class="desc">{{ cfg.description }}</span>
+                </div>
+              </td>
               <td>
                 <span :class="['status-badge', cfg.isLocked ? 'status-err' : 'status-ok']">
-                  {{ cfg.isLocked ? '🔒 已加锁' : '🌐 完全公开' }}
+                  {{ cfg.isLocked ? '🔒 私有锁定' : '🌐 公开访问' }}
                 </span>
               </td>
               <td>
-                <button class="btn btn-primary btn-sm" @click="editIndex(cfg)" style="margin-right: 8px;">编辑</button>
-                <button class="btn btn-secondary btn-sm" @click="toggleIndexLock(cfg)" style="margin-right: 8px;">切换锁定</button>
+                <button class="btn btn-secondary btn-sm" @click="editIndex(cfg)">编辑</button>
                 <button class="btn btn-danger btn-sm" @click="deleteIndex(cfg.uid)">彻底删除</button>
               </td>
             </tr>
           </tbody>
         </table>
-      </div>
-    </div>
+      </section>
 
-    <div class="card" style="margin-top: 20px;">
-      <div class="card-header">
-        <h3>2. 访问凭证分发 (Access Tokens)</h3>
-        <p style="font-size: 12px; color: #888; margin-top: 4px;">为“已加锁”的私有库派发解锁令牌。访问者在前台输入令牌即可跨越屏障。</p>
-      </div>
-      <div class="card-body">
-        <button class="btn btn-primary" style="margin-bottom: 12px;" @click="openAddToken">派发新 Token</button>
-        <div v-if="showAddToken" class="edit-box" style="margin-bottom: 15px; border: 1px solid #444;">
-           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-              <input v-model="newToken.token" placeholder="Token 字符串 (UUID)" class="form-control" style="flex: 1;">
-              <button class="btn btn-secondary btn-sm" @click="newToken.token = generateUUID()">重新生成</button>
-           </div>
-           
-           <div style="margin-bottom: 10px;">
-             <p style="font-size: 13px; margin-bottom: 6px;">允许访问的索引 (多选):</p>
-             <div class="index-selector">
-                <label v-for="uid in availableIndexes" :key="uid" class="index-item">
-                   <input type="checkbox" :value="uid" v-model="newToken.allowIndexes"> {{ uid }}
-                </label>
-                <label class="index-item" style="color: var(--primary);">
-                   <input type="checkbox" value="*" :checked="newToken.allowIndexes.includes('*')" @change="toggleAllIndexes"> [全部索引 *]
-                </label>
-             </div>
-           </div>
+      <!-- 2. 访问凭证分发 -->
+      <section v-if="activeTab === 'tokens'" class="content-section">
+        <header class="section-header">
+          <h1>访问凭证管理 <span>Access Tokens</span></h1>
+          <p>派发和管理访问私有索引的通行证。</p>
+          <button class="btn btn-primary" @click="openAddToken">🎫 派发新 Token</button>
+        </header>
 
-           <div style="display: flex; align-items: center; gap: 8px;">
-             <input v-model="newToken.description" placeholder="拥有者备注" class="form-control" style="width: 150px;">
-             <input type="number" v-model="newToken.validDays" placeholder="有效期 (天)" title="留空表示永不过期" class="form-control" style="width: 100px;">
-             <button class="btn btn-secondary btn-sm" @click="handleSaveToken" style="margin-left: auto;">{{ editingTokenId ? '更新' : '生成并保存' }}</button>
-             <button class="btn btn-secondary btn-sm" @click="cancelTokenEdit">取消</button>
-           </div>
+        <div v-if="showAddToken" class="glass-editor">
+          <h3>Token 配置</h3>
+          <div class="token-generator">
+            <input v-model="newToken.token" class="form-control token-input" readonly>
+            <button class="btn btn-secondary" @click="newToken.token = generateUUID()">重新生成</button>
+          </div>
+          <div class="input-group" style="margin-top:20px">
+            <label>授权范围 (允许访问的库)</label>
+            <div class="index-chips">
+              <label v-for="uid in availableIndexes" :key="uid" :class="['chip', { selected: newToken.allowIndexes.includes(uid) }]">
+                <input type="checkbox" :value="uid" v-model="newToken.allowIndexes"> {{ uid }}
+              </label>
+              <label :class="['chip all', { selected: newToken.allowIndexes.includes('*') }]">
+                <input type="checkbox" value="*" :checked="newToken.allowIndexes.includes('*')" @change="toggleAllIndexes"> [ 全部索引 * ]
+              </label>
+            </div>
+          </div>
+          <div class="grid-inputs" style="margin-top:20px">
+            <div class="input-group">
+              <label>拥有者备注</label>
+              <input v-model="newToken.description" placeholder="如：外部合作伙伴" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>有效期 (天)</label>
+              <input type="number" v-model="newToken.validDays" placeholder="留空永不过期" class="form-control">
+            </div>
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" @click="handleSaveToken">确认派发</button>
+            <button class="btn btn-secondary" @click="cancelTokenEdit">取消</button>
+          </div>
         </div>
 
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>凭证口令 (Token)</th>
-              <th>解锁的私密库 (UIDs)</th>
-              <th>备注下发对象</th>
-              <th>有效期至</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="tok in accessTokens" :key="tok.id">
-              <td>{{ tok.id }}</td>
-              <td><code style="color: #ffb86c">{{ tok.token }}</code></td>
-              <td><code>{{ tok.allowIndexes }}</code></td>
-              <td>{{ tok.description }}</td>
-              <td>
-                <span :class="['status-badge', isExpired(tok.expiresAt) ? 'status-err' : '']">
-                  {{ tok.expiresAt ? new Date(tok.expiresAt).toLocaleString() : '永久' }}
+        <div class="token-list">
+          <div v-for="tok in accessTokens" :key="tok.id" class="token-card">
+            <div class="token-info">
+              <div class="tok-header">
+                <span class="tok-tag">ACTIVE TOKEN</span>
+                <span :class="['status-badge', isExpired(tok.expiresAt) ? 'status-err' : 'status-ok']">
+                  {{ isExpired(tok.expiresAt) ? '已过期' : '正常' }}
                 </span>
-              </td>
-              <td>
-                <button class="btn btn-primary btn-sm" @click="editToken(tok)" style="margin-right: 8px;">编辑</button>
-                <button class="btn btn-danger btn-sm" @click="deleteToken(tok.id)">吊销</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+              </div>
+              <code class="tok-val">{{ tok.token }}</code>
+              <p class="tok-desc">👤 {{ tok.description || '未命名持有者' }}</p>
+              <div class="tok-meta">
+                <span>📂 授权: {{ tok.allowIndexes }}</span>
+                <span>⏳ 截止: {{ tok.expiresAt ? new Date(tok.expiresAt).toLocaleDateString() : '永久' }}</span>
+              </div>
+            </div>
+            <div class="token-ops">
+              <button class="btn btn-secondary btn-sm" @click="editToken(tok)">编辑</button>
+              <button class="btn btn-danger btn-sm" @click="deleteToken(tok.id)">撤销</button>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <div class="card" style="margin-top: 20px;">
-      <div class="card-header">
-        <h3>3. 基础页面设置 (App Config)</h3>
-      </div>
-      <div class="card-body">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>应用名称</th>
-              <th>全局 UI 配置</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="app in apps" :key="app.id">
-              <td>{{ app.name }}</td>
-              <td class="code-cell" :title="app.uiConfig">{{ app.uiConfig }}</td>
-              <td>
-                <button class="btn btn-primary btn-sm" @click="editApp(app)">更新皮肤/名称</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+      <!-- 3. 应用全局设置 -->
+      <section v-if="activeTab === 'settings'" class="content-section">
+        <header class="section-header">
+          <h1>全局应用设置 <span>App Configuration</span></h1>
+          <p>配置应用名称、外观皮肤及核心 UI 参数。</p>
+        </header>
 
+        <div v-for="app in apps" :key="app.id" class="card settings-card">
+          <div class="settings-row">
+            <div class="row-label">
+              <h4>应用基本信息</h4>
+              <p>名称、版本及全局标识。</p>
+            </div>
+            <div class="row-val">
+              <div class="app-identity">
+                <span class="app-icon">🚀</span>
+                <strong>{{ app.name }}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="row-label">
+              <h4>UI 配置矩阵</h4>
+              <p>自定义界面的 JSON 配置参数。</p>
+            </div>
+            <div class="row-val">
+              <pre class="json-preview">{{ app.uiConfig }}</pre>
+              <button class="btn btn-primary btn-sm" @click="editApp(app)">更新配置</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+
+const activeTab = ref('instances')
+const tabs = [
+  { id: 'instances', label: '节点管理', icon: '☁️' },
+  { id: 'security', label: '安全锁库', icon: '🛡️' },
+  { id: 'tokens', label: '凭证分发', icon: '🎫' },
+  { id: 'settings', label: '应用设置', icon: '⚙️' },
+]
 
 const indexConfigs = ref<any[]>([])
 const accessTokens = ref<any[]>([])
@@ -253,7 +314,6 @@ async function loadAdminData() {
     if (resActual.ok) {
         const body = await resActual.json()
         if (body && body.results) {
-          actualIndexes.value = body.results
           availableIndexes.value = body.results.map((r: any) => r.uid)
         }
     }
@@ -279,7 +339,6 @@ async function createInstance() {
       body: JSON.stringify(newInstance.value)
   })
   if (res.ok) {
-      alert('实例添加成功')
       cancelInstanceEdit()
       loadAdminData()
   }
@@ -293,7 +352,6 @@ async function updateInstance() {
       body: JSON.stringify({ id: editingInstanceId.value, ...newInstance.value })
   })
   if (res.ok) {
-      alert('实例更新成功')
       cancelInstanceEdit()
       loadAdminData()
   }
@@ -321,28 +379,8 @@ async function deleteInstance(id: number) {
    loadAdminData()
 }
 
-const showUIConfig = ref(false)
-const currentConfig = ref<any>(null)
-const actualIndexes = ref<any[]>([])
-
-function openUIConfig(cfg: any) {
-  currentConfig.value = { ...cfg }
-  showUIConfig.value = true
-}
-
-async function saveUIConfig() {
-  const token = localStorage.getItem('authToken')
-  await fetch(`/api/v1/admin/index_configs`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(currentConfig.value)
-  })
-  showUIConfig.value = false
-  loadAdminData()
-}
-
 async function saveIndexConfig() {
-    if (!newIndex.value.uid) return alert('请先从下拉列表中选择一个索引')
+    if (!newIndex.value.uid) return alert('请先选择一个索引')
     await submitIndexConfig(newIndex.value)
     cancelIndexEdit()
 }
@@ -357,10 +395,6 @@ function cancelIndexEdit() {
   showAddIndexConf.value = false
   editingIndexId.value = null
   newIndex.value = { uid: '', alias: '', description: '', isLocked: false }
-}
-
-function toggleIndexLock(cfg: any) {
-    submitIndexConfig({ uid: cfg.uid, alias: cfg.alias, description: cfg.description, isLocked: !cfg.isLocked })
 }
 
 async function submitIndexConfig(payload: any) {
@@ -393,7 +427,6 @@ async function createToken() {
       body: JSON.stringify({ ...newToken.value, allowIndexes: JSON.stringify(newToken.value.allowIndexes), expiresAt })
   })
   if (res.ok) {
-      alert('令牌下发成功')
       cancelTokenEdit()
       loadAdminData()
   }
@@ -410,7 +443,6 @@ async function updateToken() {
       body: JSON.stringify({ id: editingTokenId.value, ...newToken.value, allowIndexes: JSON.stringify(newToken.value.allowIndexes), expiresAt })
   })
   if (res.ok) {
-      alert('令牌更新成功')
       cancelTokenEdit()
       loadAdminData()
   }
@@ -444,16 +476,12 @@ async function deleteIndex(uid: string) {
       headers: { 'Authorization': `Bearer ${token}` }
   })
   if (res.ok) {
-      alert('索引已成功删除')
       loadAdminData()
-  } else {
-      const err = await res.json()
-      alert('删除失败: ' + (err.error || '未知错误'))
   }
 }
 
 async function deleteToken(id: number) {
-   if(!confirm('确定吊销该令牌？前台正在使用该令牌的用户将立即失去访问权。')) return
+   if(!confirm('确定吊销该令牌？')) return
    const token = localStorage.getItem('authToken')
    await fetch(`/api/v1/admin/access_tokens/${id}`, {
       method: 'DELETE',
@@ -485,127 +513,133 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.admin-panel {
-  padding: 16px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-.card {
-  background: var(--surface);
-  border-radius: var(--radius, 8px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  overflow: hidden;
-}
-.card-header {
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.05);
-  border-bottom: 1px solid var(--border-color, #444);
-}
-.card-header h3 {
-  margin: 0;
-  font-size: 16px;
-  color: var(--text);
-}
-.card-body {
-  padding: 16px;
-}
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.data-table th, .data-table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--border-color, #444);
-  color: var(--text);
-}
-.data-table th {
-  font-weight: 600;
-  color: var(--text-muted, #aaa);
-}
-.status-badge {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: bold;
-  background: rgba(255,255,255,0.1);
-}
-.status-ok {
-  background: #28c84022;
-  color: #28c840;
-}
-.status-err {
-  background: #ff4a4a22;
-  color: #ff4a4a;
-}
-.code-cell {
-  max-width: 300px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-family: monospace;
-}
-.edit-box {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 12px;
-  border-radius: 8px;
-}
-.btn-sm {
-  padding: 4px 10px;
-  font-size: 12px;
-}
-.btn-danger {
-  background: #ff4a4a;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-.form-control {
-  padding: 8px 12px;
-  border: 1px solid var(--border-color, #444);
-  border-radius: var(--radius, 4px);
-  background: var(--input-bg, #2a2a2e);
-  color: var(--text, #fff);
-  outline: none;
-  transition: border-color 0.2s;
-}
-.form-control:focus {
-  border-color: var(--primary, #6366f1);
-}
-select.form-control {
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 16px;
-  padding-right: 32px;
-}
-option {
-  background: #2a2a2e;
-  color: #fff;
-}
-.index-selector {
-  max-height: 120px;
-  overflow-y: auto;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 8px;
-  border-radius: 4px;
+.admin-layout {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  min-height: 100vh;
+  background: #030712;
 }
-.index-item {
+
+/* 侧边栏 */
+.admin-sidebar {
+  width: 260px;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  padding: 32px 0;
+  position: fixed;
+  height: 100vh;
+}
+
+.sidebar-header {
+  padding: 0 32px;
+  margin-bottom: 48px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 2px 8px;
-  border-radius: 4px;
+  gap: 12px;
+}
+.sidebar-logo { font-size: 32px; }
+.sidebar-header h2 { font-family: 'Outfit'; font-size: 20px; font-weight: 700; color: white; }
+
+.sidebar-nav { flex: 1; padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
   cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
 }
-.index-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+.nav-item:hover { background: rgba(255, 255, 255, 0.05); color: white; }
+.nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+.nav-icon { font-size: 18px; }
+
+.sidebar-footer { padding: 0 32px; font-size: 11px; color: #475569; }
+
+/* 主内容区 */
+.admin-main { flex: 1; margin-left: 260px; padding: 48px 64px; }
+
+.content-section { max-width: 1000px; }
+
+.section-header { margin-bottom: 40px; display: flex; flex-direction: column; gap: 8px; position: relative; }
+.section-header h1 { font-family: 'Outfit'; font-size: 32px; font-weight: 700; color: white; }
+.section-header h1 span { font-weight: 300; opacity: 0.3; margin-left: 8px; font-size: 0.6em; }
+.section-header p { color: #94a3b8; font-size: 15px; }
+.section-header .btn { position: absolute; right: 0; top: 0; }
+
+/* 编辑器容器 */
+.glass-editor {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 32px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
+.glass-editor h3 { margin-bottom: 24px; font-size: 18px; color: white; }
+.grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+.input-group label { display: block; font-size: 13px; color: #64748b; margin-bottom: 8px; }
+.editor-actions { margin-top: 32px; display: flex; gap: 12px; justify-content: flex-end; }
+
+/* 数据卡片 */
+.data-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+.data-card {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transition: all 0.3s ease;
+}
+.data-card:hover { transform: translateY(-4px); border-color: rgba(99, 102, 241, 0.3); }
+.card-info { display: flex; align-items: center; gap: 16px; }
+.ins-avatar { width: 48px; height: 48px; border-radius: 12px; background: var(--primary); color: white; font-weight: 700; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+.card-info h4 { font-size: 16px; color: white; margin-bottom: 4px; }
+.card-info code { font-size: 12px; color: var(--primary); }
+.card-ops { display: flex; gap: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); pt: 16px; padding-top: 16px; }
+
+/* Token 特殊样式 */
+.token-list { display: flex; flex-direction: column; gap: 16px; }
+.token-card {
+  background: rgba(30, 41, 59, 0.4);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.tok-tag { font-size: 9px; font-weight: 800; color: var(--primary); letter-spacing: 0.1em; background: rgba(99, 102, 241, 0.1); padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
+.tok-val { font-size: 16px; color: #fbbf24; font-family: monospace; display: block; margin: 12px 0; }
+.tok-desc { color: white; font-size: 14px; margin-bottom: 8px; }
+.tok-meta { display: flex; gap: 24px; font-size: 12px; color: #64748b; }
+
+/* 设置 */
+.settings-card { display: flex; flex-direction: column; gap: 32px; }
+.settings-row { display: flex; gap: 48px; align-items: flex-start; }
+.row-label { width: 240px; }
+.row-label h4 { font-size: 16px; color: white; margin-bottom: 4px; }
+.row-label p { font-size: 13px; color: #64748b; }
+.row-val { flex: 1; }
+.app-identity { display: flex; align-items: center; gap: 12px; font-size: 20px; }
+.json-preview { background: #000; padding: 16px; border-radius: 8px; font-size: 12px; color: #10b981; max-height: 200px; overflow: auto; margin-bottom: 12px; }
+
+/* 通用列表项 */
+.alias-info { display: flex; flex-direction: column; gap: 4px; }
+.alias { color: white; font-weight: 600; }
+.desc { font-size: 12px; color: #64748b; }
+
+/* 芯片多选 */
+.index-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 6px 12px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; font-size: 13px; color: #94a3b8; cursor: pointer; border: 1px solid transparent; }
+.chip:hover { background: rgba(255, 255, 255, 0.1); }
+.chip.selected { background: rgba(99, 102, 241, 0.15); border-color: var(--primary); color: white; }
+.chip input { display: none; }
 </style>
