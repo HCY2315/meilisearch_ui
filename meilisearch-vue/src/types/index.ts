@@ -155,4 +155,4 @@ export interface CellValue {
 
 export type Theme = 'dark' | 'light'
 
-export type CurrentTab = 'search' | 'assets'
+export type CurrentTab = 'search' | 'assets' | 'admin'
