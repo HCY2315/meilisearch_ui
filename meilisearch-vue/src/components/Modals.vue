@@ -341,22 +341,30 @@ function formatDetailValue(val: unknown): string {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(3, 7, 18, 0.85);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(8px);
 }
 .modal {
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  width: 480px;
+  background: var(--glass-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  width: 520px;
   max-width: 90vw;
   max-height: 80vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  box-shadow: var(--shadow-lg);
+  animation: modalIn 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 .modal-lg { width: 700px; }
 .modal-header {

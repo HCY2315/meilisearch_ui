@@ -19,10 +19,10 @@
   --text-muted: #64748b;
   
   /* 边框与装饰 */
-  --border: rgba(255, 255, 255, 0.08);
-  --border-active: rgba(99, 102, 241, 0.5);
-  --glass-bg: rgba(15, 23, 42, 0.8);
-  --glass-blur: blur(20px);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-active: rgba(99, 102, 241, 0.6);
+  --glass-bg: rgba(15, 23, 42, 0.95);
+  --glass-blur: blur(25px);
   
   /* 阴影系统 */
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
