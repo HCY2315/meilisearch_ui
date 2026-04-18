@@ -482,6 +482,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function clearQuery() {
+    searchInput.value = ''
     queryRows.value = [createQueryRow()]
     currentPage.value = 1
     performSearch()
