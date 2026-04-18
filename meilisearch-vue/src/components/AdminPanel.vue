@@ -9,7 +9,10 @@
       <div class="card-body">
         <button class="btn btn-primary" style="margin-bottom: 12px;" @click="showAddIndexConf = true">配置指定索引加密</button>
         <div v-if="showAddIndexConf" class="edit-box" style="margin-bottom: 15px;">
-           <input v-model="newIndex.uid" placeholder="索引 UID (如 movies)" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
+           <select v-model="newIndex.uid" class="form-control" style="width: 180px; display: inline-block; margin-right: 8px;">
+              <option disabled value="">-- 选择要加密的索引 --</option>
+              <option v-for="uid in availableIndexes" :key="uid" :value="uid">{{ uid }}</option>
+           </select>
            <input v-model="newIndex.alias" placeholder="别名备注" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
            <label style="margin-right: 12px; font-size: 14px;">
                <input type="checkbox" v-model="newIndex.isLocked"> 设置为私有锁定
@@ -122,6 +125,7 @@ import { ref, onMounted } from 'vue'
 const indexConfigs = ref<any[]>([])
 const accessTokens = ref<any[]>([])
 const apps = ref<any[]>([])
+const availableIndexes = ref<string[]>([])
 
 const showAddIndexConf = ref(false)
 const newIndex = ref({ uid: '', alias: '', isLocked: false })
@@ -135,15 +139,22 @@ async function loadAdminData() {
 
   try {
     const headers = { 'Authorization': `Bearer ${token}` }
-    const [resIdx, resTok, resApps] = await Promise.all([
+    const [resIdx, resTok, resApps, resActual] = await Promise.all([
       fetch('http://localhost:8080/api/v1/admin/index_configs', { headers }),
       fetch('http://localhost:8080/api/v1/admin/access_tokens', { headers }),
-      fetch('http://localhost:8080/api/v1/admin/apps', { headers })
+      fetch('http://localhost:8080/api/v1/admin/apps', { headers }),
+      fetch('http://localhost:8080/api/v1/proxy/indexes', { headers })
     ])
 
     if (resIdx.ok) indexConfigs.value = await resIdx.json()
     if (resTok.ok) accessTokens.value = await resTok.json()
     if (resApps.ok) apps.value = await resApps.json()
+    if (resActual.ok) {
+       const body = await resActual.json()
+       if(body && body.results) {
+         availableIndexes.value = body.results.map((r: any) => r.uid)
+       }
+    }
   } catch (e) {
     console.error('Failed', e)
   }
