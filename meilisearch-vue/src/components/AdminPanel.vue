@@ -98,14 +98,31 @@
         <p style="font-size: 12px; color: #888; margin-top: 4px;">为“已加锁”的私有库派发解锁令牌。访问者在前台输入令牌即可跨越屏障。</p>
       </div>
       <div class="card-body">
-        <button class="btn btn-primary" style="margin-bottom: 12px;" @click="showAddToken = true">派发新 Token</button>
-        <div v-if="showAddToken" class="edit-box" style="margin-bottom: 15px;">
-           <input v-model="newToken.token" placeholder="自定义 Token 字符串" class="form-control" style="width: 200px; display: inline-block; margin-right: 8px;">
-           <input v-model="newToken.allowIndexes" placeholder='解锁目标 (例如: ["movies", "books"])' class="form-control" style="width: 250px; display: inline-block; margin-right: 8px;">
-           <input v-model="newToken.description" placeholder="拥有者备注" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
-           <input type="number" v-model="newToken.validDays" placeholder="有效期 (天)" title="留空表示永不过期" class="form-control" style="width: 100px; display: inline-block; margin-right: 8px;">
-           <button class="btn btn-secondary btn-sm" @click="handleSaveToken">{{ editingTokenId ? '更新' : '生成' }}</button>
-           <button class="btn btn-secondary btn-sm" @click="cancelTokenEdit" style="margin-left: 8px;">取消</button>
+        <button class="btn btn-primary" style="margin-bottom: 12px;" @click="openAddToken">派发新 Token</button>
+        <div v-if="showAddToken" class="edit-box" style="margin-bottom: 15px; border: 1px solid #444;">
+           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              <input v-model="newToken.token" placeholder="Token 字符串 (UUID)" class="form-control" style="flex: 1;">
+              <button class="btn btn-secondary btn-sm" @click="newToken.token = generateUUID()">重新生成</button>
+           </div>
+           
+           <div style="margin-bottom: 10px;">
+             <p style="font-size: 13px; margin-bottom: 6px;">允许访问的索引 (多选):</p>
+             <div class="index-selector">
+                <label v-for="uid in availableIndexes" :key="uid" class="index-item">
+                   <input type="checkbox" :value="uid" v-model="newToken.allowIndexes"> {{ uid }}
+                </label>
+                <label class="index-item" style="color: var(--primary);">
+                   <input type="checkbox" value="*" :checked="newToken.allowIndexes.includes('*')" @change="toggleAllIndexes"> [全部索引 *]
+                </label>
+             </div>
+           </div>
+
+           <div style="display: flex; align-items: center; gap: 8px;">
+             <input v-model="newToken.description" placeholder="拥有者备注" class="form-control" style="width: 150px;">
+             <input type="number" v-model="newToken.validDays" placeholder="有效期 (天)" title="留空表示永不过期" class="form-control" style="width: 100px;">
+             <button class="btn btn-secondary btn-sm" @click="handleSaveToken" style="margin-left: auto;">{{ editingTokenId ? '更新' : '生成并保存' }}</button>
+             <button class="btn btn-secondary btn-sm" @click="cancelTokenEdit">取消</button>
+           </div>
         </div>
 
         <table class="data-table">
@@ -188,7 +205,26 @@ const newIndex = ref({ uid: '', alias: '', description: '', isLocked: false })
 
 const showAddToken = ref(false)
 const editingTokenId = ref<number | null>(null)
-const newToken = ref({ token: '', allowIndexes: '[]', description: '', validDays: null as number | null })
+const newToken = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: null as number | null })
+
+function generateUUID() {
+  return window.crypto.randomUUID()
+}
+
+function openAddToken() {
+  showAddToken.value = true
+  editingTokenId.value = null
+  newToken.value = { token: generateUUID(), allowIndexes: [], description: '', validDays: null }
+}
+
+function toggleAllIndexes(e: Event) {
+  const checked = (e.target as HTMLInputElement).checked
+  if (checked) {
+    newToken.value.allowIndexes = ['*']
+  } else {
+    newToken.value.allowIndexes = []
+  }
+}
 
 function isExpired(date: string | null) {
   if (!date) return false
@@ -353,7 +389,7 @@ async function createToken() {
   const res = await fetch(`/api/v1/admin/access_tokens`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newToken.value, expiresAt })
+      body: JSON.stringify({ ...newToken.value, allowIndexes: JSON.stringify(newToken.value.allowIndexes), expiresAt })
   })
   if (res.ok) {
       alert('令牌下发成功')
@@ -370,7 +406,7 @@ async function updateToken() {
   const res = await fetch(`/api/v1/admin/access_tokens`, {
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: editingTokenId.value, ...newToken.value, expiresAt })
+      body: JSON.stringify({ id: editingTokenId.value, ...newToken.value, allowIndexes: JSON.stringify(newToken.value.allowIndexes), expiresAt })
   })
   if (res.ok) {
       alert('令牌更新成功')
@@ -381,9 +417,12 @@ async function updateToken() {
 
 function editToken(tok: any) {
   editingTokenId.value = tok.id
+  let allowed = []
+  try { allowed = JSON.parse(tok.allowIndexes || '[]') } catch { allowed = [] }
+
   newToken.value = { 
     token: tok.token, 
-    allowIndexes: tok.allowIndexes, 
+    allowIndexes: allowed, 
     description: tok.description,
     validDays: tok.expiresAt ? Math.round((new Date(tok.expiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null
   }
@@ -393,7 +432,7 @@ function editToken(tok: any) {
 function cancelTokenEdit() {
   showAddToken.value = false
   editingTokenId.value = null
-  newToken.value = { token: '', allowIndexes: '[]', description: '', validDays: null }
+  newToken.value = { token: '', allowIndexes: [], description: '', validDays: null }
 }
 
 async function deleteToken(id: number) {
@@ -528,5 +567,28 @@ select.form-control {
 option {
   background: #2a2a2e;
   color: #fff;
+}
+.index-selector {
+  max-height: 120px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  border-radius: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.index-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.index-item:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 </style>
