@@ -8,6 +8,11 @@ import (
 	"backend/model"
 	"backend/repository"
 
+	"encoding/json"
+	"net/http/httputil"
+	"net/url"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -54,6 +59,11 @@ func main() {
 			adminGroup.POST("/users", handleCreateUser)
 			adminGroup.PUT("/users/:id/permissions", handleUpdateUserPermissions)
 		}
+
+		// 4. Meilisearch 透明转发网关 (Proxy)
+		proxyGroup := api.Group("/proxy")
+		proxyGroup.Use(AuthMiddleware()) // 网关统一经过 JWT 验证
+		proxyGroup.Any("/*proxyPath", handleProxy)
 	}
 
 	log.Println("Server mapping to port :8080")
@@ -147,17 +157,64 @@ func handleAppConfig(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Instance not properly configured"})
 		return
 	}
-
-	// TODO: 利用 instance.APIKey 去 Meilisearch 换取 Tenant Token，现在临时直接返回假的 token 和真实的 Host
-	// NOTE: 在生产环境中，前端不应拿到 Master Key
 	
 	c.JSON(http.StatusOK, gin.H{
 		"uiConfig": app.UIConfig,
 		"allowIndexes": allowIndexes,
 		"meili": gin.H{
-			"host": instance.Host,
-			// HACK: 暂时返回 apiKey 给前端测试连接，后续应替换为 Tenant Token
-			"searchToken": instance.APIKey, 
+			// 返回网关地址，而非真实 Meili host
+			"host": "http://localhost:8080/api/v1/proxy",
+			// 前台使用 JWT Token 作为身份凭证伪装成 apiKey 请求网关
+			"searchToken": c.GetHeader("Authorization"), 
 		},
 	})
+}
+
+// handleProxy 拦截并转发所有发往 Meilisearch 的请求
+func handleProxy(c *gin.Context) {
+	// 目前简易取第一台实例，多实例可根据前台 App 或 User 绑定关联查询
+	var instance model.MeiliInstance
+	repository.DB.First(&instance)
+
+	proxyPath := c.Param("proxyPath")
+	// 鉴权：拦截 URL 路径进行安全审查 (如 /indexes/books/search)
+	parts := strings.Split(strings.TrimPrefix(proxyPath, "/"), "/")
+	if len(parts) >= 2 && parts[0] == "indexes" {
+		requestedIndex := parts[1]
+		role, _ := c.Get("role")
+		if role != "admin" {
+			userId, _ := c.Get("userId")
+			var user model.User
+			repository.DB.First(&user, userId)
+
+			allowed := false
+			var allowedArr []string
+			json.Unmarshal([]byte(user.AllowIndexes), &allowedArr)
+			for _, a := range allowedArr {
+				if a == requestedIndex || a == "*" {
+					allowed = true
+					break
+				}
+			}
+			if !allowed {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "You do not have access to index: " + requestedIndex})
+				return
+			}
+		}
+	}
+
+	// 转发到真实的 Meilisearch 节点
+	target, _ := url.Parse(instance.Host)
+	proxy := httputil.NewSingleHostReverseProxy(target)
+
+	originalDirector := proxy.Director
+	proxy.Director = func(req *http.Request) {
+		originalDirector(req)
+		req.Host = target.Host
+		// 剥离请求携带的 JWT Token，擦除痕迹，换成真实的 Meilisearch Master_Key
+		req.Header.Set("Authorization", "Bearer "+instance.APIKey)
+		req.Header.Set("X-Meili-API-Key", instance.APIKey)
+	}
+
+	proxy.ServeHTTP(c.Writer, c.Request)
 }
