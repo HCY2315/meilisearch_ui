@@ -13,9 +13,10 @@ type AppUpdateRequest struct {
 
 // IndexConfigRequest 索引加密配置
 type IndexConfigRequest struct {
-	Uid      string `json:"uid" binding:"required"`
-	Alias    string `json:"alias"`
-	IsLocked bool   `json:"isLocked"`
+	Uid         string `json:"uid" binding:"required"`
+	Alias       string `json:"alias"`
+	Description string `json:"description"`
+	IsLocked    bool   `json:"isLocked"`
 }
 
 // AccessTokenRequest 新建数据访问Token
