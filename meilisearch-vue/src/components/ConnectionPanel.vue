@@ -12,11 +12,24 @@
         <label>选择查询资源 (Index)</label>
         <select class="form-control" v-model="selectedIndex" @change="onIndexChange">
           <option value="">-- 请选择 --</option>
-          <option v-for="idx in store.indexes" :key="idx.uid" :value="idx.uid" :disabled="idx.isLocked && !idx.isUnlocked">
-            {{ idx.isLocked ? (idx.isUnlocked ? '🔓 ' : '🔒 ') : '' }}
-            {{ idx.displayName || idx.uid }}
-            {{ idx.count !== undefined ? ` (${formatNumber(idx.count)} 条记录)` : '' }}
-          </option>
+          
+          <optgroup v-if="publicIndexes.length" label="🌐 公开可见">
+            <option v-for="idx in publicIndexes" :key="idx.uid" :value="idx.uid">
+              {{ idx.displayName || idx.uid }} {{ idx.count !== undefined ? ` (${formatNumber(idx.count)})` : '' }}
+            </option>
+          </optgroup>
+
+          <optgroup v-if="unlockedIndexes.length" label="🔓 已解锁 (私有)">
+            <option v-for="idx in unlockedIndexes" :key="idx.uid" :value="idx.uid">
+              {{ idx.displayName || idx.uid }} {{ idx.count !== undefined ? ` (${formatNumber(idx.count)})` : '' }}
+            </option>
+          </optgroup>
+
+          <optgroup v-if="lockedIndexes.length" label="🔒 需凭证解锁">
+            <option v-for="idx in lockedIndexes" :key="idx.uid" :value="idx.uid" disabled>
+              {{ idx.displayName || idx.uid }} (受限访问)
+            </option>
+          </optgroup>
         </select>
       </div>
     </div>
