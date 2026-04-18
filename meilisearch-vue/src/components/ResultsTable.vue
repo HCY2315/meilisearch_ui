@@ -62,7 +62,7 @@
                   {{ store.fieldLabels[col] || col }}
                   <span v-if="store.tableSortField === col">{{ store.tableSortDir === 'asc' ? '▲' : '▼' }}</span>
                 </span>
-                <span class="column-resizer" @mousedown.prevent="startResize($event, col)"></span>
+                <span class="column-resizer" @mousedown.prevent.stop="startResize($event, col)"></span>
               </th>
               <th>操作</th>
             </tr>
@@ -294,7 +294,12 @@ function startResize(e: MouseEvent, col: string) {
 }
 .empty-state svg { width: 48px; height: 48px; }
 .table-wrap { }
-.results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
 .results-table th {
   background: var(--bg-secondary);
   padding: 8px 10px;
@@ -309,8 +314,34 @@ function startResize(e: MouseEvent, col: string) {
 .sortable-th.drag-over { background: rgba(var(--primary-color-rgb), 0.1); }
 .pk-col { color: var(--primary-color); }
 .th-label { display: flex; align-items: center; gap: 4px; }
-.column-resizer { position: absolute; right: 0; top: 0; bottom: 0; width: 4px; cursor: col-resize; }
-.column-resizer:hover { background: var(--primary-color); }
+.column-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background 0.2s;
+}
+.column-resizer:hover, .column-resizer.active {
+  background: rgba(var(--primary-color-rgb), 0.2);
+}
+.column-resizer::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: 20%;
+  bottom: 20%;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 1px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.column-resizer:hover::after {
+  opacity: 1;
+}
 .cell-input { padding: 4px 6px; font-size: 12px; width: 100%; min-width: 60px; }
 .edited-cell { background: rgba(var(--warning-color), 0.15); border-radius: 3px; padding: 2px 4px; font-style: italic; }
 .rank-score { color: var(--text-muted); font-size: 11px; }
