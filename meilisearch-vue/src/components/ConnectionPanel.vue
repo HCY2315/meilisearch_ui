@@ -12,8 +12,10 @@
         <label>选择查询资源 (Index)</label>
         <select class="form-control" v-model="selectedIndex" @change="onIndexChange">
           <option value="">-- 请选择 --</option>
-          <option v-for="idx in store.indexes" :key="idx.uid" :value="idx.uid">
-            {{ idx.uid }}{{ idx.count !== undefined ? ` (${formatNumber(idx.count)} 条记录)` : '' }}
+          <option v-for="idx in store.indexes" :key="idx.uid" :value="idx.uid" :disabled="idx.isLocked && !idx.isUnlocked">
+            {{ idx.isLocked ? (idx.isUnlocked ? '🔓 ' : '🔒 ') : '' }}
+            {{ idx.displayName || idx.uid }}
+            {{ idx.count !== undefined ? ` (${formatNumber(idx.count)} 条记录)` : '' }}
           </option>
         </select>
       </div>
