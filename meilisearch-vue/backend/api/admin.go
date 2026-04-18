@@ -16,6 +16,54 @@ func HandleGetInstances(c *gin.Context) {
 	c.JSON(http.StatusOK, instances)
 }
 
+func HandleCreateInstance(c *gin.Context) {
+	var req schema.MeiliInstanceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
+		return
+	}
+	ins := model.MeiliInstance{
+		Name:   req.Name,
+		Host:   req.Host,
+		APIKey: req.APIKey,
+	}
+	if err := repository.DB.Create(&ins).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create instance"})
+		return
+	}
+	c.JSON(http.StatusOK, ins)
+}
+
+func HandleUpdateInstance(c *gin.Context) {
+	var req schema.MeiliInstanceUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
+		return
+	}
+	var ins model.MeiliInstance
+	if err := repository.DB.First(&ins, req.ID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Instance not found"})
+		return
+	}
+	if req.Name != "" {
+		ins.Name = req.Name
+	}
+	if req.Host != "" {
+		ins.Host = req.Host
+	}
+	if req.APIKey != "" {
+		ins.APIKey = req.APIKey
+	}
+	repository.DB.Save(&ins)
+	c.JSON(http.StatusOK, ins)
+}
+
+func HandleDeleteInstance(c *gin.Context) {
+	id := c.Param("id")
+	repository.DB.Delete(&model.MeiliInstance{}, id)
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
 func HandleGetApps(c *gin.Context) {
 	var apps []model.Application
 	repository.DB.Find(&apps)
@@ -55,13 +103,26 @@ func HandleSaveIndexConfig(c *gin.Context) {
 	var config model.IndexConfig
 	if err := repository.DB.Where("uid = ?", req.Uid).First(&config).Error; err != nil {
 		// Create new
-		config = model.IndexConfig{Uid: req.Uid, Alias: req.Alias, Description: req.Description, IsLocked: req.IsLocked}
+		config = model.IndexConfig{
+			Uid:          req.Uid,
+			Alias:        req.Alias,
+			Description:  req.Description,
+			IsLocked:     req.IsLocked,
+			FieldConfigs: req.FieldConfigs,
+			ViewConfigs:  req.ViewConfigs,
+			TableConfigs: req.TableConfigs,
+			CanEdit:      req.CanEdit,
+		}
 		repository.DB.Create(&config)
 	} else {
 		// Update
 		config.Alias = req.Alias
 		config.Description = req.Description
 		config.IsLocked = req.IsLocked
+		config.FieldConfigs = req.FieldConfigs
+		config.ViewConfigs = req.ViewConfigs
+		config.TableConfigs = req.TableConfigs
+		config.CanEdit = req.CanEdit
 		repository.DB.Save(&config)
 	}
 	c.JSON(http.StatusOK, config)
@@ -84,11 +145,31 @@ func HandleCreateAccessToken(c *gin.Context) {
 		Token:        req.Token,
 		AllowIndexes: req.AllowIndexes,
 		Description:  req.Description,
+		ExpiresAt:    req.ExpiresAt,
 	}
 	if err := repository.DB.Create(&tok).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token already exists"})
 		return
 	}
+	c.JSON(http.StatusOK, tok)
+}
+
+func HandleUpdateAccessToken(c *gin.Context) {
+	var req schema.AccessTokenUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
+		return
+	}
+	var tok model.AccessToken
+	if err := repository.DB.First(&tok, req.ID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Token not found"})
+		return
+	}
+	tok.Token = req.Token
+	tok.AllowIndexes = req.AllowIndexes
+	tok.Description = req.Description
+	tok.ExpiresAt = req.ExpiresAt
+	repository.DB.Save(&tok)
 	c.JSON(http.StatusOK, tok)
 }
 

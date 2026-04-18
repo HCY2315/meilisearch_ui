@@ -15,11 +15,13 @@ import type {
 
 function createClient(host: string, apiKey: string): AxiosInstance {
   const trimmed = host.trim().replace(/\/$/, '')
+  const adminToken = localStorage.getItem('authToken')
   return axios.create({
     baseURL: trimmed,
     headers: {
       'Content-Type': 'application/json',
       ...(apiKey.trim() ? { 'App-Token': apiKey.trim() } : {}),
+      ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {}),
     },
   })
 }
@@ -31,7 +33,8 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
   const fetchUrl = isProxy ? '/api/v1/public/indexes' : `${host}/indexes`
   const resp = await axios.get<IndexListResponse>(fetchUrl, {
     headers: {
-      'App-Token': apiKey
+      'App-Token': apiKey,
+      ...(localStorage.getItem('authToken') ? { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } : {})
     }
   })
   const results: IndexInfo[] = []
@@ -43,14 +46,22 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
         count: statsResp.data.numberOfDocuments,
         isLocked: idx.isLocked,
         isUnlocked: idx.isUnlocked,
-        displayName: idx.displayName
+        displayName: idx.displayName,
+        fieldConfigs: idx.fieldConfigs,
+        viewConfigs: idx.viewConfigs,
+        tableConfigs: idx.tableConfigs,
+        canEdit: idx.canEdit
       })
     } catch {
       results.push({ 
         uid: idx.uid,
         isLocked: idx.isLocked,
         isUnlocked: idx.isUnlocked,
-        displayName: idx.displayName
+        displayName: idx.displayName,
+        fieldConfigs: idx.fieldConfigs,
+        viewConfigs: idx.viewConfigs,
+        tableConfigs: idx.tableConfigs,
+        canEdit: idx.canEdit
       })
     }
   }

@@ -13,22 +13,26 @@ func InitRouter() *gin.Engine {
 	{
 		v1.POST("/auth/login", HandleLogin)
 		v1.GET("/app/config", HandleAppConfig)
-        
-        // 前台拉取允许展示的 Index 列表
-        v1.GET("/public/indexes", HandleGetVisibleIndexes)
+
+		// 前台拉取允许展示的 Index 列表
+		v1.GET("/public/indexes", HandleGetVisibleIndexes)
 
 		adminGroup := v1.Group("/admin")
 		adminGroup.Use(AuthMiddleware())
 		{
 			adminGroup.GET("/instances", HandleGetInstances)
+			adminGroup.POST("/instances", HandleCreateInstance)
+			adminGroup.PUT("/instances", HandleUpdateInstance)
+			adminGroup.DELETE("/instances/:id", HandleDeleteInstance)
 			adminGroup.GET("/apps", HandleGetApps)
 			adminGroup.PUT("/apps/:id", HandleUpdateApp)
 
-            adminGroup.GET("/index_configs", HandleGetIndexConfigs)
-            adminGroup.POST("/index_configs", HandleSaveIndexConfig)
+			adminGroup.GET("/index_configs", HandleGetIndexConfigs)
+			adminGroup.POST("/index_configs", HandleSaveIndexConfig)
 
 			adminGroup.GET("/access_tokens", HandleGetAccessTokens)
 			adminGroup.POST("/access_tokens", HandleCreateAccessToken)
+			adminGroup.PUT("/access_tokens", HandleUpdateAccessToken)
 			adminGroup.DELETE("/access_tokens/:id", HandleDeleteAccessToken)
 		}
 

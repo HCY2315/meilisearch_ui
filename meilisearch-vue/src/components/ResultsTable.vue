@@ -15,14 +15,16 @@
         <div v-for="hit in sortedHits" :key="getId(hit)" class="custom-row">
           <div class="custom-row-columns" :style="gridStyle">
             <div v-for="(colFields, ci) in store.activeViewConfig()!.columns" :key="ci" class="custom-col">
-              <div v-for="field in colFields" :key="field" class="custom-field">
-                <span class="custom-label" :style="getLabelWidthStyle(ci)">{{ store.fieldLabels[field] || field }}</span>
-                <span
-                  class="field-width-resizer"
-                  @mousedown.prevent.stop="onViewFieldResizeStart($event, ci)"
-                ></span>
-                <span class="custom-value">{{ getFieldValue(hit, field) }}</span>
-              </div>
+              <template v-for="field in colFields" :key="field">
+                <div v-if="!store.hiddenColumns.includes(field)" class="custom-field">
+                  <span class="custom-label" :style="getLabelWidthStyle(ci)">{{ store.fieldLabels[field] || field }}</span>
+                  <span
+                    class="field-width-resizer"
+                    @mousedown.prevent.stop="onViewFieldResizeStart($event, ci)"
+                  ></span>
+                  <span class="custom-value">{{ getFieldValue(hit, field) }}</span>
+                </div>
+              </template>
               <span
                 v-if="ci < store.activeViewConfig()!.columns.length - 1"
                 class="view-col-resizer"
@@ -60,7 +62,7 @@
                   {{ store.fieldLabels[col] || col }}
                   <span v-if="store.tableSortField === col">{{ store.tableSortDir === 'asc' ? '▲' : '▼' }}</span>
                 </span>
-                <span class="column-resizer" @mousedown.prevent="startResize($event, col)"></span>
+                <span class="column-resizer" @mousedown.prevent.stop="startResize($event, col)"></span>
               </th>
               <th>操作</th>
             </tr>
@@ -154,9 +156,20 @@ const sortedHits = computed(() => {
 })
 
 const gridStyle = computed(() => {
-  const widths = store.viewWidthsWorking.length > 0 ? store.viewWidthsWorking : (store.activeViewConfig()?.widths ?? [])
-  if (!widths.length) return ''
-  return `grid-template-columns: ${widths.map(w => `${w}%`).join(' ')};`
+  const activeCfg = store.activeViewConfig()
+  if (!activeCfg) return ''
+  const colCount = activeCfg.columns.length
+  if (colCount === 0) return ''
+
+  const widths = store.viewWidthsWorking.length > 0 ? store.viewWidthsWorking : (activeCfg.widths ?? [])
+  
+  // 如果有明确配置的有效宽度，使用百分比
+  if (widths.length === colCount && widths.some((w: number) => w > 0)) {
+    return `grid-template-columns: ${widths.map((w: number) => `${w}%`).join(' ')};`
+  }
+  
+  // 否则均分宽度 (1fr)
+  return `grid-template-columns: repeat(${colCount}, 1fr);`
 })
 
 const pageRange = computed(() => {
@@ -281,7 +294,12 @@ function startResize(e: MouseEvent, col: string) {
 }
 .empty-state svg { width: 48px; height: 48px; }
 .table-wrap { }
-.results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
 .results-table th {
   background: var(--bg-secondary);
   padding: 8px 10px;
@@ -296,8 +314,34 @@ function startResize(e: MouseEvent, col: string) {
 .sortable-th.drag-over { background: rgba(var(--primary-color-rgb), 0.1); }
 .pk-col { color: var(--primary-color); }
 .th-label { display: flex; align-items: center; gap: 4px; }
-.column-resizer { position: absolute; right: 0; top: 0; bottom: 0; width: 4px; cursor: col-resize; }
-.column-resizer:hover { background: var(--primary-color); }
+.column-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background 0.2s;
+}
+.column-resizer:hover, .column-resizer.active {
+  background: rgba(var(--primary-color-rgb), 0.2);
+}
+.column-resizer::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: 20%;
+  bottom: 20%;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 1px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.column-resizer:hover::after {
+  opacity: 1;
+}
 .cell-input { padding: 4px 6px; font-size: 12px; width: 100%; min-width: 60px; }
 .edited-cell { background: rgba(var(--warning-color), 0.15); border-radius: 3px; padding: 2px 4px; font-style: italic; }
 .rank-score { color: var(--text-muted); font-size: 11px; }

@@ -1,5 +1,43 @@
 <template>
   <div class="admin-panel">
+    <div class="card" style="margin-bottom: 20px;">
+      <div class="card-header">
+        <h3>0. 搜索引擎实例配置 (Meilisearch Instances)</h3>
+        <p style="font-size: 12px; color: #888; margin-top: 4px;">配置后端连接的 Meilisearch 节点，支持多实例管理。</p>
+      </div>
+      <div class="card-body">
+        <button class="btn btn-primary" style="margin-bottom: 12px;" @click="showAddInstance = true">添加新实例</button>
+        <div v-if="showAddInstance" class="edit-box" style="margin-bottom: 15px;">
+           <input v-model="newInstance.name" placeholder="实例名称 (如: 生产环境)" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
+           <input v-model="newInstance.host" placeholder="Host (如: http://localhost:7700)" class="form-control" style="width: 250px; display: inline-block; margin-right: 8px;">
+           <input v-model="newInstance.apiKey" placeholder="API Key" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
+           <button class="btn btn-secondary btn-sm" @click="handleSaveInstance">{{ editingInstanceId ? '更新' : '添加' }}</button>
+           <button class="btn btn-secondary btn-sm" @click="cancelInstanceEdit" style="margin-left: 8px;">取消</button>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>名称</th>
+              <th>地址 (Host)</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="ins in instances" :key="ins.id">
+              <td>{{ ins.id }}</td>
+              <td><b>{{ ins.name }}</b></td>
+              <td><code>{{ ins.host }}</code></td>
+              <td>
+                <button class="btn btn-primary btn-sm" @click="editInstance(ins)" style="margin-right: 8px;">编辑</button>
+                <button class="btn btn-danger btn-sm" @click="deleteInstance(ins.id)">删除</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
     <div class="card">
       <div class="card-header">
@@ -18,8 +56,8 @@
            <label style="margin-right: 12px; font-size: 14px;">
                <input type="checkbox" v-model="newIndex.isLocked"> 设置为私有锁定
            </label>
-           <button class="btn btn-secondary btn-sm" @click="saveIndexConfig">保存配置</button>
-           <button class="btn btn-secondary btn-sm" @click="showAddIndexConf = false" style="margin-left: 8px;">取消</button>
+            <button class="btn btn-secondary btn-sm" @click="saveIndexConfig">{{ editingIndexId ? '更新配置' : '保存配置' }}</button>
+            <button class="btn btn-secondary btn-sm" @click="cancelIndexEdit" style="margin-left: 8px;">取消</button>
         </div>
 
         <table class="data-table">
@@ -45,7 +83,8 @@
                 </span>
               </td>
               <td>
-                <button class="btn btn-primary btn-sm" @click="toggleIndexLock(cfg)">切换锁定状态</button>
+                <button class="btn btn-primary btn-sm" @click="editIndex(cfg)" style="margin-right: 8px;">编辑</button>
+                <button class="btn btn-secondary btn-sm" @click="toggleIndexLock(cfg)">切换锁定</button>
               </td>
             </tr>
           </tbody>
@@ -59,13 +98,31 @@
         <p style="font-size: 12px; color: #888; margin-top: 4px;">为“已加锁”的私有库派发解锁令牌。访问者在前台输入令牌即可跨越屏障。</p>
       </div>
       <div class="card-body">
-        <button class="btn btn-primary" style="margin-bottom: 12px;" @click="showAddToken = true">派发新 Token</button>
-        <div v-if="showAddToken" class="edit-box" style="margin-bottom: 15px;">
-           <input v-model="newToken.token" placeholder="自定义 Token 字符串" class="form-control" style="width: 200px; display: inline-block; margin-right: 8px;">
-           <input v-model="newToken.allowIndexes" placeholder='解锁目标 (例如: ["movies", "books"])' class="form-control" style="width: 250px; display: inline-block; margin-right: 8px;">
-           <input v-model="newToken.description" placeholder="拥有者备注" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
-           <button class="btn btn-secondary btn-sm" @click="createToken">生成</button>
-           <button class="btn btn-secondary btn-sm" @click="showAddToken = false" style="margin-left: 8px;">取消</button>
+        <button class="btn btn-primary" style="margin-bottom: 12px;" @click="openAddToken">派发新 Token</button>
+        <div v-if="showAddToken" class="edit-box" style="margin-bottom: 15px; border: 1px solid #444;">
+           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              <input v-model="newToken.token" placeholder="Token 字符串 (UUID)" class="form-control" style="flex: 1;">
+              <button class="btn btn-secondary btn-sm" @click="newToken.token = generateUUID()">重新生成</button>
+           </div>
+           
+           <div style="margin-bottom: 10px;">
+             <p style="font-size: 13px; margin-bottom: 6px;">允许访问的索引 (多选):</p>
+             <div class="index-selector">
+                <label v-for="uid in availableIndexes" :key="uid" class="index-item">
+                   <input type="checkbox" :value="uid" v-model="newToken.allowIndexes"> {{ uid }}
+                </label>
+                <label class="index-item" style="color: var(--primary);">
+                   <input type="checkbox" value="*" :checked="newToken.allowIndexes.includes('*')" @change="toggleAllIndexes"> [全部索引 *]
+                </label>
+             </div>
+           </div>
+
+           <div style="display: flex; align-items: center; gap: 8px;">
+             <input v-model="newToken.description" placeholder="拥有者备注" class="form-control" style="width: 150px;">
+             <input type="number" v-model="newToken.validDays" placeholder="有效期 (天)" title="留空表示永不过期" class="form-control" style="width: 100px;">
+             <button class="btn btn-secondary btn-sm" @click="handleSaveToken" style="margin-left: auto;">{{ editingTokenId ? '更新' : '生成并保存' }}</button>
+             <button class="btn btn-secondary btn-sm" @click="cancelTokenEdit">取消</button>
+           </div>
         </div>
 
         <table class="data-table">
@@ -75,6 +132,7 @@
               <th>凭证口令 (Token)</th>
               <th>解锁的私密库 (UIDs)</th>
               <th>备注下发对象</th>
+              <th>有效期至</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -85,6 +143,12 @@
               <td><code>{{ tok.allowIndexes }}</code></td>
               <td>{{ tok.description }}</td>
               <td>
+                <span :class="['status-badge', isExpired(tok.expiresAt) ? 'status-err' : '']">
+                  {{ tok.expiresAt ? new Date(tok.expiresAt).toLocaleString() : '永久' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-primary btn-sm" @click="editToken(tok)" style="margin-right: 8px;">编辑</button>
                 <button class="btn btn-danger btn-sm" @click="deleteToken(tok.id)">吊销</button>
               </td>
             </tr>
@@ -128,13 +192,44 @@ import { ref, onMounted } from 'vue'
 const indexConfigs = ref<any[]>([])
 const accessTokens = ref<any[]>([])
 const apps = ref<any[]>([])
+const instances = ref<any[]>([])
 const availableIndexes = ref<string[]>([])
 
+const showAddInstance = ref(false)
+const editingInstanceId = ref<number | null>(null)
+const newInstance = ref({ name: '', host: '', apiKey: '' })
+
 const showAddIndexConf = ref(false)
+const editingIndexId = ref<number | null>(null)
 const newIndex = ref({ uid: '', alias: '', description: '', isLocked: false })
 
 const showAddToken = ref(false)
-const newToken = ref({ token: '', allowIndexes: '[]', description: '' })
+const editingTokenId = ref<number | null>(null)
+const newToken = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: null as number | null })
+
+function generateUUID() {
+  return window.crypto.randomUUID()
+}
+
+function openAddToken() {
+  showAddToken.value = true
+  editingTokenId.value = null
+  newToken.value = { token: generateUUID(), allowIndexes: [], description: '', validDays: null }
+}
+
+function toggleAllIndexes(e: Event) {
+  const checked = (e.target as HTMLInputElement).checked
+  if (checked) {
+    newToken.value.allowIndexes = ['*']
+  } else {
+    newToken.value.allowIndexes = []
+  }
+}
+
+function isExpired(date: string | null) {
+  if (!date) return false
+  return new Date(date).getTime() < Date.now()
+}
 
 async function loadAdminData() {
   const token = localStorage.getItem('authToken')
@@ -142,33 +237,125 @@ async function loadAdminData() {
 
   try {
     const headers = { 'Authorization': `Bearer ${token}` }
-    const [resIdx, resTok, resApps, resActual] = await Promise.all([
+    const [resIdx, resTok, resApps, resActual, resIns] = await Promise.all([
       fetch('/api/v1/admin/index_configs', { headers }),
       fetch('/api/v1/admin/access_tokens', { headers }),
       fetch('/api/v1/admin/apps', { headers }),
-      fetch('/api/v1/proxy/indexes', { headers })
+      fetch('/api/v1/proxy/indexes', { headers }),
+      fetch('/api/v1/admin/instances', { headers })
     ])
 
     if (resIdx.ok) indexConfigs.value = await resIdx.json()
     if (resTok.ok) accessTokens.value = await resTok.json()
     if (resApps.ok) apps.value = await resApps.json()
+    if (resIns.ok) instances.value = await resIns.json()
     if (resActual.ok) {
-       const body = await resActual.json()
-       if(body && body.results) {
-         availableIndexes.value = body.results.map((r: any) => r.uid)
-       }
-    } else {
-       console.error('Fetch actual indexes failed:', resActual.status)
+        const body = await resActual.json()
+        if (body && body.results) {
+          actualIndexes.value = body.results
+          availableIndexes.value = body.results.map((r: any) => r.uid)
+        }
     }
   } catch (e) {
     console.error('Admin Data Load Error:', e)
   }
 }
 
+async function handleSaveInstance() {
+  if (editingInstanceId.value) {
+    updateInstance()
+  } else {
+    createInstance()
+  }
+}
+
+async function createInstance() {
+  if (!newInstance.value.name || !newInstance.value.host) return alert('请填入名称和地址')
+  const token = localStorage.getItem('authToken')
+  const res = await fetch(`/api/v1/admin/instances`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(newInstance.value)
+  })
+  if (res.ok) {
+      alert('实例添加成功')
+      cancelInstanceEdit()
+      loadAdminData()
+  }
+}
+
+async function updateInstance() {
+  const token = localStorage.getItem('authToken')
+  const res = await fetch(`/api/v1/admin/instances`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editingInstanceId.value, ...newInstance.value })
+  })
+  if (res.ok) {
+      alert('实例更新成功')
+      cancelInstanceEdit()
+      loadAdminData()
+  }
+}
+
+function editInstance(ins: any) {
+  editingInstanceId.value = ins.id
+  newInstance.value = { name: ins.name, host: ins.host, apiKey: ins.apiKey || '' }
+  showAddInstance.value = true
+}
+
+function cancelInstanceEdit() {
+  showAddInstance.value = false
+  editingInstanceId.value = null
+  newInstance.value = { name: '', host: '', apiKey: '' }
+}
+
+async function deleteInstance(id: number) {
+   if(!confirm('确定删除该实例配置？')) return
+   const token = localStorage.getItem('authToken')
+   await fetch(`/api/v1/admin/instances/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+   })
+   loadAdminData()
+}
+
+const showUIConfig = ref(false)
+const currentConfig = ref<any>(null)
+const actualIndexes = ref<any[]>([])
+
+function openUIConfig(cfg: any) {
+  currentConfig.value = { ...cfg }
+  showUIConfig.value = true
+}
+
+async function saveUIConfig() {
+  const token = localStorage.getItem('authToken')
+  await fetch(`/api/v1/admin/index_configs`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentConfig.value)
+  })
+  showUIConfig.value = false
+  loadAdminData()
+}
+
 async function saveIndexConfig() {
     if (!newIndex.value.uid) return alert('请先从下拉列表中选择一个索引')
-    submitIndexConfig(newIndex.value)
-    showAddIndexConf.value = false
+    await submitIndexConfig(newIndex.value)
+    cancelIndexEdit()
+}
+
+function editIndex(cfg: any) {
+  editingIndexId.value = cfg.id
+  newIndex.value = { uid: cfg.uid, alias: cfg.alias, description: cfg.description, isLocked: cfg.isLocked }
+  showAddIndexConf.value = true
+}
+
+function cancelIndexEdit() {
+  showAddIndexConf.value = false
+  editingIndexId.value = null
+  newIndex.value = { uid: '', alias: '', description: '', isLocked: false }
 }
 
 function toggleIndexLock(cfg: any) {
@@ -185,20 +372,67 @@ async function submitIndexConfig(payload: any) {
     loadAdminData()
 }
 
+async function handleSaveToken() {
+  if (editingTokenId.value) {
+    updateToken()
+  } else {
+    createToken()
+  }
+}
+
 async function createToken() {
   if (!newToken.value.token) return alert('请填入Token字符串')
   const token = localStorage.getItem('authToken')
+  const expiresAt = newToken.value.validDays 
+    ? new Date(Date.now() + newToken.value.validDays * 24 * 60 * 60 * 1000).toISOString()
+    : null
   const res = await fetch(`/api/v1/admin/access_tokens`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(newToken.value)
+      body: JSON.stringify({ ...newToken.value, allowIndexes: JSON.stringify(newToken.value.allowIndexes), expiresAt })
   })
   if (res.ok) {
       alert('令牌下发成功')
-      showAddToken.value = false
-      newToken.value = { token: '', allowIndexes: '[]', description: '' }
+      cancelTokenEdit()
       loadAdminData()
   }
+}
+
+async function updateToken() {
+  const token = localStorage.getItem('authToken')
+  const expiresAt = newToken.value.validDays 
+    ? new Date(Date.now() + newToken.value.validDays * 24 * 60 * 60 * 1000).toISOString()
+    : null
+  const res = await fetch(`/api/v1/admin/access_tokens`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editingTokenId.value, ...newToken.value, allowIndexes: JSON.stringify(newToken.value.allowIndexes), expiresAt })
+  })
+  if (res.ok) {
+      alert('令牌更新成功')
+      cancelTokenEdit()
+      loadAdminData()
+  }
+}
+
+function editToken(tok: any) {
+  editingTokenId.value = tok.id
+  let allowed = []
+  try { allowed = JSON.parse(tok.allowIndexes || '[]') } catch { allowed = [] }
+
+  newToken.value = { 
+    token: tok.token, 
+    allowIndexes: allowed, 
+    description: tok.description,
+    validDays: tok.expiresAt ? Math.round((new Date(tok.expiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null
+  }
+  showAddToken.value = true
+}
+
+function cancelTokenEdit() {
+  showAddToken.value = false
+  editingTokenId.value = null
+  newToken.value = { token: '', allowIndexes: [], description: '', validDays: null }
 }
 
 async function deleteToken(id: number) {
@@ -333,5 +567,28 @@ select.form-control {
 option {
   background: #2a2a2e;
   color: #fff;
+}
+.index-selector {
+  max-height: 120px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  border-radius: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.index-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.index-item:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 </style>

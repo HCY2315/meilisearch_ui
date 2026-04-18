@@ -250,7 +250,7 @@ const orderedColumns = computed(() => {
 })
 
 function onSave() {
-  store.hiddenColumns = store.lastBaseColumns.filter(c => !hidden[c])
+  store.hiddenColumns = store.lastBaseColumns.filter((c: string) => !hidden[c])
   for (const [k, v] of Object.entries(labels)) {
     if (v.trim() && v !== k) store.fieldLabels[k] = v.trim()
   }
@@ -286,7 +286,7 @@ function onSaveField() {
 const usedFields = computed(() => new Set(store.viewLayoutWorking.flat()))
 
 const unusedFields = computed(() =>
-  store.availableFields.filter(f => !usedFields.value.has(f))
+  store.availableFields.filter((f: string) => !usedFields.value.has(f))
 )
 
 function addColumn() {

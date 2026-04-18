@@ -16,11 +16,15 @@ type User struct {
 
 // IndexConfig 后台配置的索引展示项及加密状态
 type IndexConfig struct {
-	ID          uint   `gorm:"primarykey" json:"id"`
-	Uid         string `gorm:"uniqueIndex;not null" json:"uid"`
-	Alias       string `gorm:"size:255" json:"alias"`       // 前台显示的别名
-	Description string `gorm:"size:512" json:"description"` // 后台备注
-	IsLocked    bool   `gorm:"default:false" json:"isLocked"` // 是否加锁
+	ID           uint   `gorm:"primarykey" json:"id"`
+	Uid          string `gorm:"uniqueIndex;not null" json:"uid"`
+	Alias        string `gorm:"size:255" json:"alias"`
+	Description  string `gorm:"size:512" json:"description"`
+	IsLocked     bool   `gorm:"default:false" json:"isLocked"`
+	FieldConfigs string `gorm:"type:text" json:"fieldConfigs"` // JSON: Field settings
+	ViewConfigs  string `gorm:"type:text" json:"viewConfigs"`  // JSON: Custom views
+	TableConfigs string `gorm:"type:text" json:"tableConfigs"` // JSON: Table order/hidden
+	CanEdit      bool   `gorm:"default:false" json:"canEdit"`  // Whether front-end can edit docs
 }
 
 // AccessToken 前台解锁用的专属凭证
@@ -29,6 +33,7 @@ type AccessToken struct {
 	Token        string    `gorm:"uniqueIndex;not null" json:"token"`
 	AllowIndexes string    `gorm:"type:text" json:"allowIndexes"` // JSON数组，例如 ["docs", "finance"]
 	Description  string    `gorm:"size:255" json:"description"`
+	ExpiresAt    *time.Time `json:"expiresAt"` // 过期时间，nil 表示永不过期
 	CreatedAt    time.Time `json:"createdAt"`
 }
 

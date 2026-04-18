@@ -40,8 +40,8 @@ function createQueryRow(): QueryRow {
 }
 
 export const useAppStore = defineStore('app', () => {
-  const hostInput = ref('http://192.168.2.27:7700')
-  const apiKeyInput = ref('insur132')
+  const hostInput = ref('http://localhost:7700')
+  const apiKeyInput = ref('123456')
   const indexes = ref<IndexInfo[]>([])
   const currentIndex = ref('')
   const searchInput = ref('')
@@ -160,6 +160,25 @@ export const useAppStore = defineStore('app', () => {
     return cols.filter(c => !hiddenColumns.value.includes(c))
   })
 
+  const visibleAvailableFields = computed(() => {
+    return availableFields.value.filter(f => !hiddenColumns.value.includes(f))
+  })
+
+  const visibleFilterableFields = computed(() => {
+    return filterableFields.value.filter(f => !hiddenColumns.value.includes(f))
+  })
+
+  const visibleFacetDistribution = computed(() => {
+    if (!facetDistribution.value) return null
+    const result: FacetDistribution = {}
+    for (const [key, val] of Object.entries(facetDistribution.value)) {
+      if (!hiddenColumns.value.includes(key)) {
+        result[key] = val
+      }
+    }
+    return result
+  })
+
   const totalPages = computed(() => Math.ceil(resultsCount.value / pageSize.value))
 
   const getHost = () => hostInput.value.trim()
@@ -196,6 +215,9 @@ export const useAppStore = defineStore('app', () => {
       popularSearches.value = []
       return
     }
+
+    const idxMeta = indexes.value.find(i => i.uid === uid)
+
     loading.value = true
     try {
       const data = await api.loadIndexData(getHost(), getApiKey(), uid)
@@ -207,11 +229,60 @@ export const useAppStore = defineStore('app', () => {
       sortableAttributes.value = data.sortableAttributes
       aiEmbedder.value = data.embedder
       sortValue.value = ''
+      
+      // ---- 重要：应用后端同步过来的持久化配置 ----
+      if (idxMeta) {
+        // 1. 字段与权限设置
+        if (idxMeta.fieldConfigs) {
+          try {
+            const configs: FieldConfigItem[] = JSON.parse(idxMeta.fieldConfigs)
+            const searchable: string[] = []
+            const highlight: string[] = []
+            const display: string[] = []
+            const weights: Record<string, number> = {}
+            const labels: Record<string, string> = {}
+            for (const item of configs) {
+               if (item.searchable) searchable.push(item.field)
+               if (item.highlight) highlight.push(item.field)
+               if (item.display) display.push(item.field)
+               weights[item.field] = item.weight
+               labels[item.field] = item.label
+            }
+            searchFields.value = searchable
+            highlightFields.value = highlight
+            displayFields.value = display
+            searchFieldWeights.value = weights
+            fieldLabels.value = labels
+          } catch (e) { console.error('Parse fieldConfigs failed', e) }
+        }
+        // 2. 视图设置
+        if (idxMeta.viewConfigs) {
+          try { viewConfigs.value = JSON.parse(idxMeta.viewConfigs) } catch(e) { console.error('Parse viewConfigs failed', e) }
+        }
+        // 3. 表格布局设置 (顺序与隐藏)
+        if (idxMeta.tableConfigs) {
+          try {
+            const tConf = JSON.parse(idxMeta.tableConfigs)
+            if (tConf.order) columnOrder.value = tConf.order
+            if (tConf.hidden) hiddenColumns.value = tConf.hidden
+          } catch (e) { console.error('Parse tableConfigs failed', e) }
+        }
+        // 4. 编辑权限
+        if (idxMeta.canEdit !== undefined) {
+          editLocked.value = !idxMeta.canEdit
+        }
+      }
+
       updatePopularField()
-      loadColumnPrefs()
+      // 如果有后端配置，则不再从本地加载
+      if (!idxMeta?.tableConfigs) {
+        loadColumnPrefs()
+      }
       loadColumnWidthPrefs()
-      loadFieldLabels()
-      loadViewConfigs()
+      // 如果没有后端配置，再尝试加载本地(兼容逻辑)
+      if (!idxMeta?.fieldConfigs) loadFieldLabels()
+      if (!idxMeta?.viewConfigs) loadViewConfigs()
+
       if (filterableFields.value.length > 0) {
         popularSearchField.value = filterableFields.value[0]
         await loadPopularSearches()
@@ -223,6 +294,17 @@ export const useAppStore = defineStore('app', () => {
     } finally {
       loading.value = false
     }
+  }
+
+  function currentFieldConfigsForSync(): FieldConfigItem[] {
+    return availableFields.value.map(f => ({
+      field: f,
+      searchable: searchFields.value.includes(f),
+      highlight: highlightFields.value.includes(f),
+      display: displayFields.value.includes(f),
+      weight: searchFieldWeights.value[f] || 0,
+      label: fieldLabels.value[f] || f
+    }))
   }
 
   function resetIndexState() {
@@ -928,7 +1010,7 @@ export const useAppStore = defineStore('app', () => {
     imagePreviewSize, currentTab, assetForm, assetList, assetModalOpen,
     assetDetail, assetsLoading, uploadModalOpen, uploadData, uploadFileName,
     uploadPreviewData, uploadPreviewPage, uploadPreviewPageSize, uploadProgress,
-    uploadLoading, newIndexUid, newIndexPk, visibleColumns, totalPages,
+    uploadLoading, newIndexUid, newIndexPk, visibleColumns, visibleAvailableFields, visibleFilterableFields, visibleFacetDistribution, totalPages,
     draggingCol, dragOverCol, isResizingColumns,
     viewLayoutWorking, viewWidthsWorking, viewLabelWidthsWorking,
     startViewColumnResize, viewColumnResizeMove, endViewColumnResize,
@@ -944,5 +1026,6 @@ export const useAppStore = defineStore('app', () => {
     openResultModal, createIndex, parseUploadData, batchImport, exportCsv,
     saveAsset, deleteAsset, applySearchHistory, applyPopularSearch,
     saveViewConfig, openViewConfig, setAiEnabled, setAiWeight, setCurrentTab,
+    currentFieldConfigsForSync,
   }
 })
