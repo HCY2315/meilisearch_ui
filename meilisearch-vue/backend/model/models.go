@@ -33,6 +33,7 @@ type AccessToken struct {
 	Token        string    `gorm:"uniqueIndex;not null" json:"token"`
 	AllowIndexes string    `gorm:"type:text" json:"allowIndexes"` // JSON数组，例如 ["docs", "finance"]
 	Description  string    `gorm:"size:255" json:"description"`
+	ExpiresAt    *time.Time `json:"expiresAt"` // 过期时间，nil 表示永不过期
 	CreatedAt    time.Time `json:"createdAt"`
 }
 

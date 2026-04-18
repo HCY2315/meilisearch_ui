@@ -6,6 +6,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	"backend/model"
 	"backend/repository"
@@ -66,12 +67,16 @@ func HandleProxy(c *gin.Context) {
 				if userToken != "" {
 					var tok model.AccessToken
 					if err := repository.DB.Where("token = ?", userToken).First(&tok).Error; err == nil {
-						var allowedArr []string
-						json.Unmarshal([]byte(tok.AllowIndexes), &allowedArr)
-						for _, a := range allowedArr {
-							if a == requestedIndex || a == "*" {
-								hasAccess = true
-								break
+						if tok.ExpiresAt != nil && tok.ExpiresAt.Before(time.Now()) {
+							repository.DB.Delete(&tok)
+						} else {
+							var allowedArr []string
+							json.Unmarshal([]byte(tok.AllowIndexes), &allowedArr)
+							for _, a := range allowedArr {
+								if a == requestedIndex || a == "*" {
+									hasAccess = true
+									break
+								}
 							}
 						}
 					}

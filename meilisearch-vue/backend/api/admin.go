@@ -145,6 +145,7 @@ func HandleCreateAccessToken(c *gin.Context) {
 		Token:        req.Token,
 		AllowIndexes: req.AllowIndexes,
 		Description:  req.Description,
+		ExpiresAt:    req.ExpiresAt,
 	}
 	if err := repository.DB.Create(&tok).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token already exists"})
@@ -167,6 +168,7 @@ func HandleUpdateAccessToken(c *gin.Context) {
 	tok.Token = req.Token
 	tok.AllowIndexes = req.AllowIndexes
 	tok.Description = req.Description
+	tok.ExpiresAt = req.ExpiresAt
 	repository.DB.Save(&tok)
 	c.JSON(http.StatusOK, tok)
 }

@@ -1,5 +1,7 @@
 package schema
 
+import "time"
+
 // LoginRequest 表示超级后台登录请求
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
@@ -25,16 +27,18 @@ type IndexConfigRequest struct {
 
 // AccessTokenRequest 新建数据访问Token
 type AccessTokenRequest struct {
-	Token        string `json:"token" binding:"required"`
-	AllowIndexes string `json:"allowIndexes" binding:"required"` // '["docs", "finance"]'
-	Description  string `json:"description"`
+	Token        string     `json:"token" binding:"required"`
+	AllowIndexes string     `json:"allowIndexes" binding:"required"` // '["docs", "finance"]'
+	Description  string     `json:"description"`
+	ExpiresAt    *time.Time `json:"expiresAt"`
 }
 
 type AccessTokenUpdateRequest struct {
-	ID           uint   `json:"id" binding:"required"`
-	Token        string `json:"token"`
-	AllowIndexes string `json:"allowIndexes"`
-	Description  string `json:"description"`
+	ID           uint       `json:"id" binding:"required"`
+	Token        string     `json:"token"`
+	AllowIndexes string     `json:"allowIndexes"`
+	Description  string     `json:"description"`
+	ExpiresAt    *time.Time `json:"expiresAt"`
 }
 
 // MeiliInstanceRequest 新建实例

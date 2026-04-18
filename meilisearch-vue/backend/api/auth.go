@@ -102,9 +102,11 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 	if userToken != "" {
 		var tok model.AccessToken
 		if err := repository.DB.Where("token = ?", userToken).First(&tok).Error; err == nil {
-			json.Unmarshal([]byte(tok.AllowIndexes), &allowedByToken)
-		} else {
-			log.Printf("[Auth] Token [%s] not found in DB", userToken)
+			if tok.ExpiresAt != nil && tok.ExpiresAt.Before(time.Now()) {
+				repository.DB.Delete(&tok)
+			} else {
+				json.Unmarshal([]byte(tok.AllowIndexes), &allowedByToken)
+			}
 		}
 	}
 

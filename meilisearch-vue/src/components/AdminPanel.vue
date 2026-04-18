@@ -103,6 +103,7 @@
            <input v-model="newToken.token" placeholder="自定义 Token 字符串" class="form-control" style="width: 200px; display: inline-block; margin-right: 8px;">
            <input v-model="newToken.allowIndexes" placeholder='解锁目标 (例如: ["movies", "books"])' class="form-control" style="width: 250px; display: inline-block; margin-right: 8px;">
            <input v-model="newToken.description" placeholder="拥有者备注" class="form-control" style="width: 150px; display: inline-block; margin-right: 8px;">
+           <input type="number" v-model="newToken.validDays" placeholder="有效期 (天)" title="留空表示永不过期" class="form-control" style="width: 100px; display: inline-block; margin-right: 8px;">
            <button class="btn btn-secondary btn-sm" @click="handleSaveToken">{{ editingTokenId ? '更新' : '生成' }}</button>
            <button class="btn btn-secondary btn-sm" @click="cancelTokenEdit" style="margin-left: 8px;">取消</button>
         </div>
@@ -114,6 +115,7 @@
               <th>凭证口令 (Token)</th>
               <th>解锁的私密库 (UIDs)</th>
               <th>备注下发对象</th>
+              <th>有效期至</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -123,6 +125,11 @@
               <td><code style="color: #ffb86c">{{ tok.token }}</code></td>
               <td><code>{{ tok.allowIndexes }}</code></td>
               <td>{{ tok.description }}</td>
+              <td>
+                <span :class="['status-badge', isExpired(tok.expiresAt) ? 'status-err' : '']">
+                  {{ tok.expiresAt ? new Date(tok.expiresAt).toLocaleString() : '永久' }}
+                </span>
+              </td>
               <td>
                 <button class="btn btn-primary btn-sm" @click="editToken(tok)" style="margin-right: 8px;">编辑</button>
                 <button class="btn btn-danger btn-sm" @click="deleteToken(tok.id)">吊销</button>
@@ -181,7 +188,12 @@ const newIndex = ref({ uid: '', alias: '', description: '', isLocked: false })
 
 const showAddToken = ref(false)
 const editingTokenId = ref<number | null>(null)
-const newToken = ref({ token: '', allowIndexes: '[]', description: '' })
+const newToken = ref({ token: '', allowIndexes: '[]', description: '', validDays: null as number | null })
+
+function isExpired(date: string | null) {
+  if (!date) return false
+  return new Date(date).getTime() < Date.now()
+}
 
 async function loadAdminData() {
   const token = localStorage.getItem('authToken')
@@ -335,10 +347,13 @@ async function handleSaveToken() {
 async function createToken() {
   if (!newToken.value.token) return alert('请填入Token字符串')
   const token = localStorage.getItem('authToken')
+  const expiresAt = newToken.value.validDays 
+    ? new Date(Date.now() + newToken.value.validDays * 24 * 60 * 60 * 1000).toISOString()
+    : null
   const res = await fetch(`/api/v1/admin/access_tokens`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(newToken.value)
+      body: JSON.stringify({ ...newToken.value, expiresAt })
   })
   if (res.ok) {
       alert('令牌下发成功')
@@ -349,10 +364,13 @@ async function createToken() {
 
 async function updateToken() {
   const token = localStorage.getItem('authToken')
+  const expiresAt = newToken.value.validDays 
+    ? new Date(Date.now() + newToken.value.validDays * 24 * 60 * 60 * 1000).toISOString()
+    : null
   const res = await fetch(`/api/v1/admin/access_tokens`, {
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: editingTokenId.value, ...newToken.value })
+      body: JSON.stringify({ id: editingTokenId.value, ...newToken.value, expiresAt })
   })
   if (res.ok) {
       alert('令牌更新成功')
@@ -363,14 +381,19 @@ async function updateToken() {
 
 function editToken(tok: any) {
   editingTokenId.value = tok.id
-  newToken.value = { token: tok.token, allowIndexes: tok.allowIndexes, description: tok.description }
+  newToken.value = { 
+    token: tok.token, 
+    allowIndexes: tok.allowIndexes, 
+    description: tok.description,
+    validDays: tok.expiresAt ? Math.round((new Date(tok.expiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null
+  }
   showAddToken.value = true
 }
 
 function cancelTokenEdit() {
   showAddToken.value = false
   editingTokenId.value = null
-  newToken.value = { token: '', allowIndexes: '[]', description: '' }
+  newToken.value = { token: '', allowIndexes: '[]', description: '', validDays: null }
 }
 
 async function deleteToken(id: number) {
