@@ -13,23 +13,20 @@
         <select class="form-control" v-model="selectedIndex" @change="onIndexChange">
           <option value="">-- 请选择 --</option>
           
-          <optgroup v-if="publicIndexes.length" label="🌐 公开可见">
-            <option v-for="idx in publicIndexes" :key="idx.uid" :value="idx.uid">
-              {{ idx.displayName || idx.uid }} {{ idx.count !== undefined ? ` (${formatNumber(idx.count)})` : '' }}
-            </option>
-          </optgroup>
+          <!-- 公开资源 -->
+          <option v-for="idx in publicIndexes" :key="idx.uid + 'pub'" :value="idx.uid">
+            {{ idx.displayName || idx.uid }} {{ idx.count !== undefined ? `(${formatNumber(idx.count)})` : '' }} 🌐
+          </option>
 
-          <optgroup v-if="unlockedIndexes.length" label="🔓 已解锁 (私有)">
-            <option v-for="idx in unlockedIndexes" :key="idx.uid" :value="idx.uid">
-              {{ idx.displayName || idx.uid }} {{ idx.count !== undefined ? ` (${formatNumber(idx.count)})` : '' }}
-            </option>
-          </optgroup>
+          <!-- 已解锁私有 -->
+          <option v-for="idx in unlockedIndexes" :key="idx.uid + 'unl'" :value="idx.uid">
+            {{ idx.displayName || idx.uid }} {{ idx.count !== undefined ? `(${formatNumber(idx.count)})` : '' }} 🔓
+          </option>
 
-          <optgroup v-if="lockedIndexes.length" label="🔒 需凭证解锁">
-            <option v-for="idx in lockedIndexes" :key="idx.uid" :value="idx.uid" disabled>
-              {{ idx.displayName || idx.uid }} (受限访问)
-            </option>
-          </optgroup>
+          <!-- 锁定资源 -->
+          <option v-for="idx in lockedIndexes" :key="idx.uid + 'loc'" :value="idx.uid" disabled>
+            {{ idx.displayName || idx.uid }} 🔒 (受限)
+          </option>
         </select>
       </div>
     </div>
