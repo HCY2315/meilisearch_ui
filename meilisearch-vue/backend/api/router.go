@@ -37,16 +37,16 @@ func InitRouter() *gin.Engine {
 		proxyGroup.Any("/*proxyPath", HandleProxy)
 	}
 
-	// r.Static("/assets", "../dist/assets")
-	// r.StaticFile("/favicon.ico", "../dist/favicon.ico")
+	r.Static("/assets", "../dist/assets")
+	r.StaticFile("/favicon.ico", "../dist/favicon.ico")
 
-	// r.NoRoute(func(c *gin.Context) {
-	// 	if c.Request.URL.Path == "/" || c.Request.URL.Path == "/admin" {
-	// 		c.File("../dist/index.html")
-	// 		return
-	// 	}
-	// 	c.AbortWithStatusJSON(404, gin.H{"error": "route not found"})
-	// })
+	r.NoRoute(func(c *gin.Context) {
+		if c.Request.URL.Path == "/" || c.Request.URL.Path == "/admin" {
+			c.File("../dist/index.html")
+			return
+		}
+		c.AbortWithStatusJSON(404, gin.H{"error": "route not found"})
+	})
 
 	return r
 }
