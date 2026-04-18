@@ -35,6 +35,9 @@ export interface IndexListResponse {
 
 export interface IndexItem {
   uid: string
+  isLocked?: boolean
+  isUnlocked?: boolean
+  displayName?: string
 }
 
 export interface IndexStats {
@@ -72,6 +75,9 @@ export interface SearchResponse {
 export interface IndexInfo {
   uid: string
   count?: number
+  isLocked?: boolean
+  isUnlocked?: boolean
+  displayName?: string
 }
 
 export interface PopularItem {
