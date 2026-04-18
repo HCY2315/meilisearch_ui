@@ -5,8 +5,8 @@ import (
 
 	"backend/model"
 
+	"github.com/glebarez/sqlite" // 替换为纯 Go 实现的 sqlite 驱动，解决 cgo 报错
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -43,10 +43,10 @@ func seedData() {
 			Username:     "admin",
 			PasswordHash: string(hash),
 			Role:         "admin",
+            AllowIndexes: `["*"]`,
 		}
 		DB.Create(&admin)
 
-		// HACK: 临时插入一个测试用的 Meilisearch 实例和测试应用
 		testInstance := model.MeiliInstance{
 			Name: "Default Local",
 			Host: "http://localhost:7700",
