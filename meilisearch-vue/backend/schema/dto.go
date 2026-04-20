@@ -54,3 +54,7 @@ type MeiliInstanceUpdateRequest struct {
 	Host   string `json:"host"`
 	APIKey string `json:"apiKey"`
 }
+
+type PasswordUpdateRequest struct {
+	NewPassword string `json:"newPassword" binding:"required"`
+}
