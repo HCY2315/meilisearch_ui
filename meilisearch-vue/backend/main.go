@@ -25,8 +25,8 @@ func main() {
 	// 初始化 Gin 路由
 	r := api.InitRouter()
 
-	log.Println("Server mapping to port :8080")
-	if err := r.Run(":7701"); err != nil {
+	log.Println("Server mapping to port :80")
+	if err := r.Run(":80"); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 }
