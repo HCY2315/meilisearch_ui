@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/meilisearch/meilisearch-go"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func HandleDeleteIndex(c *gin.Context) {
@@ -198,4 +199,34 @@ func HandleDeleteAccessToken(c *gin.Context) {
 	id := c.Param("id")
 	repository.DB.Delete(&model.AccessToken{}, id)
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// HandleUpdateAdminPassword 修改管理员密码
+func HandleUpdateAdminPassword(c *gin.Context) {
+	var req schema.PasswordUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的参数"})
+		return
+	}
+
+	var user model.User
+	// 默认修改 admin 账户
+	if err := repository.DB.Where("username = ?", "admin").First(&user).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "管理员用户未找到"})
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "加密失败"})
+		return
+	}
+
+	user.PasswordHash = string(hash)
+	if err := repository.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "密码修改成功"})
 }
