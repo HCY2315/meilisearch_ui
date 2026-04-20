@@ -30,6 +30,7 @@ import {
   normalizeViewWidths,
   normalizeLabelWidths,
   formatNumber,
+  generateUUID,
 } from '@/utils'
 
 let nextQueryId = 1
@@ -112,7 +113,7 @@ export const useAppStore = defineStore('app', () => {
   const imagePreviewSize = ref(storage.loadImagePreviewSize())
 
   const currentTab = ref<CurrentTab>('search')
-  const assetForm = ref<DeviceAsset>({ id: crypto.randomUUID(), name: '', brand: '', model: '' })
+  const assetForm = ref<DeviceAsset>({ id: generateUUID(), name: '', brand: '', model: '' })
   const assetList = ref<DeviceAsset[]>([])
   const assetModalOpen = ref(false)
   const assetDetail = ref<DeviceAsset | null>(null)

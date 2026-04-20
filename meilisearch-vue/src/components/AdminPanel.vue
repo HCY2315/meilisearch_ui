@@ -242,6 +242,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { generateUUID } from '@/utils'
 
 const activeTab = ref('instances')
 const tabs = [
@@ -269,9 +270,6 @@ const showAddToken = ref(false)
 const editingTokenId = ref<number | null>(null)
 const newToken = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: null as number | null })
 
-function generateUUID() {
-  return window.crypto.randomUUID()
-}
 
 function openAddToken() {
   showAddToken.value = true
