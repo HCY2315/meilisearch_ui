@@ -15,8 +15,13 @@ var DB *gorm.DB
 
 // InitDB 初始化本地 SQLite 数据库并进行字段迁移
 func InitDB() {
+	// 确保 data 目录存在
+	if _, err := os.Stat("data"); os.IsNotExist(err) {
+		os.MkdirAll("data", 0755)
+	}
+
 	var err error
-	DB, err = gorm.Open(sqlite.Open("meili_admin.db"), &gorm.Config{})
+	DB, err = gorm.Open(sqlite.Open("data/meili_admin.db"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}
