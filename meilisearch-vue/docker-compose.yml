@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     image: meilisearch-ui:latest
     ports:
-      - "80:80"
+      - "8080:8080"
     volumes:
       # 将容器内的 data 目录挂载到宿主机的 ./data 目录下
       # 这样数据库文件会保存在宿主机的 ./data/meili_admin.db
