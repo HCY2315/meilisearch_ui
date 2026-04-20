@@ -4,6 +4,36 @@ export function formatNumber(n: number): string {
   return n.toLocaleString('zh-CN')
 }
 
+/**
+ * 生成 UUID (v4)
+ * 处理在非安全上下文（HTTP）下 crypto.randomUUID 不可用的情况
+ */
+export function generateUUID(): string {
+  // 1. 优先尝试原生 randomUUID
+  if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+
+  // 2. 降级：使用 getRandomValues (浏览器兼容性更好，但在非安全上下文也可能受限)
+  const cryptoObj = typeof window !== 'undefined' ? (window.crypto || (window as any).msCrypto) : null;
+  if (cryptoObj && cryptoObj.getRandomValues) {
+    try {
+      return (([1e7] as any) + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c: any) =>
+        (c ^ cryptoObj.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+      );
+    } catch (e) {
+      console.warn('Crypto getRandomValues fallback failed, using Math.random', e);
+    }
+  }
+
+  // 3. 最终降级：使用 Math.random (非加密安全，但能保证在任何环境下不报错)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export function formatTime(isoString: string): string {
   try {
     const d = new Date(isoString)

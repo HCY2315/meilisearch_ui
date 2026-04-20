@@ -1,0 +1,23 @@
+services:
+  meilisearch-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: meilisearch-ui:latest
+    ports:
+      - "7701:80"
+    volumes:
+      # 将容器内的 data 目录挂载到宿主机的 ./data 目录下
+      # 这样数据库文件会保存在宿主机的 ./data/meili_admin.db
+      - ./backend:/app/backend/data
+    restart: always
+
+# 如果需要同时启动 meilisearch 官方服务，可以在下面添加
+#   meilisearch:
+#     image: getmeili/meilisearch:v1.12
+#     ports:
+#       - "7700:7700"
+#     environment:
+#       - MEILI_MASTER_KEY=your_master_key
+#     volumes:
+#       - ./meili_data:/meili_data

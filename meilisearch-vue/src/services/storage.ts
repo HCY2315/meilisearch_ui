@@ -1,14 +1,14 @@
 import type { HistoryItem, AiConfig, DeviceAsset, ToastType, Theme } from '@/types'
 
-function storageGet(key: string): string | null {
+export function storageGet(key: string): string | null {
   return localStorage.getItem(key)
 }
 
-function storageSet(key: string, value: string): void {
+export function storageSet(key: string, value: string): void {
   localStorage.setItem(key, value)
 }
 
-function storageRemove(key: string): void {
+export function storageRemove(key: string): void {
   localStorage.removeItem(key)
 }
 
