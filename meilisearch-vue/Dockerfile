@@ -27,7 +27,7 @@ COPY --from=frontend-builder /app/dist ../dist
 # Set working directory to where the binary is, so "../dist" paths work
 WORKDIR /app/backend
 
-EXPOSE 8080
+EXPOSE 80
 
 # Run the backend
 CMD ["./server"]
