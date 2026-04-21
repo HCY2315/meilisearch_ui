@@ -60,7 +60,7 @@
 
         <!-- ── 字段配置面板（可折叠） ── -->
         <Transition name="config-panel">
-          <div v-if="configOpen && allConfigFields.length > 0" class="config-panel">
+          <div v-if="configOpen && allConfigFields.length > 0 && isAdmin" class="config-panel">
             <div class="config-panel-hd">
               <div class="config-panel-title-wrap">
                 <span class="config-panel-title">字段配置</span>
