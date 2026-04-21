@@ -29,7 +29,7 @@
           <div class="nd-header-actions">
             <!-- 字段配置切换按钮（纯数组无字段配置） -->
             <button
-              v-if="!isPureArray"
+              v-if="!isPureArray && isAdmin"
               class="btn-config-toggle"
               :class="{ active: configOpen }"
               @click="configOpen = !configOpen"
@@ -209,6 +209,7 @@ const props = defineProps<{
   modelValue: boolean
   initialData: unknown
   initialLabel: string
+  isAdmin: boolean
 }>()
 
 const emit = defineEmits<{

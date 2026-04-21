@@ -132,6 +132,7 @@
     v-model="drawerOpen"
     :initial-data="drawerData"
     :initial-label="drawerLabel"
+    :is-admin="isAdmin"
   />
 </template>
 
@@ -143,6 +144,18 @@ import type { SearchHit } from '@/types'
 import NestedDataDrawer from '@/components/NestedDataDrawer.vue'
 
 const store = useAppStore()
+
+// 从 localStorage 获取用户角色
+const isAdmin = computed(() => {
+  const authUserStr = localStorage.getItem('authUser')
+  if (!authUserStr) return false
+  try {
+    const authUser = JSON.parse(authUserStr)
+    return authUser.role === 'admin'
+  } catch {
+    return false
+  }
+})
 
 // NOTE: 嵌套数据抽屉的开关状态与当前打开的数据源
 const drawerOpen = ref(false)
