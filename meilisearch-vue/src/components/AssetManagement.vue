@@ -34,8 +34,26 @@
         <span>主键字段: <strong>{{ store.primaryKeyField }}</strong></span>
       </div>
 
-      <!-- JSON 文件上传 -->
-      <div class="section-card">
+      <!-- 导入方式切换 Tab -->
+      <div class="import-tabs">
+        <button
+          class="tab-btn"
+          :class="{ active: store.importMode === 'file' }"
+          @click="switchMode('file')"
+        >
+          📂 文件上传
+        </button>
+        <button
+          class="tab-btn"
+          :class="{ active: store.importMode === 'json' }"
+          @click="switchMode('json')"
+        >
+          📝 JSON 文本
+        </button>
+      </div>
+
+      <!-- 文件上传模式 -->
+      <div v-if="store.importMode === 'file'" class="section-card">
         <h3>选择 JSON 文件</h3>
         <input type="file" accept=".json" @change="onFileChange" />
         <p class="hint">支持 JSON 数组格式</p>
@@ -44,6 +62,26 @@
 
         <div v-if="store.uploadFileName" class="file-info">
           ✓ 已选择: {{ store.uploadFileName }} ({{ store.uploadPreviewData.length }} 条数据)
+        </div>
+      </div>
+
+      <!-- JSON 文本输入模式 -->
+      <div v-if="store.importMode === 'json'" class="section-card">
+        <h3>输入 JSON 数组</h3>
+        <textarea
+          class="json-textarea"
+          v-model="store.jsonTextInput"
+          placeholder='[{"id": 1, "name": "示例数据"}, ...]'
+          rows="10"
+          spellcheck="false"
+          @input="onJsonTextChange"
+        ></textarea>
+        <p class="hint">请输入 JSON 数组格式，每个元素为一条记录</p>
+
+        <!-- 解析状态反馈 -->
+        <div v-if="jsonParseError" class="parse-error">⚠️ {{ jsonParseError }}</div>
+        <div v-else-if="store.uploadPreviewData.length" class="file-info">
+          ✓ 解析成功，共 {{ store.uploadPreviewData.length }} 条数据
         </div>
       </div>
 
@@ -82,10 +120,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useAppStore } from '@/composables/useApp'
 
 const store = useAppStore()
+
+// JSON 文本模式的解析错误提示
+const jsonParseError = ref<string | null>(null)
 
 const previewStart = computed(() => (store.uploadPreviewPage - 1) * store.uploadPreviewPageSize + 1)
 const previewEnd = computed(() => Math.min(store.uploadPreviewPage * store.uploadPreviewPageSize, store.uploadPreviewData.length))
@@ -95,12 +136,56 @@ const previewItems = computed(() =>
   store.uploadPreviewData.slice(previewStart.value - 1, previewEnd.value)
 )
 
+// 文件上传处理
 async function onFileChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
   const text = await file.text()
   store.uploadFileName = file.name
   store.parseUploadData(text)
+}
+
+// NOTE: JSON 文本输入时实时解析并更新预览数据，解析失败则展示错误提示
+function onJsonTextChange() {
+  const text = store.jsonTextInput.trim()
+  if (!text) {
+    store.uploadPreviewData.splice(0)
+    store.uploadPreviewPage = 1
+    jsonParseError.value = null
+    return
+  }
+  try {
+    const items = JSON.parse(text)
+    if (!Array.isArray(items)) {
+      jsonParseError.value = '顶层结构必须为 JSON 数组（以 [ 开头）'
+      store.uploadPreviewData.splice(0)
+      store.uploadPreviewPage = 1
+    } else {
+      jsonParseError.value = null
+      // 替换 reactive 数组内容，保持响应式
+      store.uploadPreviewData.splice(0, store.uploadPreviewData.length, ...items)
+      store.uploadPreviewPage = 1
+    }
+  } catch (e: unknown) {
+    jsonParseError.value = `JSON 格式错误: ${(e as Error).message}`
+    store.uploadPreviewData.splice(0)
+    store.uploadPreviewPage = 1
+  }
+}
+
+// 切换导入模式时清理双方状态，避免旧数据干扰
+function switchMode(mode: 'file' | 'json') {
+  store.importMode = mode
+  // 清理预览数据，避免两种模式之间数据残留
+  store.uploadPreviewData.splice(0)
+  store.uploadPreviewPage = 1
+  jsonParseError.value = null
+  if (mode === 'file') {
+    store.jsonTextInput = ''
+  } else {
+    store.uploadData = ''
+    store.uploadFileName = ''
+  }
 }
 </script>
 
@@ -133,6 +218,7 @@ async function onFileChange(e: Event) {
 .hint { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); }
 .loading-text { margin-top: 12px; color: var(--text-muted); }
 .file-info { margin-top: 12px; padding: 8px 12px; background: var(--bg-secondary); border-radius: 4px; color: var(--success-color); }
+.parse-error { margin-top: 12px; padding: 8px 12px; background: rgba(239,68,68,0.1); border-radius: 4px; color: var(--error-color, #ef4444); font-size: 13px; }
 .progress-bar { margin: 8px 0; }
 .progress-fill {
   height: 8px;
@@ -148,4 +234,55 @@ async function onFileChange(e: Event) {
 .preview-pagination { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 12px; }
 .import-action { text-align: center; }
 .btn-lg { padding: 12px 24px; font-size: 14px; }
+
+/* 导入方式切换 Tab */
+.import-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 4px;
+  width: fit-content;
+}
+.tab-btn {
+  padding: 8px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+.tab-btn:hover {
+  color: var(--text-primary, #fff);
+}
+.tab-btn.active {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+/* JSON 文本输入区 */
+.json-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+  border-radius: 6px;
+  color: var(--text-primary, #fff);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.json-textarea:focus {
+  border-color: var(--primary-color);
+}
+.json-textarea::placeholder {
+  color: var(--text-muted);
+}
 </style>

@@ -20,7 +20,7 @@
 
           <!-- 已解锁私有 -->
           <option v-for="idx in unlockedIndexes" :key="idx.uid + 'unl'" :value="idx.uid">
-            {{ idx.displayName || idx.uid }} {{ idx.count !== undefined ? `(${formatNumber(idx.count)})` : '' }} 🔓
+            {{ idx.displayName || idx.uid }} {{ idx.count !== undefined ? `(${formatNumber(idx.count)})` : '' }} 🔓 (受限)
           </option>
 
           <!-- 锁定资源 -->
