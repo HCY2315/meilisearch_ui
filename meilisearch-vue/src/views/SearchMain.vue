@@ -15,7 +15,7 @@
         </div>
 
         <div class="header-actions">
-          <button class="glass-btn theme-toggle" @click="toggleTheme" :title="theme === 'dark' ? '切换日间' : '切换夜间'">
+          <button v-if="userRole === 'admin'" class="glass-btn theme-toggle" @click="toggleTheme" :title="theme === 'dark' ? '切换日间' : '切换夜间'">
             {{ theme === 'dark' ? '🌙' : '☀️' }}
           </button>
           
