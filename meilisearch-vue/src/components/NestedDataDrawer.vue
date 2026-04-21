@@ -62,8 +62,17 @@
         <Transition name="config-panel">
           <div v-if="configOpen && allConfigFields.length > 0" class="config-panel">
             <div class="config-panel-hd">
-              <span class="config-panel-title">字段配置</span>
-              <span class="config-panel-desc">配置按路径结构自动保存，重新打开仍生效</span>
+              <div class="config-panel-title-wrap">
+                <span class="config-panel-title">字段配置</span>
+                <span class="config-panel-desc">修改后点击保存才会同步到后端</span>
+              </div>
+              <button
+                class="btn-save-config"
+                :disabled="!hasPendingSave"
+                @click="saveConfig"
+              >
+                保存配置
+              </button>
             </div>
             <div class="config-list">
               <div
@@ -92,7 +101,6 @@
                   :placeholder="field"
                   :disabled="!isFieldVisible(field)"
                   @input="setAlias(field, ($event.target as HTMLInputElement).value)"
-                  @blur="saveConfig"
                 />
               </div>
             </div>
@@ -211,6 +219,9 @@ const store = useAppStore()
 // ─── 导航栈 ──────────────────────────────────────────────────────────────────
 
 const stack = ref<NestedFrame[]>([])
+const configOpen = ref(false)
+const hasPendingSave = ref(false)
+const draftConfigs = ref<Record<string, Record<string, NestedFieldConfigItem>>>({})
 
 // 当抽屉打开时，重置导航栈到初始层并加载对应的字段配置
 watch(
@@ -218,6 +229,8 @@ watch(
   ([open]) => {
     if (open) {
       stack.value = [{ label: props.initialLabel, data: props.initialData }]
+      draftConfigs.value = {}
+      hasPendingSave.value = false
       loadConfig()
     }
   },
@@ -225,8 +238,6 @@ watch(
 )
 
 // ─── 字段配置面板 ─────────────────────────────────────────────────────────────
-
-const configOpen = ref(false)
 
 // 当前层的字段配置（可见性 + 别名），会随导航路径自动切换
 const config = ref<Record<string, NestedFieldConfigItem>>({})
@@ -238,13 +249,39 @@ const currentPathLabel = computed<string>(() => {
 })
 
 function loadConfig() {
-  const serverConfig = store.getNestedFieldConfig(currentPathLabel.value)
+  const pathKey = normalizePath(currentPathLabel.value)
+  const draft = draftConfigs.value[pathKey]
+  if (draft) {
+    config.value = { ...draft }
+    return
+  }
+  const serverConfig = store.getNestedFieldConfig(pathKey)
   config.value = { ...serverConfig }
 }
 
-function saveConfig() {
-  store.setNestedFieldConfig(currentPathLabel.value, { ...config.value })
-  store.scheduleSaveNestedFieldConfigs()
+function normalizePath(label: string): string {
+  return label.replace(/\[\d+\]/g, '[*]')
+}
+
+function markDirtyAndSaveDraft(nextConfig: Record<string, NestedFieldConfigItem>) {
+  const pathKey = normalizePath(currentPathLabel.value)
+  config.value = nextConfig
+  draftConfigs.value = {
+    ...draftConfigs.value,
+    [pathKey]: { ...nextConfig },
+  }
+  hasPendingSave.value = true
+}
+
+async function saveConfig() {
+  if (!hasPendingSave.value) return
+  for (const [pathKey, cfg] of Object.entries(draftConfigs.value)) {
+    store.setNestedFieldConfig(pathKey, cfg)
+  }
+  await store.saveNestedFieldConfigs()
+  draftConfigs.value = {}
+  hasPendingSave.value = false
+  store.pushToast('嵌套字段配置已保存', 'success')
 }
 
 // 导航路径变化时自动切换配置
@@ -265,19 +302,19 @@ function getFieldAlias(field: string): string {
 
 function toggleVisible(field: string) {
   const current = isFieldVisible(field)
-  config.value = {
+  const nextConfig = {
     ...config.value,
     [field]: { visible: !current, alias: config.value[field]?.alias || '' }
   }
-  saveConfig()
+  markDirtyAndSaveDraft(nextConfig)
 }
 
 function setAlias(field: string, alias: string) {
-  config.value = {
+  const nextConfig = {
     ...config.value,
     [field]: { visible: isFieldVisible(field), alias }
   }
-  saveConfig()
+  markDirtyAndSaveDraft(nextConfig)
 }
 
 // ─── 当前层数据 ──────────────────────────────────────────────────────────────
@@ -566,14 +603,22 @@ function primitiveToStr(val: unknown): string {
 
 .config-panel-hd {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 10px 18px 6px;
   position: sticky;
   top: 0;
   background: var(--bg-primary, #0f1117);
   border-bottom: 1px solid rgba(255,255,255,0.05);
   z-index: 1;
+}
+
+.config-panel-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
 }
 
 .config-panel-title {
@@ -585,6 +630,24 @@ function primitiveToStr(val: unknown): string {
 .config-panel-desc {
   font-size: 11.5px;
   color: rgba(255,255,255,0.3);
+}
+
+.btn-save-config {
+  border: 1px solid rgba(99, 179, 237, 0.35);
+  background: rgba(99, 179, 237, 0.16);
+  color: #9fd3ff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.btn-save-config:hover:not(:disabled) {
+  background: rgba(99, 179, 237, 0.24);
+}
+.btn-save-config:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .config-list {

@@ -44,7 +44,7 @@
               <small class="rank-score" style="display: block; opacity: 0.8;">相关度评分</small>
               <span class="rank-score" style="font-weight: bold; color: var(--primary-color);">{{ ((hit._rankingScore as number) * 100).toFixed(1) }}%</span>
             </div>
-            <button class="btn btn-secondary" @click="store.openResultModal(getId(hit))">查看</button>
+            <button class="btn btn-secondary" @click="store.openResultModalByHit(hit)">查看</button>
           </div>
         </div>
       </div>
@@ -106,7 +106,7 @@
                 <div v-if="hit._rankingScore" style="margin-bottom: 4px;">
                   <small class="rank-score">评分: {{ ((hit._rankingScore as number) * 100).toFixed(1) }}%</small>
                 </div>
-                <button class="btn btn-secondary btn-sm" @click="store.openResultModal(getId(hit))">查看</button>
+                <button class="btn btn-secondary btn-sm" @click="store.openResultModalByHit(hit)">查看</button>
               </td>
             </tr>
           </tbody>
