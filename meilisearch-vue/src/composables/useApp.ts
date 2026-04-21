@@ -829,6 +829,16 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  function openResultModalByHit(hit: SearchHit | null) {
+    if (!hit) {
+      resultModalOpen.value = false
+      resultDetail.value = null
+      return
+    }
+    resultDetail.value = hit
+    resultModalOpen.value = true
+  }
+
   async function createIndex() {
     if (!newIndexUid.value.trim()) { pushToast('请提供索引 UID', 'error'); return }
     loading.value = true
@@ -1134,7 +1144,7 @@ export const useAppStore = defineStore('app', () => {
     saveColumnWidthPrefs, loadColumnWidthPrefs, loadColumnPrefs, saveColumnPrefs,
     loadFieldLabels, saveFieldLabels, loadViewConfigs, saveViewConfigs, saveViewMode,
     activeViewConfig, saveFieldConfig, toggleEditLock, updateCellEdit, saveEdits,
-    openResultModal, createIndex, parseUploadData, batchImport, exportCsv,
+    openResultModal, openResultModalByHit, createIndex, parseUploadData, batchImport, exportCsv,
     saveAsset, deleteAsset, applySearchHistory, applyPopularSearch,
     saveViewConfig, openViewConfig, setAiEnabled, setAiWeight, setCurrentTab,
     currentFieldConfigsForSync,
