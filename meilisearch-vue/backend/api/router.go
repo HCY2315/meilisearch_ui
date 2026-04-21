@@ -35,6 +35,7 @@ func InitRouter() *gin.Engine {
 			adminGroup.POST("/access_tokens", HandleCreateAccessToken)
 			adminGroup.PUT("/access_tokens", HandleUpdateAccessToken)
 			adminGroup.DELETE("/access_tokens/:id", HandleDeleteAccessToken)
+			adminGroup.PUT("/password", HandleUpdateAdminPassword)
 		}
 
 		proxyGroup := v1.Group("/proxy")

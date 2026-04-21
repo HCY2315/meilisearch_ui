@@ -236,6 +236,31 @@
           </div>
         </div>
       </section>
+
+      <!-- 4. 账户安全设置 -->
+      <section v-if="activeTab === 'password'" class="content-section">
+        <header class="section-header">
+          <h1>账户安全设置 <span>Account Security</span></h1>
+          <p>定期更换密码可显著提高系统安全性。</p>
+        </header>
+
+        <div class="glass-editor">
+          <h3>🔐 修改管理员密码</h3>
+          <div class="grid-inputs" style="max-width: 400px;">
+            <div class="input-group">
+              <label>新密码</label>
+              <input type="password" v-model="passwordForm.newPassword" placeholder="请输入新密码" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>确认新密码</label>
+              <input type="password" v-model="passwordForm.confirmPassword" placeholder="请再次输入新密码" class="form-control">
+            </div>
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" @click="handleUpdatePassword">保存并重新登录</button>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 </template>
@@ -250,6 +275,7 @@ const tabs = [
   { id: 'security', label: '安全锁库', icon: '🛡️' },
   { id: 'tokens', label: '凭证分发', icon: '🎫' },
   { id: 'settings', label: '应用设置', icon: '⚙️' },
+  { id: 'password', label: '账户安全', icon: '🔐' },
 ]
 
 const indexConfigs = ref<any[]>([])
@@ -269,6 +295,8 @@ const newIndex = ref({ uid: '', alias: '', description: '', isLocked: false, fie
 const showAddToken = ref(false)
 const editingTokenId = ref<number | null>(null)
 const newToken = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: null as number | null })
+
+const passwordForm = ref({ newPassword: '', confirmPassword: '' })
 
 
 function openAddToken() {
@@ -512,6 +540,35 @@ async function updateApp(id: number, uiConfig: string) {
       body: JSON.stringify({ uiConfig })
   })
   loadAdminData()
+}
+
+async function handleUpdatePassword() {
+  if (!passwordForm.value.newPassword) return alert('请输入新密码')
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) return alert('两次输入的密码不一致')
+  if (passwordForm.value.newPassword.length < 6) return alert('密码长度至少为 6 位')
+
+  const token = localStorage.getItem('authToken')
+  try {
+    const res = await fetch('/api/v1/admin/password', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ newPassword: passwordForm.value.newPassword })
+    })
+
+    if (res.ok) {
+      alert('密码修改成功，请使用新密码重新登录')
+      localStorage.removeItem('authToken')
+      window.location.reload()
+    } else {
+      const data = await res.json()
+      alert(data.error || '修改失败')
+    }
+  } catch (e) {
+    alert('请求网络异常')
+  }
 }
 
 onMounted(() => {
