@@ -450,3 +450,44 @@ html[data-theme="light"] .app-footer {
 html[data-theme="light"] .footer-divider {
   border-top-color: var(--border);
 }
+
+html[data-theme="light"] .login-wrapper {
+  background: linear-gradient(135deg, #faf9f6 0%, #f0efe9 100%);
+}
+
+html[data-theme="light"] .login-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  box-shadow: var(--shadow-lg);
+}
+
+html[data-theme="light"] .login-header h1 {
+  background: linear-gradient(135deg, #1a1a2e, #6366f1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+html[data-theme="light"] .login-header p {
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .input-wrapper input {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  color: var(--text-main);
+}
+
+html[data-theme="light"] .input-wrapper input:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+html[data-theme="light"] .login-footer {
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .error-banner {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #dc2626;
+}
