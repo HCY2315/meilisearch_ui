@@ -22,7 +22,14 @@
                     class="field-width-resizer"
                     @mousedown.prevent.stop="onViewFieldResizeStart($event, ci)"
                   ></span>
-                  <span class="custom-value" v-html="getCellHtml(hit, field)" :title="getCellTitle(hit, field)"></span>
+                  <!-- NOTE: 嵌套字段在自定义视图中同样渲染徽章+查看按钮 -->
+                  <span class="custom-value">
+                    <template v-if="isNested(hit, field)">
+                      <span class="nested-badge">{{ getNestedBadge(hit, field) }}</span>
+                      <button class="btn-nested-view" @click="openDrawer(field, hit[field])">🔍 查看</button>
+                    </template>
+                    <span v-else v-html="getCellHtml(hit, field)" :title="getCellTitle(hit, field)"></span>
+                  </span>
                 </div>
               </template>
               <span
@@ -86,7 +93,11 @@
                 <template v-else-if="getEditedValue(hit, col) !== undefined">
                   <span class="edited-cell" :title="getEditedValue(hit, col)">{{ getEditedValue(hit, col) }}</span>
                 </template>
-                <!-- 正常单元格 -->
+                <!-- 正常单元格（嵌套类型走查看按钮，原始类型正常渲染） -->
+                <template v-else-if="isNested(hit, col)">
+                  <span class="nested-badge">{{ getNestedBadge(hit, col) }}</span>
+                  <button class="btn-nested-view" @click="openDrawer(col, hit[col])">🔍 查看</button>
+                </template>
                 <template v-else>
                   <span v-html="getCellHtml(hit, col)" :title="getCellTitle(hit, col)"></span>
                 </template>
@@ -115,15 +126,28 @@
       </div>
     </div>
   </div>
+
+  <!-- 嵌套数据侧抽屉 -->
+  <NestedDataDrawer
+    v-model="drawerOpen"
+    :initial-data="drawerData"
+    :initial-label="drawerLabel"
+  />
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useAppStore } from '@/composables/useApp'
-import { sortHits, getIdString, getDocKey, valueToStringForEdit, valueToString, getCellValue } from '@/utils'
+import { sortHits, getIdString, getDocKey, valueToStringForEdit, valueToString, getCellValue, isNestedValue, getNestedBadgeText } from '@/utils'
 import type { SearchHit } from '@/types'
+import NestedDataDrawer from '@/components/NestedDataDrawer.vue'
 
 const store = useAppStore()
+
+// NOTE: 嵌套数据抽屉的开关状态与当前打开的数据源
+const drawerOpen = ref(false)
+const drawerData = ref<unknown>(null)
+const drawerLabel = ref('')
 
 const allCols = computed(() => [...store.visibleColumns, '__action__'])
 
@@ -193,6 +217,23 @@ function getFieldValue(hit: SearchHit, field: string): string {
   const val = hit[field]
   if (val === null || val === undefined) return ''
   return valueToString(val)
+}
+
+// NOTE: 检查原始字段值（非 _formatted 高亮版）是否为嵌套类型
+function isNested(hit: SearchHit, col: string): boolean {
+  return isNestedValue(hit[col])
+}
+
+// 获取嵌套字段的徽章文本
+function getNestedBadge(hit: SearchHit, col: string): string {
+  return getNestedBadgeText(hit[col])
+}
+
+// 打开嵌套数据抽屉
+function openDrawer(label: string, data: unknown) {
+  drawerLabel.value = label
+  drawerData.value = data
+  drawerOpen.value = true
 }
 
 function isEditable(col: string, hit: SearchHit): boolean {
@@ -285,7 +326,7 @@ function startResize(e: MouseEvent, col: string) {
 </script>
 
 <style scoped>
-.results-wrapper { }
+
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -296,7 +337,7 @@ function startResize(e: MouseEvent, col: string) {
   gap: 12px;
 }
 .empty-state svg { width: 48px; height: 48px; }
-.table-wrap { }
+
 .results-table {
   width: 100%;
   border-collapse: collapse;
@@ -399,4 +440,40 @@ function startResize(e: MouseEvent, col: string) {
 }
 .field-width-resizer:hover::after { background: var(--primary-color); }
 .pagination { display: flex; gap: 4px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+
+/* ─── 嵌套字段徽章 & 查看按钮 ─────────────────────────────────────────────── */
+.nested-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(99,179,237,0.12);
+  color: #63b3ed;
+  vertical-align: middle;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.btn-nested-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.7);
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  vertical-align: middle;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.btn-nested-view:hover {
+  background: rgba(99,179,237,0.15);
+  color: #63b3ed;
+  border-color: rgba(99,179,237,0.3);
+}
 </style>
