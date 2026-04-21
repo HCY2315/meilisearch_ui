@@ -206,10 +206,15 @@
         <button class="modal-close" @click="store.resultModalOpen = false">×</button>
       </div>
       <div class="modal-body">
-        <div v-if="store.resultDetail" class="result-detail">
-          <div v-for="(val, key) in detailEntries" :key="key" class="detail-row">
-            <strong>{{ key }}:</strong>
-            <span>{{ formatDetailValue(val) }}</span>
+        <div v-if="store.resultDetail" class="result-json-wrap">
+          <div class="result-json-actions">
+            <button class="btn btn-secondary btn-sm" @click="copyResultJson">复制 JSON</button>
+          </div>
+          <pre class="result-json">{{ fullResultJson }}</pre>
+        </div>
+        <div v-else class="result-detail">
+          <div class="detail-row">
+            <span>暂无详情</span>
           </div>
         </div>
       </div>
@@ -220,7 +225,6 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
 import { useAppStore } from '@/composables/useApp'
-import { valueToString } from '@/utils'
 import type { FieldConfigItem } from '@/types'
 
 const store = useAppStore()
@@ -318,22 +322,23 @@ function onDropField(targetCol: number) {
   store.viewDragOverIndex = null
 }
 
-// Result detail
-const detailEntries = computed(() => {
-  if (!store.resultDetail) return {}
-  const entries: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(store.resultDetail)) {
-    if (!['id', '_formatted', '_rankingScore'].includes(k)) {
-      entries[k] = v
-    }
+const fullResultJson = computed(() => {
+  if (!store.resultDetail) return ''
+  try {
+    return JSON.stringify(store.resultDetail, null, 2)
+  } catch {
+    return String(store.resultDetail)
   }
-  return entries
 })
 
-function formatDetailValue(val: unknown): string {
-  if (Array.isArray(val)) return val.map(v => valueToString(v)).join(', ')
-  if (typeof val === 'object') return JSON.stringify(val)
-  return valueToString(val)
+async function copyResultJson() {
+  if (!fullResultJson.value) return
+  try {
+    await navigator.clipboard.writeText(fullResultJson.value)
+    store.pushToast('完整 JSON 已复制', 'success')
+  } catch {
+    store.pushToast('复制失败，请手动复制', 'warning')
+  }
 }
 </script>
 
@@ -414,6 +419,21 @@ function formatDetailValue(val: unknown): string {
 .detail-row { display: flex; gap: 8px; margin-bottom: 8px; font-size: 13px; }
 .detail-row strong { min-width: 120px; color: var(--text-primary); }
 .detail-row span { color: var(--text-secondary); word-break: break-all; }
+.result-json-wrap { display: flex; flex-direction: column; gap: 10px; }
+.result-json-actions { display: flex; justify-content: flex-end; }
+.result-json {
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  max-height: 60vh;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+}
 
 .adv-setting-group {
   margin-bottom: 24px;
