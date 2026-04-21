@@ -30,6 +30,8 @@ func InitRouter() *gin.Engine {
 			adminGroup.GET("/index_configs", HandleGetIndexConfigs)
 			adminGroup.POST("/index_configs", HandleSaveIndexConfig)
 			adminGroup.DELETE("/index_configs/:uid", HandleDeleteIndex)
+			// NOTE: 嵌套查看器字段配置的局部保存接口，不触就其他索引设置
+			adminGroup.PUT("/nested_field_configs", HandleSaveNestedFieldConfigs)
 
 			adminGroup.GET("/access_tokens", HandleGetAccessTokens)
 			adminGroup.POST("/access_tokens", HandleCreateAccessToken)
