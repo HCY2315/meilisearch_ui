@@ -314,17 +314,17 @@ html[data-theme="light"] .nav-pill.active {
 
 html[data-theme="light"] .data-table th {
   color: var(--text-muted);
-  border-bottom: 2px solid rgba(99, 102, 241, 0.15);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
   font-weight: 600;
 }
 
 html[data-theme="light"] .data-table td {
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
-  color: var(--text-main);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
 }
 
 html[data-theme="light"] .data-table tr:hover td {
-  background: linear-gradient(90deg, rgba(99, 102, 241, 0.05), rgba(6, 182, 212, 0.03));
+  background: rgba(255, 255, 255, 0.05);
 }
 
 html[data-theme="light"] .card-header {
