@@ -386,8 +386,10 @@ html[data-theme="light"] input[type="radio"] {
 
 html[data-theme="light"] .badge,
 html[data-theme="light"] .status-badge {
-  background: rgba(99, 102, 241, 0.1);
-  color: var(--primary);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(6, 182, 212, 0.1));
+  color: #6366f1;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
 }
 
 html[data-theme="light"] .token-unlock-pill {
