@@ -15,14 +15,21 @@ type AppUpdateRequest struct {
 
 // IndexConfigRequest 索引加密配置
 type IndexConfigRequest struct {
-	Uid          string `json:"uid" binding:"required"`
-	Alias        string `json:"alias"`
-	Description  string `json:"description"`
-	IsLocked     bool   `json:"isLocked"`
-	FieldConfigs string `json:"fieldConfigs"`
-	ViewConfigs  string `json:"viewConfigs"`
-	TableConfigs string `json:"tableConfigs"`
-	CanEdit      bool   `json:"canEdit"`
+	Uid                string `json:"uid" binding:"required"`
+	Alias              string `json:"alias"`
+	Description        string `json:"description"`
+	IsLocked           bool   `json:"isLocked"`
+	FieldConfigs       string `json:"fieldConfigs"`
+	ViewConfigs        string `json:"viewConfigs"`
+	TableConfigs       string `json:"tableConfigs"`
+	CanEdit            bool   `json:"canEdit"`
+	NestedFieldConfigs string `json:"nestedFieldConfigs"`
+}
+
+// NestedFieldConfigsUpdateRequest 单独更新嵌套字段配置（不需传其他字段）
+type NestedFieldConfigsUpdateRequest struct {
+	Uid                string `json:"uid" binding:"required"`
+	NestedFieldConfigs string `json:"nestedFieldConfigs" binding:"required"` // 全量 JSON
 }
 
 // AccessTokenRequest 新建数据访问Token
