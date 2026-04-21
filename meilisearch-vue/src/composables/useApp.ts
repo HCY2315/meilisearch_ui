@@ -126,6 +126,10 @@ export const useAppStore = defineStore('app', () => {
   const uploadPreviewPageSize = ref(10)
   const uploadProgress = ref(0)
   const uploadLoading = ref(false)
+  // NOTE: 导入方式切换：'file' 为文件上传，'json' 为 JSON 文本直接输入
+  const importMode = ref<'file' | 'json'>('file')
+  // JSON 文本输入框的内容（数组格式）
+  const jsonTextInput = ref('')
 
   const newIndexUid = ref('')
   const newIndexPk = ref('')
@@ -788,15 +792,32 @@ export const useAppStore = defineStore('app', () => {
 
   async function batchImport() {
     if (!currentIndex.value) { pushToast('请先选择一个索引', 'error'); return }
-    if (!uploadData.value.trim()) { pushToast('请先上传JSON文件', 'error'); return }
+
+    // NOTE: 根据导入模式决定数据来源
+    let rawJson: string
+    if (importMode.value === 'json') {
+      if (!jsonTextInput.value.trim()) { pushToast('请先输入 JSON 数据', 'error'); return }
+      rawJson = jsonTextInput.value.trim()
+    } else {
+      if (!uploadData.value.trim()) { pushToast('请先上传 JSON 文件', 'error'); return }
+      rawJson = uploadData.value
+    }
+
     loading.value = true
     uploadProgress.value = 40
     try {
-      const msg = await api.batchImportDocuments(getHost(), getApiKey(), currentIndex.value, uploadData.value)
+      const msg = await api.batchImportDocuments(getHost(), getApiKey(), currentIndex.value, rawJson)
       uploadProgress.value = 100
       pushToast(msg, 'success')
-      uploadData.value = ''
-      uploadFileName.value = ''
+      // 清理对应模式的数据
+      if (importMode.value === 'json') {
+        jsonTextInput.value = ''
+        uploadPreviewData.value = []
+        uploadPreviewPage.value = 1
+      } else {
+        uploadData.value = ''
+        uploadFileName.value = ''
+      }
       await performSearch()
     } catch (e) {
       pushToast(`批量导入失败: ${e}`, 'error')
@@ -1030,7 +1051,8 @@ export const useAppStore = defineStore('app', () => {
     imagePreviewSize, currentTab, assetForm, assetList, assetModalOpen,
     assetDetail, assetsLoading, uploadModalOpen, uploadData, uploadFileName,
     uploadPreviewData, uploadPreviewPage, uploadPreviewPageSize, uploadProgress,
-    uploadLoading, newIndexUid, newIndexPk, visibleColumns, visibleAvailableFields, visibleFilterableFields, visibleFacetDistribution, totalPages,
+    uploadLoading, importMode, jsonTextInput,
+    newIndexUid, newIndexPk, visibleColumns, visibleAvailableFields, visibleFilterableFields, visibleFacetDistribution, totalPages,
     draggingCol, dragOverCol, isResizingColumns,
     viewLayoutWorking, viewWidthsWorking, viewLabelWidthsWorking,
     startViewColumnResize, viewColumnResizeMove, endViewColumnResize,
