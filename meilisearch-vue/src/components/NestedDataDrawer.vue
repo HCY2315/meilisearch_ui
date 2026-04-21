@@ -184,6 +184,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useAppStore } from '@/composables/useApp'
+import type { NestedFieldConfigItem } from '@/types'
 import { isNestedValue, getNestedBadgeText } from '@/utils'
 
 // ─── 类型定义 ─────────────────────────────────────────────────────────────────
@@ -193,24 +195,18 @@ interface NestedFrame {
   data: unknown    // 该层数据
 }
 
-interface FieldConfig {
-  visible: boolean
-  alias: string
-}
-
 // ─── Props & Emits ───────────────────────────────────────────────────────────
 
 const props = defineProps<{
   modelValue: boolean
   initialData: unknown
   initialLabel: string
-  // NOTE: 用于构造 localStorage 存储键，区分不同索引的字段配置
-  indexUid: string
 }>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', val: boolean): void
 }>()
+const store = useAppStore()
 
 // ─── 导航栈 ──────────────────────────────────────────────────────────────────
 
@@ -233,7 +229,7 @@ watch(
 const configOpen = ref(false)
 
 // 当前层的字段配置（可见性 + 别名），会随导航路径自动切换
-const config = ref<Record<string, FieldConfig>>({})
+const config = ref<Record<string, NestedFieldConfigItem>>({})
 
 // 当前层的路径标签（面包屑最后一段）
 const currentPathLabel = computed<string>(() => {
@@ -241,33 +237,14 @@ const currentPathLabel = computed<string>(() => {
   return stack.value[stack.value.length - 1].label
 })
 
-/**
- * 将路径中的数组索引替换为 [*]，使配置按结构而非具体下标存储。
- * 例如 authors[0].address → authors[*].address
- * 这样 authors[0] 和 authors[1] 的同类字段共享同一份配置。
- */
-function normalizePath(label: string): string {
-  return label.replace(/\[\d+\]/g, '[*]')
-}
-
-function getStorageKey(): string {
-  return `nestedFieldConfig:${props.indexUid}:${normalizePath(currentPathLabel.value)}`
-}
-
 function loadConfig() {
-  try {
-    const raw = localStorage.getItem(getStorageKey())
-    config.value = raw ? JSON.parse(raw) : {}
-  } catch {
-    config.value = {}
-  }
+  const serverConfig = store.getNestedFieldConfig(currentPathLabel.value)
+  config.value = { ...serverConfig }
 }
 
-// NOTE: 每次修改配置后立即持久化，无需手动保存
 function saveConfig() {
-  try {
-    localStorage.setItem(getStorageKey(), JSON.stringify(config.value))
-  } catch { /* 存储容量满等边界情况，静默忽略 */ }
+  store.setNestedFieldConfig(currentPathLabel.value, { ...config.value })
+  store.scheduleSaveNestedFieldConfigs()
 }
 
 // 导航路径变化时自动切换配置
@@ -300,7 +277,7 @@ function setAlias(field: string, alias: string) {
     ...config.value,
     [field]: { visible: isFieldVisible(field), alias }
   }
-  // NOTE: blur 时再 saveConfig，避免每次击键都写 localStorage
+  saveConfig()
 }
 
 // ─── 当前层数据 ──────────────────────────────────────────────────────────────
@@ -402,7 +379,7 @@ function primitiveToStr(val: unknown): string {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 80vw;
+  width: 80%;
   min-width: 400px;
   display: flex;
   flex-direction: column;

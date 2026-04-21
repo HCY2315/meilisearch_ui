@@ -132,7 +132,6 @@
     v-model="drawerOpen"
     :initial-data="drawerData"
     :initial-label="drawerLabel"
-    :index-uid="store.currentIndex"
   />
 </template>
 

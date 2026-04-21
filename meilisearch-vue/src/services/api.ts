@@ -50,6 +50,7 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
         fieldConfigs: idx.fieldConfigs,
         viewConfigs: idx.viewConfigs,
         tableConfigs: idx.tableConfigs,
+        nestedFieldConfigs: idx.nestedFieldConfigs,
         canEdit: idx.canEdit
       })
     } catch {
@@ -61,6 +62,7 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
         fieldConfigs: idx.fieldConfigs,
         viewConfigs: idx.viewConfigs,
         tableConfigs: idx.tableConfigs,
+        nestedFieldConfigs: idx.nestedFieldConfigs,
         canEdit: idx.canEdit
       })
     }

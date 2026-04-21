@@ -41,6 +41,7 @@ export interface IndexItem {
   fieldConfigs?: string
   viewConfigs?: string
   tableConfigs?: string
+  nestedFieldConfigs?: string
   canEdit?: boolean
 }
 
@@ -85,6 +86,7 @@ export interface IndexInfo {
   fieldConfigs?: string
   viewConfigs?: string
   tableConfigs?: string
+  nestedFieldConfigs?: string
   canEdit?: boolean
 }
 
@@ -140,6 +142,13 @@ export interface FieldConfigItem {
   highlight: boolean
   display: boolean
 }
+
+export interface NestedFieldConfigItem {
+  visible: boolean
+  alias: string
+}
+
+export type NestedFieldConfigsMap = Record<string, Record<string, NestedFieldConfigItem>>
 
 export interface ViewConfig {
   name: string

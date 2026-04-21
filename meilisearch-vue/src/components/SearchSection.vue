@@ -195,7 +195,8 @@ async function saveAllUISettingsToBackend() {
        hidden: store.hiddenColumns,
        order: store.columnOrder
     }),
-    canEdit: !store.editLocked
+    canEdit: !store.editLocked,
+    nestedFieldConfigs: JSON.stringify(store.nestedFieldConfigs)
   }
 
   try {

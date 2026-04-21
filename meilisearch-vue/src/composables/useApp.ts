@@ -16,6 +16,8 @@ import type {
   ViewConfig,
   FieldConfigItem,
   CurrentTab,
+  NestedFieldConfigsMap,
+  NestedFieldConfigItem,
 } from '@/types'
 import * as api from '@/services/api'
 import * as storage from '@/services/storage'
@@ -149,6 +151,8 @@ export const useAppStore = defineStore('app', () => {
   const viewResizeState = ref<{ colIdx: number; startX: number; startWidthPx: number; containerWidthPx: number; baseWidths: number[] } | null>(null)
 
   const viewFieldResizeState = ref<{ colIdx: number; startX: number; startWidthPx: number; containerWidthPx: number; baseWidths: number[] } | null>(null)
+  const nestedFieldConfigs = ref<NestedFieldConfigsMap>({})
+  let nestedConfigSaveTimer: ReturnType<typeof setTimeout> | null = null
 
   const visibleColumns = computed(() => {
     let cols = [...lastBaseColumns.value]
@@ -188,6 +192,53 @@ export const useAppStore = defineStore('app', () => {
 
   const getHost = () => hostInput.value.trim()
   const getApiKey = () => apiKeyInput.value.trim()
+
+  function normalizeNestedPath(pathLabel: string): string {
+    return pathLabel.replace(/\[\d+\]/g, '[*]')
+  }
+
+  function getNestedFieldConfig(pathLabel: string): Record<string, NestedFieldConfigItem> {
+    return nestedFieldConfigs.value[normalizeNestedPath(pathLabel)] || {}
+  }
+
+  function setNestedFieldConfig(pathLabel: string, fieldConfig: Record<string, NestedFieldConfigItem>) {
+    const normalizedPath = normalizeNestedPath(pathLabel)
+    nestedFieldConfigs.value = {
+      ...nestedFieldConfigs.value,
+      [normalizedPath]: fieldConfig,
+    }
+  }
+
+  function scheduleSaveNestedFieldConfigs() {
+    if (nestedConfigSaveTimer) clearTimeout(nestedConfigSaveTimer)
+    nestedConfigSaveTimer = setTimeout(() => {
+      saveNestedFieldConfigs()
+    }, 300)
+  }
+
+  async function saveNestedFieldConfigs() {
+    const token = localStorage.getItem('authToken')
+    if (!token) return
+    if (!currentIndex.value) return
+    try {
+      const res = await fetch('/api/v1/admin/nested_field_configs', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uid: currentIndex.value,
+          nestedFieldConfigs: JSON.stringify(nestedFieldConfigs.value),
+        }),
+      })
+      if (!res.ok) {
+        pushToast(`保存嵌套字段配置失败: ${res.status}`, 'error')
+      }
+    } catch {
+      pushToast('保存嵌套字段配置失败: 网络错误', 'error')
+    }
+  }
 
   function pushToast(message: string, kind: ToastTypeEnum) {
     toasts.value.push({ id: nextToastId++, message, kind })
@@ -285,6 +336,18 @@ export const useAppStore = defineStore('app', () => {
             if (tConf.hidden) hiddenColumns.value = tConf.hidden
           } catch (e) { console.error('Parse tableConfigs failed', e) }
         }
+        // 4. 嵌套抽屉字段配置（按路径）
+        if (idxMeta.nestedFieldConfigs) {
+          try {
+            const parsedNested = JSON.parse(idxMeta.nestedFieldConfigs)
+            nestedFieldConfigs.value = parsedNested && typeof parsedNested === 'object' ? parsedNested : {}
+          } catch (e) {
+            console.error('Parse nestedFieldConfigs failed', e)
+            nestedFieldConfigs.value = {}
+          }
+        } else {
+          nestedFieldConfigs.value = {}
+        }
         // 4. 编辑权限
         if (idxMeta.canEdit !== undefined) {
           editLocked.value = !idxMeta.canEdit
@@ -355,6 +418,11 @@ export const useAppStore = defineStore('app', () => {
     processingTimeMs.value = null
     facetDistribution.value = null
     sortableAttributes.value = []
+    nestedFieldConfigs.value = {}
+    if (nestedConfigSaveTimer) {
+      clearTimeout(nestedConfigSaveTimer)
+      nestedConfigSaveTimer = null
+    }
   }
 
   function scheduleDebouncedSearch() {
@@ -1055,6 +1123,7 @@ export const useAppStore = defineStore('app', () => {
     newIndexUid, newIndexPk, visibleColumns, visibleAvailableFields, visibleFilterableFields, visibleFacetDistribution, totalPages,
     draggingCol, dragOverCol, isResizingColumns,
     viewLayoutWorking, viewWidthsWorking, viewLabelWidthsWorking,
+    nestedFieldConfigs,
     startViewColumnResize, viewColumnResizeMove, endViewColumnResize,
     startViewFieldResize, viewFieldResizeMove, endViewFieldResize,
     viewDragField, viewDragFromColumn, viewDragColumn, viewDragOverIndex,
@@ -1069,5 +1138,6 @@ export const useAppStore = defineStore('app', () => {
     saveAsset, deleteAsset, applySearchHistory, applyPopularSearch,
     saveViewConfig, openViewConfig, setAiEnabled, setAiWeight, setCurrentTab,
     currentFieldConfigsForSync,
+    getNestedFieldConfig, setNestedFieldConfig, saveNestedFieldConfigs, scheduleSaveNestedFieldConfigs,
   }
 })
