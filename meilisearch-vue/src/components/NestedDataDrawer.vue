@@ -1,21 +1,15 @@
 <template>
   <Teleport to="body">
+    <!-- 半透明遮罩 -->
     <Transition name="drawer-backdrop">
-      <div
-        v-if="modelValue"
-        class="nd-backdrop"
-        @click.self="handleClose"
-      />
+      <div v-if="modelValue" class="nd-backdrop" @click.self="handleClose" />
     </Transition>
+
+    <!-- 抽屉主体 -->
     <Transition name="drawer-slide">
-      <div
-        v-if="modelValue"
-        class="nd-drawer"
-        role="dialog"
-        aria-modal="true"
-        @keydown.esc="handleClose"
-      >
-        <!-- 头部：面包屑 + 关闭按钮 -->
+      <div v-if="modelValue" class="nd-drawer" role="dialog" aria-modal="true">
+
+        <!-- ── 头部：面包屑 + 操作按钮 ── -->
         <div class="nd-header">
           <nav class="nd-breadcrumb" aria-label="嵌套路径">
             <button class="bc-root" @click="handleClose" title="关闭，返回主表格">
@@ -29,50 +23,109 @@
                 :disabled="i === stack.length - 1"
                 @click="jumpTo(i)"
                 :title="frame.label"
-              >
-                {{ frame.label }}
-              </button>
+              >{{ frame.label }}</button>
             </template>
           </nav>
-          <button class="nd-close-btn" @click="handleClose" aria-label="关闭">✕</button>
+          <div class="nd-header-actions">
+            <!-- 字段配置切换按钮（纯数组无字段配置） -->
+            <button
+              v-if="!isPureArray"
+              class="btn-config-toggle"
+              :class="{ active: configOpen }"
+              @click="configOpen = !configOpen"
+              title="配置字段可见性和别名"
+            >⚙ 配置字段</button>
+            <button class="nd-close-btn" @click="handleClose" aria-label="关闭">✕</button>
+          </div>
         </div>
 
-        <!-- 类型徽章 + 当前层说明 -->
+        <!-- ── 子头部：类型徽章 + 隐藏字段提示 ── -->
         <div class="nd-subheader">
-          <span v-if="isArrayOfObjects" class="type-badge badge-array">
-            🗂 对象数组 · {{ (currentData as unknown[]).length }} 条
-          </span>
-          <span v-else-if="isPureArray" class="type-badge badge-prim-array">
-            📋 基础数组 · {{ (currentData as unknown[]).length }} 条
-          </span>
-          <span v-else class="type-badge badge-object">
-            📦 对象 · {{ objectEntries.length }} 个字段
-          </span>
+          <div class="subheader-left">
+            <span v-if="isArrayOfObjects" class="type-badge badge-array">
+              🗂 对象数组 · {{ (currentData as unknown[]).length }} 条
+            </span>
+            <span v-else-if="isPureArray" class="type-badge badge-prim-array">
+              📋 基础数组 · {{ (currentData as unknown[]).length }} 条
+            </span>
+            <span v-else class="type-badge badge-object">
+              📦 对象 · {{ objectEntries.length }} 个字段
+            </span>
+            <span v-if="hiddenCount > 0" class="hidden-hint">（已隐藏 {{ hiddenCount }} 个字段）</span>
+          </div>
+          <div class="subheader-right">
+            <span class="path-hint" :title="currentPathLabel">{{ currentPathLabel }}</span>
+          </div>
         </div>
 
-        <!-- 主内容区 -->
+        <!-- ── 字段配置面板（可折叠） ── -->
+        <Transition name="config-panel">
+          <div v-if="configOpen && allConfigFields.length > 0" class="config-panel">
+            <div class="config-panel-hd">
+              <span class="config-panel-title">字段配置</span>
+              <span class="config-panel-desc">配置按路径结构自动保存，重新打开仍生效</span>
+            </div>
+            <div class="config-list">
+              <div
+                v-for="field in allConfigFields"
+                :key="field"
+                class="config-row"
+                :class="{ 'is-hidden-row': !isFieldVisible(field) }"
+              >
+                <!-- 可见性切换 -->
+                <button
+                  class="vis-btn"
+                  :class="{ 'vis-off': !isFieldVisible(field) }"
+                  @click="toggleVisible(field)"
+                  :title="isFieldVisible(field) ? '点击隐藏此字段' : '点击显示此字段'"
+                >
+                  <span v-if="isFieldVisible(field)">👁</span>
+                  <span v-else>🙈</span>
+                </button>
+                <!-- 原始字段名 -->
+                <span class="config-field-name" :title="field">{{ field }}</span>
+                <span class="config-arrow">→</span>
+                <!-- 别名输入框 -->
+                <input
+                  class="alias-input"
+                  :value="getFieldAlias(field)"
+                  :placeholder="field"
+                  :disabled="!isFieldVisible(field)"
+                  @input="setAlias(field, ($event.target as HTMLInputElement).value)"
+                  @blur="saveConfig"
+                />
+              </div>
+            </div>
+          </div>
+        </Transition>
+
+        <!-- ── 主体内容区 ── -->
         <div class="nd-body">
 
           <!-- ① 对象数组 → 迷你表格 -->
           <div v-if="isArrayOfObjects" class="mini-table-wrap">
-            <table class="mini-table">
+            <div v-if="visibleArrayColumns.length === 0" class="all-hidden-tip">
+              所有字段已隐藏，请在「配置字段」中开启至少一个字段
+            </div>
+            <table v-else class="mini-table">
               <thead>
                 <tr>
                   <th class="row-num-th">#</th>
-                  <th v-for="col in arrayColumns" :key="col" :title="col">
-                    {{ col }}
+                  <th v-for="col in visibleArrayColumns" :key="col" :title="col">
+                    {{ getFieldAlias(col) || col }}
+                    <span v-if="getFieldAlias(col)" class="alias-tag" :title="`原始字段：${col}`">{{ col }}</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(row, ri) in (currentData as Record<string, unknown>[])" :key="ri">
                   <td class="row-num">{{ ri + 1 }}</td>
-                  <td v-for="col in arrayColumns" :key="col">
+                  <td v-for="col in visibleArrayColumns" :key="col">
                     <template v-if="isNestedValue(row[col])">
                       <span class="nested-badge-sm">{{ getNestedBadgeText(row[col]) }}</span>
                       <button
                         class="btn-drill"
-                        @click="push(`${stack[stack.length - 1].label}[${ri}].${col}`, row[col])"
+                        @click="push(`${currentPathLabel}[${ri}].${col}`, row[col])"
                       >🔍</button>
                     </template>
                     <span v-else class="cell-text" :title="primitiveToStr(row[col])">
@@ -98,18 +151,24 @@
 
           <!-- ③ 单个对象 → 键值对列表 -->
           <div v-else class="kv-list">
+            <div v-if="visibleObjectEntries.length === 0" class="all-hidden-tip">
+              所有字段已隐藏，请在「配置字段」中开启至少一个字段
+            </div>
             <div
-              v-for="[key, val] in objectEntries"
+              v-for="[key, val] in visibleObjectEntries"
               :key="key"
               class="kv-row"
             >
-              <span class="kv-key" :title="key">{{ key }}</span>
+              <span class="kv-key" :title="key">
+                {{ getFieldAlias(key) || key }}
+                <span v-if="getFieldAlias(key)" class="alias-raw-tag" :title="`原始字段：${key}`">{{ key }}</span>
+              </span>
               <span class="kv-val">
                 <template v-if="isNestedValue(val)">
                   <span class="nested-badge-sm">{{ getNestedBadgeText(val) }}</span>
                   <button
                     class="btn-drill"
-                    @click="push(`${stack[stack.length - 1].label}.${key}`, val)"
+                    @click="push(`${currentPathLabel}.${key}`, val)"
                   >🔍 查看</button>
                 </template>
                 <span v-else :title="primitiveToStr(val)">{{ primitiveToStr(val) }}</span>
@@ -127,11 +186,26 @@
 import { ref, computed, watch } from 'vue'
 import { isNestedValue, getNestedBadgeText } from '@/utils'
 
+// ─── 类型定义 ─────────────────────────────────────────────────────────────────
+
+interface NestedFrame {
+  label: string    // 面包屑显示名
+  data: unknown    // 该层数据
+}
+
+interface FieldConfig {
+  visible: boolean
+  alias: string
+}
+
 // ─── Props & Emits ───────────────────────────────────────────────────────────
+
 const props = defineProps<{
-  modelValue: boolean       // 控制抽屉开关
-  initialData: unknown      // 初始层数据（Object 或 Object[]）
-  initialLabel: string      // 初始字段名（面包屑第一节）
+  modelValue: boolean
+  initialData: unknown
+  initialLabel: string
+  // NOTE: 用于构造 localStorage 存储键，区分不同索引的字段配置
+  indexUid: string
 }>()
 
 const emit = defineEmits<{
@@ -139,43 +213,114 @@ const emit = defineEmits<{
 }>()
 
 // ─── 导航栈 ──────────────────────────────────────────────────────────────────
-interface NestedFrame {
-  label: string    // 面包屑显示名
-  data: unknown    // 该层数据
-}
 
 const stack = ref<NestedFrame[]>([])
 
-// 当抽屉打开时（或打开时传入的数据变化），重置导航栈到初始层
+// 当抽屉打开时，重置导航栈到初始层并加载对应的字段配置
 watch(
   () => [props.modelValue, props.initialData, props.initialLabel] as const,
   ([open]) => {
     if (open) {
       stack.value = [{ label: props.initialLabel, data: props.initialData }]
+      loadConfig()
     }
   },
   { immediate: true }
 )
 
-// ─── 当前层 ──────────────────────────────────────────────────────────────────
+// ─── 字段配置面板 ─────────────────────────────────────────────────────────────
+
+const configOpen = ref(false)
+
+// 当前层的字段配置（可见性 + 别名），会随导航路径自动切换
+const config = ref<Record<string, FieldConfig>>({})
+
+// 当前层的路径标签（面包屑最后一段）
+const currentPathLabel = computed<string>(() => {
+  if (!stack.value.length) return ''
+  return stack.value[stack.value.length - 1].label
+})
+
+/**
+ * 将路径中的数组索引替换为 [*]，使配置按结构而非具体下标存储。
+ * 例如 authors[0].address → authors[*].address
+ * 这样 authors[0] 和 authors[1] 的同类字段共享同一份配置。
+ */
+function normalizePath(label: string): string {
+  return label.replace(/\[\d+\]/g, '[*]')
+}
+
+function getStorageKey(): string {
+  return `nestedFieldConfig:${props.indexUid}:${normalizePath(currentPathLabel.value)}`
+}
+
+function loadConfig() {
+  try {
+    const raw = localStorage.getItem(getStorageKey())
+    config.value = raw ? JSON.parse(raw) : {}
+  } catch {
+    config.value = {}
+  }
+}
+
+// NOTE: 每次修改配置后立即持久化，无需手动保存
+function saveConfig() {
+  try {
+    localStorage.setItem(getStorageKey(), JSON.stringify(config.value))
+  } catch { /* 存储容量满等边界情况，静默忽略 */ }
+}
+
+// 导航路径变化时自动切换配置
+watch(currentPathLabel, () => {
+  loadConfig()
+})
+
+// ─── 字段配置 API ─────────────────────────────────────────────────────────────
+
+function isFieldVisible(field: string): boolean {
+  // 默认可见，只有明确设置 visible: false 时才隐藏
+  return config.value[field]?.visible !== false
+}
+
+function getFieldAlias(field: string): string {
+  return config.value[field]?.alias || ''
+}
+
+function toggleVisible(field: string) {
+  const current = isFieldVisible(field)
+  config.value = {
+    ...config.value,
+    [field]: { visible: !current, alias: config.value[field]?.alias || '' }
+  }
+  saveConfig()
+}
+
+function setAlias(field: string, alias: string) {
+  config.value = {
+    ...config.value,
+    [field]: { visible: isFieldVisible(field), alias }
+  }
+  // NOTE: blur 时再 saveConfig，避免每次击键都写 localStorage
+}
+
+// ─── 当前层数据 ──────────────────────────────────────────────────────────────
+
 const currentData = computed<unknown>(() => {
   if (!stack.value.length) return null
   return stack.value[stack.value.length - 1].data
 })
 
-// 是否为"对象数组"（每个元素都是对象）
 const isArrayOfObjects = computed(() => {
   const d = currentData.value
   return Array.isArray(d) && d.length > 0 && d[0] !== null && typeof d[0] === 'object'
 })
 
-// 是否为基础类型数组（元素为 string/number/boolean）
 const isPureArray = computed(() => {
   const d = currentData.value
   return Array.isArray(d) && !isArrayOfObjects.value
 })
 
-// 对象数组的列名：取所有行 key 的并集，确保无遗漏
+// 对象数组的所有列名（含在各行中分布不均匀的列，取并集）
 const arrayColumns = computed<string[]>(() => {
   if (!isArrayOfObjects.value) return []
   const keySet = new Set<string>()
@@ -187,42 +332,57 @@ const arrayColumns = computed<string[]>(() => {
   return Array.from(keySet)
 })
 
-// 单个对象的键值对列表
+// 对象模式的所有键值对
 const objectEntries = computed<[string, unknown][]>(() => {
   const d = currentData.value
   if (d === null || Array.isArray(d) || typeof d !== 'object') return []
   return Object.entries(d as object)
 })
 
+// ── 配置面板展示的全量字段（含已隐藏），用于开关和别名设置 ──
+const allConfigFields = computed<string[]>(() => {
+  if (isArrayOfObjects.value) return arrayColumns.value
+  if (isPureArray.value) return []  // 纯数组无字段维度
+  return objectEntries.value.map(([k]) => k)
+})
+
+// 过滤掉被隐藏字段后的可见列（用于实际渲染）
+const visibleArrayColumns = computed(() =>
+  arrayColumns.value.filter(col => isFieldVisible(col))
+)
+
+const visibleObjectEntries = computed(() =>
+  objectEntries.value.filter(([k]) => isFieldVisible(k))
+)
+
+// 隐藏字段数量，用于提示
+const hiddenCount = computed(() =>
+  allConfigFields.value.filter(f => !isFieldVisible(f)).length
+)
+
 // ─── 导航操作 ─────────────────────────────────────────────────────────────────
-// 向下钻取一层（压栈）
+
 function push(label: string, data: unknown) {
   stack.value = [...stack.value, { label, data }]
+  // watch(currentPathLabel) 会自动触发 loadConfig
 }
 
-// 点击面包屑跳回指定层（弹栈到该索引）
 function jumpTo(index: number) {
   if (index < 0 || index >= stack.value.length - 1) return
   stack.value = stack.value.slice(0, index + 1)
 }
 
-// 关闭抽屉
 function handleClose() {
   emit('update:modelValue', false)
 }
 
 // ─── 原始值渲染 ───────────────────────────────────────────────────────────────
-/**
- * 将原始类型值转为可读字符串，用于单元格/键值对的文字展示。
- * 对象/数组类型不会走到这里（会走嵌套按钮分支），但保留兜底处理。
- */
+
 function primitiveToStr(val: unknown): string {
   if (val === null) return 'null'
   if (val === undefined) return ''
   if (typeof val === 'string') return val
   if (typeof val === 'number' || typeof val === 'boolean') return String(val)
-  // NOTE: 兜底：理论上不会出现（嵌套类型会被 isNestedValue 拦截），
-  //       但保留以防边界情况
   return JSON.stringify(val)
 }
 </script>
@@ -232,7 +392,7 @@ function primitiveToStr(val: unknown): string {
 .nd-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 1000;
 }
 
@@ -242,13 +402,13 @@ function primitiveToStr(val: unknown): string {
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(65vw, 960px);
-  min-width: 360px;
+  width: 80vw;
+  min-width: 400px;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary, #0f1117);
   border-left: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.5);
+  box-shadow: -12px 0 48px rgba(0, 0, 0, 0.55);
   z-index: 1001;
   overflow: hidden;
 }
@@ -258,13 +418,12 @@ function primitiveToStr(val: unknown): string {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.025);
   flex-shrink: 0;
 }
 
-/* ─── 面包屑 ─────────────────────────────────────────────────────────────────── */
 .nd-breadcrumb {
   display: flex;
   align-items: center;
@@ -280,35 +439,36 @@ function primitiveToStr(val: unknown): string {
   color: var(--primary-color);
   font-size: 13px;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 4px;
   flex-shrink: 0;
   transition: background 0.15s;
+  white-space: nowrap;
 }
 .bc-root:hover { background: rgba(255,255,255,0.06); }
 
 .bc-sep {
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 13px;
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 14px;
   flex-shrink: 0;
 }
 
 .bc-item {
   background: transparent;
   border: none;
-  color: var(--text-muted, rgba(255,255,255,0.5));
+  color: rgba(255,255,255,0.45);
   font-size: 12.5px;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 4px;
-  max-width: 160px;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: background 0.15s, color 0.15s;
 }
 .bc-item:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255,255,255,0.06);
   color: #fff;
 }
 .bc-current {
@@ -317,28 +477,86 @@ function primitiveToStr(val: unknown): string {
   cursor: default;
 }
 
+.nd-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 字段配置切换按钮 */
+.btn-config-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-config-toggle:hover {
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  border-color: rgba(255,255,255,0.2);
+}
+.btn-config-toggle.active {
+  background: rgba(var(--primary-color-rgb, 99,179,237), 0.15);
+  color: #63b3ed;
+  border-color: rgba(99,179,237,0.3);
+}
+
 .nd-close-btn {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.35);
   font-size: 16px;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
   line-height: 1;
   transition: color 0.15s, background 0.15s;
-  flex-shrink: 0;
 }
 .nd-close-btn:hover {
   color: #fff;
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* ─── 子头部（类型徽章） ────────────────────────────────────────────────────── */
+/* ─── 子头部（类型 + 路径） ─────────────────────────────────────────────────── */
 .nd-subheader {
-  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 18px;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   flex-shrink: 0;
+  gap: 12px;
+}
+
+.subheader-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.subheader-right {
+  flex-shrink: 0;
+}
+
+.path-hint {
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.25);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
 }
 
 .type-badge {
@@ -349,16 +567,147 @@ function primitiveToStr(val: unknown): string {
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
+  flex-shrink: 0;
 }
-.badge-array   { background: rgba(99,179,237,0.12); color: #63b3ed; }
-.badge-prim-array { background: rgba(154,230,180,0.1); color: #9ae6b4; }
-.badge-object  { background: rgba(214,188,250,0.12); color: #d6bcfa; }
+.badge-array      { background: rgba(99,179,237,0.12);  color: #63b3ed; }
+.badge-prim-array { background: rgba(154,230,180,0.1);  color: #9ae6b4; }
+.badge-object     { background: rgba(214,188,250,0.12); color: #d6bcfa; }
+
+.hidden-hint {
+  font-size: 11.5px;
+  color: rgba(255,200,100,0.7);
+}
+
+/* ─── 字段配置面板 ──────────────────────────────────────────────────────────── */
+.config-panel {
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.02);
+  flex-shrink: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.config-panel-hd {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 18px 6px;
+  position: sticky;
+  top: 0;
+  background: var(--bg-primary, #0f1117);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  z-index: 1;
+}
+
+.config-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.8);
+}
+
+.config-panel-desc {
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.3);
+}
+
+.config-list {
+  padding: 6px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.config-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+.config-row:hover { background: rgba(255,255,255,0.03); }
+
+.config-row.is-hidden-row {
+  opacity: 0.45;
+}
+
+/* 可见性切换按钮 */
+.vis-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px;
+  cursor: pointer;
+  width: 28px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+.vis-btn:hover { background: rgba(255,255,255,0.06); }
+.vis-btn.vis-off {
+  border-color: rgba(255,100,100,0.2);
+  background: rgba(255,100,100,0.05);
+}
+
+.config-field-name {
+  font-size: 12.5px;
+  color: rgba(255,255,255,0.6);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  min-width: 100px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.config-arrow {
+  color: rgba(255,255,255,0.2);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* 别名输入框 */
+.alias-input {
+  flex: 1;
+  min-width: 80px;
+  padding: 4px 9px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px;
+  color: var(--text-primary, #e2e8f0);
+  font-size: 12.5px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.alias-input:focus {
+  border-color: var(--primary-color, #63b3ed);
+  background: rgba(255,255,255,0.07);
+}
+.alias-input:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.alias-input::placeholder {
+  color: rgba(255,255,255,0.2);
+  font-style: italic;
+}
 
 /* ─── 主体内容区 ─────────────────────────────────────────────────────────────── */
 .nd-body {
   flex: 1;
   overflow-y: auto;
   padding: 16px 18px;
+}
+
+.all-hidden-tip {
+  padding: 32px 20px;
+  text-align: center;
+  color: rgba(255,200,100,0.6);
+  font-size: 13px;
 }
 
 /* ─── 迷你表格 ──────────────────────────────────────────────────────────────── */
@@ -369,43 +718,47 @@ function primitiveToStr(val: unknown): string {
 .mini-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12.5px;
+  font-size: 13px;
   min-width: 300px;
 }
 
 .mini-table th {
   background: rgba(255,255,255,0.04);
-  padding: 8px 10px;
+  padding: 8px 12px;
   text-align: left;
   border-bottom: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.65);
+  color: rgba(255,255,255,0.7);
   font-weight: 600;
   white-space: nowrap;
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.mini-table th .alias-tag {
+  margin-left: 5px;
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.3);
+  font-weight: 400;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .mini-table td {
-  padding: 7px 10px;
+  padding: 7px 12px;
   border-bottom: 1px solid rgba(255,255,255,0.04);
   vertical-align: top;
-  max-width: 220px;
 }
 
 .mini-table tr:hover td {
-  background: rgba(255,255,255,0.025);
+  background: rgba(255,255,255,0.02);
 }
 
-.row-num-th { color: rgba(255,255,255,0.3); font-weight: 400; width: 36px; }
-.row-num    { color: rgba(255,255,255,0.25); font-size: 11px; width: 36px; }
+.row-num-th { color: rgba(255,255,255,0.25); font-weight: 400; width: 36px; }
+.row-num    { color: rgba(255,255,255,0.2);  font-size: 11px; }
 
 .cell-text {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 200px;
+  max-width: 260px;
   color: var(--text-primary, #e2e8f0);
 }
 
@@ -413,13 +766,12 @@ function primitiveToStr(val: unknown): string {
 .kv-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 
 .kv-row {
   display: grid;
-  grid-template-columns: 180px 1fr;
-  gap: 12px;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
   padding: 9px 12px;
   border-bottom: 1px solid rgba(255,255,255,0.04);
   align-items: flex-start;
@@ -430,17 +782,29 @@ function primitiveToStr(val: unknown): string {
 
 .kv-key {
   color: rgba(255,255,255,0.55);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   padding-top: 1px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alias-raw-tag {
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.25);
+  font-weight: 400;
+  font-family: 'JetBrains Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .kv-val {
   color: var(--text-primary, #e2e8f0);
-  font-size: 12.5px;
+  font-size: 13px;
   word-break: break-word;
   display: flex;
   align-items: center;
@@ -452,23 +816,23 @@ function primitiveToStr(val: unknown): string {
 .prim-array-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .prim-array-item {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: baseline;
-  padding: 6px 10px;
+  padding: 7px 12px;
   border-radius: 6px;
   font-size: 13px;
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 
-.prim-idx { color: rgba(255,255,255,0.3); font-size: 11px; min-width: 28px; }
+.prim-idx { color: rgba(255,255,255,0.25); font-size: 11px; min-width: 30px; flex-shrink: 0; }
 .prim-val { color: var(--text-primary, #e2e8f0); word-break: break-word; }
 
-/* ─── 嵌套徽章（行内小版本） ────────────────────────────────────────────────── */
+/* ─── 嵌套徽章 & 下钻按钮 ───────────────────────────────────────────────────── */
 .nested-badge-sm {
   display: inline-flex;
   align-items: center;
@@ -480,16 +844,15 @@ function primitiveToStr(val: unknown): string {
   white-space: nowrap;
 }
 
-/* ─── 下钻按钮 ──────────────────────────────────────────────────────────────── */
 .btn-drill {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: 4px;
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.75);
+  color: rgba(255,255,255,0.7);
   font-size: 11.5px;
   cursor: pointer;
   white-space: nowrap;
@@ -502,15 +865,21 @@ function primitiveToStr(val: unknown): string {
 }
 
 /* ─── 动画 ──────────────────────────────────────────────────────────────────── */
-/* 背景遮罩淡入淡出 */
 .drawer-backdrop-enter-active,
 .drawer-backdrop-leave-active { transition: opacity 0.25s ease; }
 .drawer-backdrop-enter-from,
 .drawer-backdrop-leave-to    { opacity: 0; }
 
-/* 抽屉从右侧滑入滑出 */
-.drawer-slide-enter-active { transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1); }
-.drawer-slide-leave-active { transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1); }
+.drawer-slide-enter-active { transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+.drawer-slide-leave-active { transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
 .drawer-slide-enter-from,
 .drawer-slide-leave-to     { transform: translateX(100%); }
+
+/* 配置面板折叠动画 */
+.config-panel-enter-active,
+.config-panel-leave-active { transition: max-height 0.25s ease, opacity 0.2s ease; overflow: hidden; }
+.config-panel-enter-from,
+.config-panel-leave-to    { max-height: 0; opacity: 0; }
+.config-panel-enter-to,
+.config-panel-leave-from  { max-height: 280px; opacity: 1; }
 </style>
