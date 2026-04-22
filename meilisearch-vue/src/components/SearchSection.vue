@@ -93,7 +93,7 @@
         <div v-if="userRole === 'admin'" class="results-actions">
           <span>{{ store.processingTimeMs ? `耗时 ${store.processingTimeMs}ms` : '' }}</span>
           <button class="btn btn-secondary btn-sm" @click="store.advancedSettingsOpen = true">⚙️ 高级设置</button>
-          <button class="btn btn-secondary btn-sm" @click="store.columnConfigOpen = true">列设置</button>
+          <button class="btn btn-secondary btn-sm" @click="openColumnConfig">列设置</button>
           <button class="btn btn-secondary btn-sm" @click="store.openViewConfig()">视图设置</button>
           <button class="btn btn-secondary btn-sm" @click="store.exportCsv()" :disabled="store.exportDownloading">
             {{ store.exportDownloading ? `📥 导出 ${store.exportProgress}/${store.exportTotal}` : '📥 导出 CSV' }}
@@ -237,6 +237,12 @@ const hasPendingEdits = computed(() => Object.keys(store.pendingEdits).length > 
 
 function onAiBadgeClick() {
   store.aiDropdownOpen = !store.aiDropdownOpen
+}
+
+function openColumnConfig() {
+  console.log('Opening column config, store:', store)
+  store.columnConfigOpen = true
+  console.log('columnConfigOpen:', store.columnConfigOpen)
 }
 
 function onAiToggle() {
