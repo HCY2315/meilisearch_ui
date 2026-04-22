@@ -24,7 +24,7 @@ export function useUIStore() {
     // Modal states
     viewModalOpen: app.viewModalOpen,
     advancedSettingsOpen: app.advancedSettingsOpen,
-    columnConfigOpen: app.columnConfigOpen.value,
+    columnConfigOpen: app.columnConfigOpen,
     fieldConfigOpen: app.fieldConfigOpen,
     resultModalOpen: app.resultModalOpen,
     assetModalOpen: app.assetModalOpen,
