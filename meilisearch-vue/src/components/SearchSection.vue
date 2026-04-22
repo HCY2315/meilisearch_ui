@@ -169,7 +169,12 @@ const store: any = new Proxy({}, {
     const p = prop as keyof typeof store
     if (p in searchStore) { (searchStore as any)[p] = value; return true }
     if (p in connectionStore) { (connectionStore as any)[p] = value; return true }
-    if (p in uiStore) { (uiStore as any)[p] = value; return true }
+    if (p in uiStore) {
+      const val = (uiStore as any)[p]
+      if (val && 'value' in val) (val as any).value = value
+      else (uiStore as any)[p] = value
+      return true
+    }
     if (p in appStore) { (appStore as any)[p] = value; return true }
     return false
   }
