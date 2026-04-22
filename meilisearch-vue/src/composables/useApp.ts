@@ -78,7 +78,7 @@ export const useAppStore = defineStore('app', () => {
   const columnOrder = ref<string[]>([])
   const hiddenColumns = ref<string[]>([])
   const columnWidths = ref<Record<string, number>>({})
-  const drawerFieldOrder = ref<string[]>([])
+  const drawerFieldOrder = ref<Record<string, string[]>>({})
 
   const aiConfig = ref<AiConfig>(storage.loadAiConfig())
   const aiDropdownOpen = ref(false)
