@@ -226,6 +226,12 @@
         </div>
       </div>
     </Transition>
+    
+    <!-- 字段预览弹窗 -->
+    <div v-if="previewData" class="preview-popup" :style="{ left: previewData.x + 10 + 'px', top: previewData.y + 10 + 'px' }">
+      <div class="preview-header">{{ previewData.field }}</div>
+      <pre class="preview-content">{{ formatPreviewValue(previewData.value) }}</pre>
+    </div>
   </Teleport>
 </template>
 
@@ -393,6 +399,28 @@ function onDragEnd() {
     saveFieldOrderLocal()
   }
   draggedIndex.value = null
+}
+
+function showPreview(e: MouseEvent, field: string, value: unknown) {
+  previewData.value = {
+    x: e.clientX,
+    y: e.clientY,
+    field: getFieldAlias(field) || field,
+    value
+  }
+}
+
+function hidePreview() {
+  previewData.value = null
+}
+
+function formatPreviewValue(val: unknown): string {
+  if (val === null || val === undefined) return 'null'
+  if (typeof val === 'string') return val
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val)
+  if (Array.isArray(val)) return JSON.stringify(val, null, 2)
+  if (typeof val === 'object') return JSON.stringify(val, null, 2)
+  return String(val)
 }
 
 async function saveFieldOrder() {
