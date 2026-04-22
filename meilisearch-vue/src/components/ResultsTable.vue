@@ -157,9 +157,21 @@ const store: any = new Proxy({}, {
     if (p in searchStore) return (searchStore as any)[p]
     if (p in connectionStore) return (connectionStore as any)[p]
     if (p in uiStore) return (uiStore as any)[p]
-    // Fallback to the original app store for any missing properties to preserve full compatibility
     if (p in appStore) return (appStore as any)[p]
     return undefined
+  },
+  set(_target, prop: string, value: any) {
+    const p = prop as keyof typeof store
+    if (p in searchStore) { (searchStore as any)[p] = value; return true }
+    if (p in connectionStore) { (connectionStore as any)[p] = value; return true }
+    if (p in uiStore) {
+      const propVal = (uiStore as any)[p]
+      if (propVal && typeof propVal === 'object' && 'value' in propVal) (propVal as any).value = value
+      else (uiStore as any)[p] = value
+      return true
+    }
+    if (p in appStore) { (appStore as any)[p] = value; return true }
+    return false
   }
 })
 

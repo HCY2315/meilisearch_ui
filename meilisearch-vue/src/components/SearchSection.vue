@@ -171,7 +171,7 @@ const store: any = new Proxy({}, {
     if (p in connectionStore) { (connectionStore as any)[p] = value; return true }
     if (p in uiStore) {
       const propVal = (uiStore as any)[p]
-      if (propVal && 'value' in propVal) (propVal as any).value = value
+      if (propVal && typeof propVal === 'object' && 'value' in propVal) (propVal as any).value = value
       else (uiStore as any)[p] = value
       return true
     }
