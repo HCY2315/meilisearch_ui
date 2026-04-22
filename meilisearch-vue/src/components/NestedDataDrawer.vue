@@ -351,11 +351,12 @@ function loadFieldOrder() {
     fieldOrder.value = []
     return
   }
-  const saved = store.drawerFieldOrder
+  const pathKey = normalizePath(currentPathLabel.value)
+  const saved = store.drawerFieldOrder[pathKey]
   if (saved && saved.length > 0) {
     fieldOrder.value = [...saved]
   } else if (!props.isAdmin) {
-    const localKey = `drawerFieldOrder:${store.currentIndex}`
+    const localKey = `drawerFieldOrder:${store.currentIndex}:${pathKey}`
     const localStored = localStorage.getItem(localKey)
     if (localStored) {
       try {
@@ -373,7 +374,8 @@ function loadFieldOrder() {
 
 function saveFieldOrderLocal() {
   if (!props.isAdmin) {
-    const localKey = `drawerFieldOrder:${store.currentIndex}`
+    const pathKey = normalizePath(currentPathLabel.value)
+    const localKey = `drawerFieldOrder:${store.currentIndex}:${pathKey}`
     localStorage.setItem(localKey, JSON.stringify(fieldOrder.value))
   }
 }
