@@ -995,4 +995,35 @@ function primitiveToStr(val: unknown): string {
 .config-panel-leave-to    { max-height: 0; opacity: 0; }
 .config-panel-enter-to,
 .config-panel-leave-from  { max-height: 280px; opacity: 1; }
+
+/* ─── 配置面板 Tabs ─────────────────────────────────────────────────────────────── */
+.config-panel-tabs { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.config-panel-tabs button {
+  padding: 6px 12px; border: none; background: transparent; color: var(--text-secondary);
+  font-size: 13px; cursor: pointer; border-radius: 4px; transition: all 0.15s;
+}
+.config-panel-tabs button.active {
+  background: var(--primary-color); color: #fff;
+}
+
+/* ─── 字段排序面板 ───────────────────────────────────────────────────────────── */
+.order-panel { padding: 12px; }
+.order-panel-hd {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+}
+.order-hint { font-size: 12px; color: var(--text-muted); }
+.btn-save-order {
+  padding: 6px 12px; background: var(--primary-color); color: #fff; border: none;
+  border-radius: 4px; font-size: 12px; cursor: pointer;
+}
+.btn-save-order:disabled { opacity: 0.5; cursor: not-allowed; }
+.order-list { max-height: 200px; overflow-y: auto; }
+.order-row {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 4px;
+  background: var(--surface); border-radius: 4px; cursor: grab; transition: background 0.15s;
+}
+.order-row:hover { background: var(--bg-secondary); }
+.order-row:active { cursor: grabbing; }
+.drag-handle { color: var(--text-muted); font-size: 14px; }
+.order-field-name { font-size: 13px; color: var(--text-primary); }
 </style>
