@@ -1102,4 +1102,27 @@ function primitiveToStr(val: unknown): string {
 .order-row:active { cursor: grabbing; }
 .drag-handle { color: var(--text-muted); font-size: 14px; }
 .order-field-name { font-size: 13px; color: var(--text-primary); }
+
+/* ─── 字段预览弹窗 ───────────────────────────────────────────────────────── */
+.btn-preview {
+  display: none; margin-left: 4px; cursor: pointer; font-size: 12px; opacity: 0.6;
+}
+.btn-preview:hover { opacity: 1; }
+.cell-with-preview, .kv-val { display: flex; align-items: center; gap: 4px; }
+
+.preview-popup {
+  position: fixed; z-index: 10000; max-width: 400px; max-height: 300px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: var(--shadow-lg); overflow: hidden;
+}
+.preview-header {
+  padding: 8px 12px; font-size: 12px; font-weight: 600;
+  background: var(--bg-secondary); border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+}
+.preview-content {
+  padding: 10px; margin: 0; font-size: 12px; font-family: monospace;
+  white-space: pre-wrap; word-break: break-all; overflow-y: auto;
+  color: var(--text-primary); max-height: 250px;
+}
 </style>
