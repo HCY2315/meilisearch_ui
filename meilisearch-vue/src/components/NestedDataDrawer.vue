@@ -426,7 +426,8 @@ function formatPreviewValue(val: unknown): string {
 }
 
 async function saveFieldOrder() {
-  store.drawerFieldOrder = [...fieldOrder.value]
+  const pathKey = normalizePath(currentPathLabel.value)
+  store.drawerFieldOrder = { ...store.drawerFieldOrder, [pathKey]: [...fieldOrder.value] }
   await store.saveDrawerFieldOrder()
   hasOrderChange.value = false
   store.pushToast('抽屉字段顺序已保存', 'success')
