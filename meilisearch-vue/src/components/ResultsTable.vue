@@ -138,12 +138,30 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useConnectionStore } from '@/composables/useConnectionStore'
+import { useSearchStore } from '@/composables/useSearchStore'
+import { useUIStore } from '@/composables/useUIStore'
 import { useAppStore } from '@/composables/useApp'
 import { sortHits, getIdString, getDocKey, valueToStringForEdit, valueToString, getCellValue, isNestedValue, getNestedBadgeText } from '@/utils'
 import type { SearchHit } from '@/types'
 import NestedDataDrawer from '@/components/NestedDataDrawer.vue'
 
-const store = useAppStore()
+const connectionStore = useConnectionStore()
+const searchStore = useSearchStore()
+const uiStore = useUIStore()
+
+const appStore = useAppStore()
+const store: any = new Proxy({}, {
+  get(_target, prop: string) {
+    const p = prop as keyof typeof store
+    if (p in searchStore) return (searchStore as any)[p]
+    if (p in connectionStore) return (connectionStore as any)[p]
+    if (p in uiStore) return (uiStore as any)[p]
+    // Fallback to the original app store for any missing properties to preserve full compatibility
+    if (p in appStore) return (appStore as any)[p]
+    return undefined
+  }
+})
 
 // 从 localStorage 获取用户角色
 const isAdmin = computed(() => {

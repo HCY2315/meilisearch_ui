@@ -13,7 +13,6 @@ type AppUpdateRequest struct {
 	UIConfig string `json:"uiConfig"`
 }
 
-// IndexConfigRequest 索引加密配置
 type IndexConfigRequest struct {
 	Uid                string `json:"uid" binding:"required"`
 	Alias              string `json:"alias"`
@@ -24,6 +23,7 @@ type IndexConfigRequest struct {
 	TableConfigs       string `json:"tableConfigs"`
 	CanEdit            bool   `json:"canEdit"`
 	NestedFieldConfigs string `json:"nestedFieldConfigs"`
+	DrawerFieldOrder   string `json:"drawerFieldOrder"`
 }
 
 // NestedFieldConfigsUpdateRequest 单独更新嵌套字段配置（不需传其他字段）

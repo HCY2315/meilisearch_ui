@@ -88,6 +88,7 @@ export interface IndexInfo {
   tableConfigs?: string
   nestedFieldConfigs?: string
   canEdit?: boolean
+  drawerFieldOrder?: string
 }
 
 export interface PopularItem {

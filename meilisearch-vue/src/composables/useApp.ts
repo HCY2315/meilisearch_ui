@@ -78,6 +78,7 @@ export const useAppStore = defineStore('app', () => {
   const columnOrder = ref<string[]>([])
   const hiddenColumns = ref<string[]>([])
   const columnWidths = ref<Record<string, number>>({})
+  const drawerFieldOrder = ref<string[]>([])
 
   const aiConfig = ref<AiConfig>(storage.loadAiConfig())
   const aiDropdownOpen = ref(false)
@@ -240,6 +241,30 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  async function saveDrawerFieldOrder() {
+    const token = localStorage.getItem('authToken')
+    if (!token) return
+    if (!currentIndex.value) return
+    try {
+      const res = await fetch('/api/v1/admin/drawer_field_order', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uid: currentIndex.value,
+          drawerFieldOrder: JSON.stringify(drawerFieldOrder.value),
+        }),
+      })
+      if (!res.ok) {
+        pushToast(`保存抽屉字段顺序失败: ${res.status}`, 'error')
+      }
+    } catch {
+      pushToast('保存抽屉字段顺序失败: 网络错误', 'error')
+    }
+  }
+
   function pushToast(message: string, kind: ToastTypeEnum) {
     toasts.value.push({ id: nextToastId++, message, kind })
     setTimeout(() => {
@@ -351,6 +376,18 @@ export const useAppStore = defineStore('app', () => {
         // 4. 编辑权限
         if (idxMeta.canEdit !== undefined) {
           editLocked.value = !idxMeta.canEdit
+        }
+        // 5. 抽屉字段顺序
+        if (idxMeta.drawerFieldOrder) {
+          try {
+            const dfo = JSON.parse(idxMeta.drawerFieldOrder)
+            drawerFieldOrder.value = Array.isArray(dfo) ? dfo : []
+          } catch (e) {
+            console.error('Parse drawerFieldOrder failed', e)
+            drawerFieldOrder.value = []
+          }
+        } else {
+          drawerFieldOrder.value = []
         }
       }
 
@@ -1120,7 +1157,7 @@ export const useAppStore = defineStore('app', () => {
     popularSearches, popularSearchField, currentPage, pageSize, maxResultsPerPage,
     resultsCount, processingTimeMs, facetDistribution, sortableAttributes,
     lastHits, lastResults, lastBaseColumns, tableSortField, tableSortDir,
-    columnOrder, hiddenColumns, columnWidths, aiConfig, aiDropdownOpen,
+    columnOrder, hiddenColumns, columnWidths, drawerFieldOrder, aiConfig, aiDropdownOpen,
     highlightEnabled, showRankingScore, cropLength, sortValue,
     filtersDrawerOpen, columnConfigOpen, fieldConfigOpen, viewModalOpen, advancedSettingsOpen,
     viewMode, viewNameInput, viewConfigs, exportDownloading, exportProgress,
@@ -1148,6 +1185,6 @@ export const useAppStore = defineStore('app', () => {
     saveAsset, deleteAsset, applySearchHistory, applyPopularSearch,
     saveViewConfig, openViewConfig, setAiEnabled, setAiWeight, setCurrentTab,
     currentFieldConfigsForSync,
-    getNestedFieldConfig, setNestedFieldConfig, saveNestedFieldConfigs, scheduleSaveNestedFieldConfigs,
+    getNestedFieldConfig, setNestedFieldConfig, saveNestedFieldConfigs, scheduleSaveNestedFieldConfigs, saveDrawerFieldOrder,
   }
 })

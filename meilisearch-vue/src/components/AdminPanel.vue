@@ -268,6 +268,23 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { generateUUID } from '@/utils'
+import {
+  getAdminIndexConfigs,
+  getAdminAccessTokens,
+  getAdminApps,
+  getProxyIndexes,
+  getAdminInstances,
+  createAdminInstance,
+  updateAdminInstance,
+  deleteAdminInstance,
+  saveAdminIndexConfig,
+  deleteAdminIndexConfig,
+  createAccessToken,
+  updateAccessToken,
+  deleteAccessToken,
+  updateApp,
+  updateAdminPassword
+} from '@/services/api'
 
 const activeTab = ref('instances')
 const tabs = [
@@ -320,28 +337,21 @@ function isExpired(date: string | null) {
 }
 
 async function loadAdminData() {
-  const token = localStorage.getItem('authToken')
-  if (!token) return
-
   try {
-    const headers = { 'Authorization': `Bearer ${token}` }
-    const [resIdx, resTok, resApps, resActual, resIns] = await Promise.all([
-      fetch('/api/v1/admin/index_configs', { headers }),
-      fetch('/api/v1/admin/access_tokens', { headers }),
-      fetch('/api/v1/admin/apps', { headers }),
-      fetch('/api/v1/proxy/indexes', { headers }),
-      fetch('/api/v1/admin/instances', { headers })
+    const [idxData, tokData, appsData, proxyData, insData] = await Promise.all([
+      getAdminIndexConfigs(),
+      getAdminAccessTokens(),
+      getAdminApps(),
+      getProxyIndexes(),
+      getAdminInstances()
     ])
 
-    if (resIdx.ok) indexConfigs.value = await resIdx.json()
-    if (resTok.ok) accessTokens.value = await resTok.json()
-    if (resApps.ok) apps.value = await resApps.json()
-    if (resIns.ok) instances.value = await resIns.json()
-    if (resActual.ok) {
-        const body = await resActual.json()
-        if (body && body.results) {
-          availableIndexes.value = body.results.map((r: any) => r.uid)
-        }
+    indexConfigs.value = idxData as any[]
+    accessTokens.value = tokData as any[]
+    apps.value = appsData as any[]
+    instances.value = insData as any[]
+    if (proxyData.results) {
+      availableIndexes.value = proxyData.results.map(r => r.uid)
     }
   } catch (e) {
     console.error('Admin Data Load Error:', e)
@@ -358,26 +368,16 @@ async function handleSaveInstance() {
 
 async function createInstance() {
   if (!newInstance.value.name || !newInstance.value.host) return alert('请填入名称和地址')
-  const token = localStorage.getItem('authToken')
-  const res = await fetch(`/api/v1/admin/instances`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(newInstance.value)
-  })
-  if (res.ok) {
+  const ok = await createAdminInstance(newInstance.value)
+  if (ok) {
       cancelInstanceEdit()
       loadAdminData()
   }
 }
 
 async function updateInstance() {
-  const token = localStorage.getItem('authToken')
-  const res = await fetch(`/api/v1/admin/instances`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: editingInstanceId.value, ...newInstance.value })
-  })
-  if (res.ok) {
+  const ok = await updateAdminInstance({ id: editingInstanceId.value, ...newInstance.value })
+  if (ok) {
       cancelInstanceEdit()
       loadAdminData()
   }
@@ -397,11 +397,7 @@ function cancelInstanceEdit() {
 
 async function deleteInstance(id: number) {
    if(!confirm('确定删除该实例配置？')) return
-   const token = localStorage.getItem('authToken')
-   await fetch(`/api/v1/admin/instances/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-   })
+   await deleteAdminInstance(id)
    loadAdminData()
 }
 
@@ -433,12 +429,7 @@ function cancelIndexEdit() {
 }
 
 async function submitIndexConfig(payload: any) {
-    const token = localStorage.getItem('authToken')
-    await fetch(`/api/v1/admin/index_configs`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
+    await saveAdminIndexConfig(payload)
     loadAdminData()
 }
 
@@ -452,32 +443,22 @@ async function handleSaveToken() {
 
 async function createToken() {
   if (!newToken.value.token) return alert('请填入Token字符串')
-  const token = localStorage.getItem('authToken')
   const expiresAt = newToken.value.validDays 
     ? new Date(Date.now() + newToken.value.validDays * 24 * 60 * 60 * 1000).toISOString()
     : null
-  const res = await fetch(`/api/v1/admin/access_tokens`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newToken.value, allowIndexes: JSON.stringify(newToken.value.allowIndexes), expiresAt })
-  })
-  if (res.ok) {
+  const ok = await createAccessToken({ ...newToken.value, allowIndexes: JSON.stringify(newToken.value.allowIndexes), expiresAt })
+  if (ok) {
       cancelTokenEdit()
       loadAdminData()
   }
 }
 
 async function updateToken() {
-  const token = localStorage.getItem('authToken')
   const expiresAt = newToken.value.validDays 
     ? new Date(Date.now() + newToken.value.validDays * 24 * 60 * 60 * 1000).toISOString()
     : null
-  const res = await fetch(`/api/v1/admin/access_tokens`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: editingTokenId.value, ...newToken.value, allowIndexes: JSON.stringify(newToken.value.allowIndexes), expiresAt })
-  })
-  if (res.ok) {
+  const ok = await updateAccessToken({ id: editingTokenId.value, ...newToken.value, allowIndexes: JSON.stringify(newToken.value.allowIndexes), expiresAt })
+  if (ok) {
       cancelTokenEdit()
       loadAdminData()
   }
@@ -505,40 +486,25 @@ function cancelTokenEdit() {
 
 async function deleteIndex(uid: string) {
   if (!confirm(`确定要彻底删除索引 [${uid}] 吗？此操作将同时删除本地配置及 Meilisearch 中的原始数据，不可恢复！`)) return
-  const token = localStorage.getItem('authToken')
-  const res = await fetch(`/api/v1/admin/index_configs/${uid}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-  })
-  if (res.ok) {
-      loadAdminData()
-  }
+  await deleteAdminIndexConfig(uid)
+  loadAdminData()
 }
 
 async function deleteToken(id: number) {
    if(!confirm('确定吊销该令牌？')) return
-   const token = localStorage.getItem('authToken')
-   await fetch(`/api/v1/admin/access_tokens/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-   })
+   await deleteAccessToken(id)
    loadAdminData()
 }
 
 function editApp(app: any) {
   const newConfig = prompt('编辑 UI 配置 (JSON 格式):', app.uiConfig)
   if (newConfig !== null) {
-      updateApp(app.id, newConfig)
+      updateAppConfig(app.id, newConfig)
   }
 }
 
-async function updateApp(id: number, uiConfig: string) {
-  const token = localStorage.getItem('authToken')
-  await fetch(`/api/v1/admin/apps/${id}`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uiConfig })
-  })
+async function updateAppConfig(id: number, uiConfig: string) {
+  await updateApp(id, { uiConfig })
   loadAdminData()
 }
 
@@ -547,24 +513,15 @@ async function handleUpdatePassword() {
   if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) return alert('两次输入的密码不一致')
   if (passwordForm.value.newPassword.length < 6) return alert('密码长度至少为 6 位')
 
-  const token = localStorage.getItem('authToken')
   try {
-    const res = await fetch('/api/v1/admin/password', {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ newPassword: passwordForm.value.newPassword })
-    })
+    const ok = await updateAdminPassword(passwordForm.value.newPassword)
 
-    if (res.ok) {
+    if (ok) {
       alert('密码修改成功，请使用新密码重新登录')
       localStorage.removeItem('authToken')
       window.location.reload()
     } else {
-      const data = await res.json()
-      alert(data.error || '修改失败')
+      alert('修改失败')
     }
   } catch (e) {
     alert('请求网络异常')

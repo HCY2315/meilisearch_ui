@@ -126,7 +126,7 @@
           >
             💾 保存修改
           </button>
-          <button class="btn btn-primary btn-sm" @click="saveAllUISettingsToBackend">推送同步配置</button>
+          <button v-if="isAdmin" class="btn btn-primary btn-sm" @click="saveAllUISettingsToBackend">推送同步配置</button>
         </div>
         <div v-else class="results-actions">
            <!-- 普通用户只能选择视图 -->
@@ -142,12 +142,31 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { useConnectionStore } from '@/composables/useConnectionStore'
+import { useSearchStore } from '@/composables/useSearchStore'
+import { useUIStore } from '@/composables/useUIStore'
 import { useAppStore } from '@/composables/useApp'
 import { formatNumber, buildFilterExpression } from '@/utils'
 import * as storage from '@/services/storage'
+import { saveIndexConfig } from '@/services/api'
 import type { IndexInfo } from '@/types'
 
-const store = useAppStore()
+const connectionStore = useConnectionStore()
+const searchStore = useSearchStore()
+const uiStore = useUIStore()
+
+const appStore = useAppStore()
+const store: any = new Proxy({}, {
+  get(_target, prop: string) {
+    const p = prop as keyof typeof store
+    if (p in searchStore) return (searchStore as any)[p]
+    if (p in connectionStore) return (connectionStore as any)[p]
+    if (p in uiStore) return (uiStore as any)[p]
+    // Fallback to the original app store for any missing properties to preserve full compatibility
+    if (p in appStore) return (appStore as any)[p]
+    return undefined
+  }
+})
 
 const aiBadgeRef = ref<HTMLElement | null>(null)
 const aiDropdownRef = ref<HTMLElement | null>(null)
@@ -167,12 +186,14 @@ const dropdownStyle = computed(() => {
 })
 
 const userRole = ref('user')
+const isAdmin = ref(false)
 onMounted(() => {
   const authUserStr = localStorage.getItem('authUser')
   if (authUserStr) {
     try {
       const authUser = JSON.parse(authUserStr)
       userRole.value = authUser.role || 'user'
+      isAdmin.value = authUser.role === 'admin'
     } catch {}
   }
   document.addEventListener('click', onDocumentClick)
@@ -184,7 +205,6 @@ async function saveAllUISettingsToBackend() {
 
   const currentIdx = store.indexes.find((i: IndexInfo) => i.uid === store.currentIndex)
 
-  // 整理数据
   const payload = {
     uid: store.currentIndex,
     alias: currentIdx?.displayName || store.currentIndex,
@@ -200,14 +220,10 @@ async function saveAllUISettingsToBackend() {
   }
 
   try {
-     const res = await fetch('/api/v1/admin/index_configs', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-     })
+     const res = await saveIndexConfig(payload)
      if(res.ok) alert('前台视图/列配置已同步至后端，永久保存成功！')
      else alert('同步失败：' + res.status)
-  } catch (e) {
+  } catch {
      alert('请求发生错误')
   }
 }

@@ -109,6 +109,7 @@ import Modals from '@/components/Modals.vue'
 import FilterDrawer from '@/components/FilterDrawer.vue'
 import AssetManagement from '@/components/AssetManagement.vue'
 import AdminPanel from '@/components/AdminPanel.vue'
+import { getAppConfig } from '@/services/api'
 
 const store = useAppStore()
 const router = useRouter()
@@ -152,18 +153,12 @@ onMounted(async () => {
     } catch {}
   }
 
-  const token = localStorage.getItem('authToken')
   try {
-    const res = await fetch('/api/v1/app/config', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-    if (res.ok) {
-      const data = await res.json()
+    const data = await getAppConfig()
+    if (data) {
       if (data.uiConfig) {
         try {
-          uiConfig.value = JSON.parse(data.uiConfig)
+          uiConfig.value = typeof data.uiConfig === 'string' ? JSON.parse(data.uiConfig) : data.uiConfig
           if (uiConfig.value.theme) {
             theme.value = uiConfig.value.theme
             document.documentElement.setAttribute('data-theme', theme.value)
@@ -171,9 +166,9 @@ onMounted(async () => {
         } catch {}
       }
       
-      if (data.meili && data.meili.host) {
-        store.hostInput = data.meili.host
-        store.apiKeyInput = lockToken.value || token || ''
+      if (data.meili && (data.meili as any).host) {
+        store.hostInput = (data.meili as any).host
+        store.apiKeyInput = lockToken.value || localStorage.getItem('authToken') || ''
         await store.connect()
       }
     }

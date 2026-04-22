@@ -60,21 +60,52 @@
 
         <!-- ── 字段配置面板（可折叠） ── -->
         <Transition name="config-panel">
-          <div v-if="configOpen && allConfigFields.length > 0 && isAdmin" class="config-panel">
-            <div class="config-panel-hd">
-              <div class="config-panel-title-wrap">
-                <span class="config-panel-title">字段配置</span>
-                <span class="config-panel-desc">修改后点击保存才会同步到后端</span>
-              </div>
-              <button
-                class="btn-save-config"
-                :disabled="!hasPendingSave"
-                @click="saveConfig"
-              >
-                保存配置
-              </button>
+          <div v-if="configOpen && allConfigFields.length > 0" class="config-panel">
+            <div class="config-panel-tabs">
+              <button :class="{ active: configTab === 'visibility' }" @click="configTab = 'visibility'">字段配置</button>
+              <button :class="{ active: configTab === 'order' }" @click="configTab = 'order'">字段排序</button>
             </div>
-            <div class="config-list">
+            
+            <!-- 字段排序面板 -->
+            <div v-if="configTab === 'order'" class="order-panel">
+              <div class="order-panel-hd">
+                <span class="order-hint">拖拽调整顺序，仅管理员可保存到后端</span>
+                <button v-if="isAdmin" class="btn-save-order" :disabled="!hasOrderChange" @click="saveFieldOrder">
+                  保存顺序
+                </button>
+              </div>
+              <div class="order-list">
+                <div
+                  v-for="(field, idx) in fieldOrder"
+                  :key="field"
+                  class="order-row"
+                  draggable="true"
+                  @dragstart="onDragStart(idx)"
+                  @dragover="onDragOver($event, idx)"
+                  @dragend="onDragEnd"
+                >
+                  <span class="drag-handle">⋮⋮</span>
+                  <span class="order-field-name">{{ field }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 可见性/别名配置面板 -->
+            <div v-else class="config-list">
+              <div class="config-panel-hd">
+                <div class="config-panel-title-wrap">
+                  <span class="config-panel-title">字段配置</span>
+                  <span class="config-panel-desc">修改后点击保存才会同步到后端</span>
+                </div>
+                <button
+                  v-if="isAdmin"
+                  class="btn-save-config"
+                  :disabled="!hasPendingSave"
+                  @click="saveConfig"
+                >
+                  保存配置
+                </button>
+              </div>
               <div
                 v-for="field in allConfigFields"
                 :key="field"
@@ -224,6 +255,12 @@ const configOpen = ref(false)
 const hasPendingSave = ref(false)
 const draftConfigs = ref<Record<string, Record<string, NestedFieldConfigItem>>>({})
 
+// 抽屉字段顺序
+const fieldOrder = ref<string[]>([])
+const hasOrderChange = ref(false)
+const draggedIndex = ref<number | null>(null)
+const configTab = ref<'visibility' | 'order'>('visibility')
+
 // 当抽屉打开时，重置导航栈到初始层并加载对应的字段配置
 watch(
   () => [props.modelValue, props.initialData, props.initialLabel] as const,
@@ -288,7 +325,42 @@ async function saveConfig() {
 // 导航路径变化时自动切换配置
 watch(currentPathLabel, () => {
   loadConfig()
+  loadFieldOrder()
 })
+
+function loadFieldOrder() {
+  const saved = store.drawerFieldOrder
+  if (saved && saved.length > 0) {
+    fieldOrder.value = [...saved]
+  } else {
+    fieldOrder.value = [...allConfigFields]
+  }
+}
+
+function onDragStart(index: number) {
+  draggedIndex.value = index
+}
+
+function onDragOver(e: DragEvent, index: number) {
+  e.preventDefault()
+  if (draggedIndex.value === null || draggedIndex.value === index) return
+  const items = [...fieldOrder.value]
+  const item = items[draggedIndex.value]
+  items.splice(draggedIndex.value, 1)
+  items.splice(index, 0, item)
+  fieldOrder.value = items
+  draggedIndex.value = index
+  hasOrderChange.value = true
+}
+
+function onDragEnd() {
+  draggedIndex.value = null
+}
+
+async function saveFieldOrder() {
+  await store.saveDrawerFieldOrder()
+  store.pushToast('抽屉字段顺序已保存', 'success')
+}
 
 // ─── 字段配置 API ─────────────────────────────────────────────────────────────
 

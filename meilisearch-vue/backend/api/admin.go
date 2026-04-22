@@ -256,3 +256,29 @@ func HandleSaveNestedFieldConfigs(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"uid": req.Uid, "nestedFieldConfigs": req.NestedFieldConfigs})
 }
+
+type DrawerFieldOrderRequest struct {
+	Uid              string `json:"uid" binding:"required"`
+	DrawerFieldOrder string `json:"drawerFieldOrder" binding:"required"`
+}
+
+func HandleSaveDrawerFieldOrder(c *gin.Context) {
+	var req DrawerFieldOrderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	var config model.IndexConfig
+	if err := repository.DB.Where("uid = ?", req.Uid).First(&config).Error; err != nil {
+		config = model.IndexConfig{
+			Uid:              req.Uid,
+			DrawerFieldOrder: req.DrawerFieldOrder,
+		}
+		repository.DB.Create(&config)
+	} else {
+		repository.DB.Model(&config).Update("drawer_field_order", req.DrawerFieldOrder)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"uid": req.Uid, "drawerFieldOrder": req.DrawerFieldOrder})
+}
