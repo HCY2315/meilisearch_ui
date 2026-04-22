@@ -329,11 +329,35 @@ watch(currentPathLabel, () => {
 })
 
 function loadFieldOrder() {
+  const fields = allConfigFields.value
+  if (!fields || fields.length === 0) {
+    fieldOrder.value = []
+    return
+  }
   const saved = store.drawerFieldOrder
   if (saved && saved.length > 0) {
     fieldOrder.value = [...saved]
+  } else if (!props.isAdmin) {
+    const localKey = `drawerFieldOrder:${store.currentIndex}`
+    const localStored = localStorage.getItem(localKey)
+    if (localStored) {
+      try {
+        fieldOrder.value = JSON.parse(localStored)
+      } catch {
+        fieldOrder.value = [...fields]
+      }
+    } else {
+      fieldOrder.value = [...fields]
+    }
   } else {
-    fieldOrder.value = [...allConfigFields]
+    fieldOrder.value = [...fields]
+  }
+}
+
+function saveFieldOrderLocal() {
+  if (!props.isAdmin) {
+    const localKey = `drawerFieldOrder:${store.currentIndex}`
+    localStorage.setItem(localKey, JSON.stringify(fieldOrder.value))
   }
 }
 
@@ -354,6 +378,9 @@ function onDragOver(e: DragEvent, index: number) {
 }
 
 function onDragEnd() {
+  if (!props.isAdmin && hasOrderChange.value) {
+    saveFieldOrderLocal()
+  }
   draggedIndex.value = null
 }
 
@@ -433,14 +460,24 @@ const allConfigFields = computed<string[]>(() => {
   return objectEntries.value.map(([k]) => k)
 })
 
-// 过滤掉被隐藏字段后的可见列（用于实际渲染）
-const visibleArrayColumns = computed(() =>
-  arrayColumns.value.filter(col => isFieldVisible(col))
-)
+// 过滤掉被隐藏字段后的可见列（用于实际渲染），按 fieldOrder 排序
+const visibleArrayColumns = computed(() => {
+  const ordered = fieldOrder.value.length > 0 ? fieldOrder.value : arrayColumns.value
+  return ordered.filter(col => isFieldVisible(col))
+})
 
-const visibleObjectEntries = computed(() =>
-  objectEntries.value.filter(([k]) => isFieldVisible(k))
-)
+const visibleObjectEntries = computed(() => {
+  const orderedFields = fieldOrder.value.length > 0 ? fieldOrder.value : objectEntries.value.map(([k]) => k)
+  const filtered = objectEntries.value.filter(([k]) => isFieldVisible(k))
+  return filtered.sort((a, b) => {
+    const idxA = orderedFields.indexOf(a[0])
+    const idxB = orderedFields.indexOf(b[0])
+    if (idxA === -1 && idxB === -1) return 0
+    if (idxA === -1) return 1
+    if (idxB === -1) return -1
+    return idxA - idxB
+  })
+})
 
 // 隐藏字段数量，用于提示
 const hiddenCount = computed(() =>
