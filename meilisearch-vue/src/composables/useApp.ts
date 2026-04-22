@@ -377,17 +377,17 @@ export const useAppStore = defineStore('app', () => {
         if (idxMeta.canEdit !== undefined) {
           editLocked.value = !idxMeta.canEdit
         }
-        // 5. 抽屉字段顺序
+        // 5. 抽屉字段顺序（每层独立）
         if (idxMeta.drawerFieldOrder) {
           try {
             const dfo = JSON.parse(idxMeta.drawerFieldOrder)
-            drawerFieldOrder.value = Array.isArray(dfo) ? dfo : []
+            drawerFieldOrder.value = (dfo && typeof dfo === 'object') ? dfo : {}
           } catch (e) {
             console.error('Parse drawerFieldOrder failed', e)
-            drawerFieldOrder.value = []
+            drawerFieldOrder.value = {}
           }
         } else {
-          drawerFieldOrder.value = []
+          drawerFieldOrder.value = {}
         }
       }
 
