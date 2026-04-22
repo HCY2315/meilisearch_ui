@@ -1159,7 +1159,7 @@ export const useAppStore = defineStore('app', () => {
     lastHits, lastResults, lastBaseColumns, tableSortField, tableSortDir,
     columnOrder, hiddenColumns, columnWidths, drawerFieldOrder, aiConfig, aiDropdownOpen,
     highlightEnabled, showRankingScore, cropLength, sortValue,
-    filtersDrawerOpen, columnConfigOpen, fieldConfigOpen, viewModalOpen, advancedSettingsOpen,
+    filtersDrawerOpen, columnConfigOpen: columnConfigOpen.value, fieldConfigOpen, viewModalOpen, advancedSettingsOpen,
     viewMode, viewNameInput, viewConfigs, exportDownloading, exportProgress,
     exportTotal, loading, toasts, resultModalOpen, resultDetail, editLocked,
     primaryKeyField, pendingEdits, imagePreviewEnabled, imagePreviewLinksOnly,

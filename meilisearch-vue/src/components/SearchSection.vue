@@ -240,7 +240,9 @@ function onAiBadgeClick() {
 }
 
 function openColumnConfig() {
+  console.log('openColumnConfig called', store.columnConfigOpen)
   store.columnConfigOpen = !store.columnConfigOpen
+  console.log('after toggle', store.columnConfigOpen)
 }
 
 function onAiToggle() {
