@@ -160,16 +160,21 @@
                 <tr v-for="(row, ri) in (currentData as Record<string, unknown>[])" :key="ri">
                   <td class="row-num">{{ ri + 1 }}</td>
                   <td v-for="col in visibleArrayColumns" :key="col">
-                    <template v-if="isNestedValue(row[col])">
-                      <span class="nested-badge-sm">{{ getNestedBadgeText(row[col]) }}</span>
-                      <button
-                        class="btn-drill"
-                        @click="push(`${currentPathLabel}[${ri}].${col}`, row[col])"
-                      >🔍</button>
-                    </template>
-                    <span v-else class="cell-text" :title="primitiveToStr(row[col])">
-                      {{ primitiveToStr(row[col]) }}
-                    </span>
+                    <div class="cell-with-preview">
+                      <template v-if="isNestedValue(row[col])">
+                        <span class="nested-badge-sm">{{ getNestedBadgeText(row[col]) }}</span>
+                        <button
+                          class="btn-drill"
+                          @click="push(`${currentPathLabel}[${ri}].${col}`, row[col])"
+                        >🔍</button>
+                      </template>
+                      <template v-else>
+                        <span class="cell-text" :title="primitiveToStr(row[col])">
+                          {{ primitiveToStr(row[col]) }}
+                        </span>
+                        <span class="btn-preview" @mouseenter="showPreview($event, col, row[col])" @mouseleave="hidePreview">🔎</span>
+                      </template>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -210,7 +215,10 @@
                     @click="push(`${currentPathLabel}.${key}`, val)"
                   >🔍 查看</button>
                 </template>
-                <span v-else :title="primitiveToStr(val)">{{ primitiveToStr(val) }}</span>
+                <template v-else>
+                  <span class="val-text" :title="primitiveToStr(val)">{{ primitiveToStr(val) }}</span>
+                  <span class="btn-preview" @mouseenter="showPreview($event, key, val)" @mouseleave="hidePreview">🔎</span>
+                </template>
               </span>
             </div>
           </div>
@@ -260,6 +268,9 @@ const fieldOrder = ref<string[]>([])
 const hasOrderChange = ref(false)
 const draggedIndex = ref<number | null>(null)
 const configTab = ref<'visibility' | 'order'>('visibility')
+
+// 字段预览
+const previewData = ref<{ x: number, y: number, field: string, value: unknown } | null>(null)
 
 // 当抽屉打开时，重置导航栈到初始层并加载对应的字段配置
 watch(
