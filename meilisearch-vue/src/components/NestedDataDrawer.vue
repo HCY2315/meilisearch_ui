@@ -455,6 +455,7 @@ function onDragEndConfig() {
 let hideTimer: ReturnType<typeof setTimeout> | null = null
 
 function showPreview(e: MouseEvent, field: string, value: unknown) {
+  console.log('[showPreview] mouseenter triggered, field:', field)
   if (hideTimer) clearTimeout(hideTimer)
   previewData.value = {
     x: e.clientX,
@@ -462,9 +463,11 @@ function showPreview(e: MouseEvent, field: string, value: unknown) {
     field: getFieldAlias(field) || field,
     value
   }
+  console.log('[showPreview] previewData.value:', previewData.value)
 }
 
 function hidePreview() {
+  console.log('[hidePreview] mouseleave triggered')
   hideTimer = setTimeout(() => {
     previewData.value = null
   }, 200)
