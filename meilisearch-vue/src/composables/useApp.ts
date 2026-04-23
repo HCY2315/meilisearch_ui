@@ -317,6 +317,7 @@ async function connect() {
       return
     }
 
+    console.log('[selectIndex] loading index:', uid)
     const idxMeta = indexes.value.find(i => i.uid === uid)
 
     loading.value = true
@@ -432,6 +433,7 @@ async function connect() {
         await loadPopularSearches()
       }
       pushToast(`已选择索引: ${uid}`, 'success')
+      console.log('[selectIndex] calling performSearch')
       await performSearch()
     } catch (e) {
       const errMsg = String(e)
