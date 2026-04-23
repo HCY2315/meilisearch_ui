@@ -148,18 +148,21 @@
                         >🔍</button>
                       </template>
                       <template v-else>
-                        <span 
-                          class="cell-text" 
-                          :title="primitiveToStr(row[col])"
-                        >
-                          {{ primitiveToStr(row[col]) }}
-                        </span>
+                        <!-- 对象/数组：只显示放大镜，悬停显示预览 -->
                         <span 
                           v-if="isObjectOrArray(row[col])"
                           class="btn-preview" 
                           @mouseenter="showPreview($event, col, row[col])" 
                           @mouseleave="hidePreview"
                         >🔎</span>
+                        <!-- 原始类型：显示值 -->
+                        <span 
+                          v-else
+                          class="cell-text" 
+                          :title="primitiveToStr(row[col])"
+                        >
+                          {{ primitiveToStr(row[col]) }}
+                        </span>
                       </template>
                     </div>
                   </td>
@@ -203,8 +206,10 @@
                   >🔍 查看</button>
                 </template>
                 <template v-else>
-                  <span class="val-text" :title="primitiveToStr(val)">{{ primitiveToStr(val) }}</span>
+                  <!-- 对象/数组：只显示放大镜，悬停显示预览 -->
                   <span v-if="isObjectOrArray(val)" class="btn-preview" @mouseenter="showPreview($event, key, val)" @mouseleave="hidePreview">🔎</span>
+                  <!-- 原始类型：显示值 -->
+                  <span v-else class="val-text" :title="primitiveToStr(val)">{{ primitiveToStr(val) }}</span>
                 </template>
               </span>
             </div>
@@ -238,9 +243,8 @@ function primitiveToStr(val: unknown): string {
 }
 
 function isObjectOrArray(val: unknown): boolean {
-  const result = val !== null && typeof val === 'object'
-  console.log('[isObjectOrArray] val:', val, 'result:', result)
-  return result
+  if (val !== null && typeof val === 'object') return true
+  return false
 }
 
 // ─── 类型定义 ─────────────────────────────────────────────────────────────────
@@ -470,7 +474,6 @@ function onDragEndConfig() {
 let hideTimer: ReturnType<typeof setTimeout> | null = null
 
 function showPreview(e: MouseEvent, field: string, value: unknown) {
-  console.log('[showPreview] mouseenter triggered, field:', field)
   if (hideTimer) clearTimeout(hideTimer)
   previewData.value = {
     x: e.clientX,
@@ -478,11 +481,9 @@ function showPreview(e: MouseEvent, field: string, value: unknown) {
     field: getFieldAlias(field) || field,
     value
   }
-  console.log('[showPreview] previewData.value:', previewData.value)
 }
 
 function hidePreview() {
-  console.log('[hidePreview] mouseleave triggered')
   hideTimer = setTimeout(() => {
     previewData.value = null
   }, 200)
