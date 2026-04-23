@@ -238,8 +238,9 @@ function primitiveToStr(val: unknown): string {
 }
 
 function isObjectOrArray(val: unknown): boolean {
-  if (val !== null && typeof val === 'object') return true
-  return false
+  const result = val !== null && typeof val === 'object'
+  console.log('[isObjectOrArray] val:', val, 'result:', result)
+  return result
 }
 
 // ─── 类型定义 ─────────────────────────────────────────────────────────────────
