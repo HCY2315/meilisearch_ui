@@ -220,7 +220,10 @@ function onViewFieldResizeStart(e: MouseEvent, colIdx: number) {
 }
 
 const sortedHits = computed(() => {
-  const hits = store.lastHits?.value ?? store.lastHits ?? []
+  const ref = store.lastHits
+  const raw = ref?.value ?? ref
+  console.log('[sortedHits] raw:', raw, 'type:', typeof raw)
+  const hits = Array.isArray(raw) ? raw : []
   if (!store.tableSortField || !store.visibleColumns.includes(store.tableSortField)) return hits
   return sortHits([...hits], store.tableSortField, store.tableSortDir)
 })
