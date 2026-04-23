@@ -1142,7 +1142,9 @@ function isObjectOrNumber(val: unknown): boolean {
 .order-field-name { font-size: 13px; color: var(--text-primary); }
 
 /* ─── 字段预览弹窗 ───────────────────────────────────────────────────────── */
-.cell-with-preview, .kv-val { display: flex; align-items: center; gap: 4px; }
+.cell-with-preview { display: flex; align-items: center; gap: 4px; }
+.cell-text { cursor: default; }
+.kv-val { display: flex; align-items: center; gap: 4px; }
 .btn-preview {
   cursor: pointer; font-size: 12px; opacity: 0; transition: opacity 0.2s;
 }
