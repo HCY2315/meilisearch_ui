@@ -231,7 +231,14 @@
 import { ref, computed, watch } from 'vue'
 import { useAppStore } from '@/composables/useApp'
 import type { NestedFieldConfigItem } from '@/types'
-import { isNestedValue, getNestedBadgeText } from '@/utils'
+import { isNestedValue, getNestedBadgeText, getCellValue } from '@/utils'
+
+const appStore = useAppStore()
+
+// 高级设置状态（从 appStore 获取）
+const imagePreviewEnabled = computed(() => appStore.imagePreviewEnabled)
+const imagePreviewLinksOnly = computed(() => appStore.imagePreviewLinksOnly)
+const imagePreviewSize = computed(() => appStore.imagePreviewSize)
 
 // ─── 辅助函数 ───────────────────────────────────────────────────────────────
 function primitiveToStr(val: unknown): string {
@@ -245,6 +252,25 @@ function primitiveToStr(val: unknown): string {
 function isObjectOrArray(val: unknown): boolean {
   if (val !== null && typeof val === 'object') return true
   return false
+}
+
+// 渲染单元格（支持缩略图模式）
+function renderCell(row: Record<string, unknown>, col: string) {
+  if (imagePreviewEnabled.value) {
+    // 构建临时的 hit 对象用于 getCellValue
+    const fakeHit = { ...row } as any
+    const cell = getCellValue(
+      fakeHit,
+      col,
+      false,  // highlightEnabled
+      imagePreviewEnabled.value,
+      imagePreviewLinksOnly.value,
+      imagePreviewSize.value
+    )
+    if (cell?.html) return cell.html
+  }
+  // 默认渲染
+  return primitiveToStr(row[col])
 }
 
 // ─── 类型定义 ─────────────────────────────────────────────────────────────────
