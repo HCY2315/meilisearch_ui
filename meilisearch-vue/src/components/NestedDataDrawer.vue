@@ -352,19 +352,10 @@ function loadFieldOrder() {
     return
   }
   const pathKey = normalizePath(currentPathLabel.value)
-  console.log('loadFieldOrder pathKey:', pathKey)
-  
-  const dfo = store.drawerFieldOrder
-  console.log('dfo:', dfo)
-  console.log('dfo type:', typeof dfo)
-  console.log('dfo.value:', (dfo as any).value)
-  console.log('Object.keys(dfo):', Object.keys(dfo))
-  
-  const dfoValue = (dfo as any).value || dfo
-  const saved = dfoValue?.[pathKey]
-  console.log('saved:', saved)
-  console.log('saved:', saved)
-  if (saved && saved.length > 0) {
+  // Drawer field order map 来自全局 store，按 pathKey 查找
+  const map = (store.drawerFieldOrder as any) || {}
+  const saved = map[pathKey] || []
+  if (Array.isArray(saved) && saved.length > 0) {
     fieldOrder.value = [...saved]
   } else if (!props.isAdmin) {
     const localKey = `drawerFieldOrder:${store.currentIndex}:${pathKey}`
