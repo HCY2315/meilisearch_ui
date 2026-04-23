@@ -317,10 +317,7 @@ async function connect() {
       return
     }
 
-    console.log('[selectIndex] loading index:', uid)
-    const idxMeta = indexes.value.find(i => i.uid === uid)
-
-    loading.value = true
+    console.log('idxMeta.drawerFieldOrder:', idxMeta.drawerFieldOrder)
     try {
       const data = await api.loadIndexData(getHost(), getApiKey(), uid)
       availableFields.value = data.availableFields
@@ -395,7 +392,9 @@ async function connect() {
           editLocked.value = !idxMeta.canEdit
         }
         // 5. 抽屉字段顺序（每层独立）
-        console.log('idxMeta.drawerFieldOrder:', idxMeta.drawerFieldOrder)
+const idxMeta = indexes.value.find(i => i.uid === uid)
+
+    loading.value = true
         console.log('idxMeta keys:', Object.keys(idxMeta))
         if (idxMeta.drawerFieldOrder) {
           try {
@@ -433,7 +432,6 @@ async function connect() {
         await loadPopularSearches()
       }
       pushToast(`已选择索引: ${uid}`, 'success')
-      console.log('[selectIndex] calling performSearch')
       await performSearch()
     } catch (e) {
       const errMsg = String(e)
@@ -495,11 +493,7 @@ async function connect() {
   }
 
   async function performSearch() {
-    if (!currentIndex.value) {
-      console.log('[performSearch] no currentIndex, skipping')
-      return
-    }
-    console.log('[performSearch] starting search for', currentIndex.value)
+    if (!currentIndex.value) return
     loading.value = true
     try {
       const params = buildSearchParams()
