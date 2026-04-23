@@ -61,57 +61,33 @@
         <!-- ── 字段配置面板（可折叠） ── -->
         <Transition name="config-panel">
           <div v-if="configOpen && allConfigFields.length > 0" class="config-panel">
-            <div class="config-panel-tabs">
-              <button :class="{ active: configTab === 'visibility' }" @click="configTab = 'visibility'">字段配置</button>
-              <button :class="{ active: configTab === 'order' }" @click="configTab = 'order'">字段排序</button>
+            <div class="config-panel-hd">
+              <div class="config-panel-title-wrap">
+                <span class="config-panel-title">字段配置</span>
+                <span class="config-panel-desc">显示/隐藏、别名、拖拽排序</span>
+              </div>
+              <button
+                v-if="isAdmin"
+                class="btn-save-config"
+                :disabled="!hasPendingSave && !hasOrderChange"
+                @click="saveAllConfig"
+              >
+                保存配置
+              </button>
             </div>
-            
-            <!-- 字段排序面板 -->
-            <div v-if="configTab === 'order'" class="order-panel">
-              <div class="order-panel-hd">
-                <span class="order-hint">拖拽调整顺序，仅管理员可保存到后端</span>
-                <button v-if="isAdmin" class="btn-save-order" :disabled="!hasOrderChange" @click="saveFieldOrder">
-                  保存顺序
-                </button>
-              </div>
-              <div class="order-list">
-                <div
-                  v-for="(field, idx) in fieldOrder"
-                  :key="field"
-                  class="order-row"
-                  draggable="true"
-                  @dragstart="onDragStart(idx)"
-                  @dragover="onDragOver($event, idx)"
-                  @dragend="onDragEnd"
-                >
-                  <span class="drag-handle">⋮⋮</span>
-                  <span class="order-field-name">{{ field }}</span>
-                </div>
-              </div>
-            </div>
-            
-            <!-- 可见性/别名配置面板 -->
-            <div v-else class="config-list">
-              <div class="config-panel-hd">
-                <div class="config-panel-title-wrap">
-                  <span class="config-panel-title">字段配置</span>
-                  <span class="config-panel-desc">修改后点击保存才会同步到后端</span>
-                </div>
-                <button
-                  v-if="isAdmin"
-                  class="btn-save-config"
-                  :disabled="!hasPendingSave"
-                  @click="saveConfig"
-                >
-                  保存配置
-                </button>
-              </div>
+            <div class="config-list">
               <div
-                v-for="field in allConfigFields"
+                v-for="field in sortedConfigFields"
                 :key="field"
                 class="config-row"
                 :class="{ 'is-hidden-row': !isFieldVisible(field) }"
+                draggable="true"
+                @dragstart="onDragStartConfig(sortedConfigFields.indexOf(field))"
+                @dragover="onDragOverConfig($event, sortedConfigFields.indexOf(field))"
+                @dragend="onDragEndConfig"
               >
+                <!-- 拖拽手柄 -->
+                <span class="drag-handle">⋮⋮</span>
                 <!-- 可见性切换 -->
                 <button
                   class="vis-btn"
@@ -122,7 +98,7 @@
                   <span v-if="isFieldVisible(field)">👁</span>
                   <span v-else>🙈</span>
                 </button>
-                <!-- 原始字段名 -->
+                <!-- 字段名 -->
                 <span class="config-field-name" :title="field">{{ field }}</span>
                 <span class="config-arrow">→</span>
                 <!-- 别名输入框 -->
@@ -278,13 +254,23 @@ const store = useAppStore()
 const stack = ref<NestedFrame[]>([])
 const configOpen = ref(false)
 const hasPendingSave = ref(false)
-const draftConfigs = ref<Record<string, Record<string, NestedFieldConfigItem>>>({})
+  const draftConfigs = ref<Record<string, Record<string, NestedFieldConfigItem>>>({})
 
-// 抽屉字段顺序
-const fieldOrder = ref<string[]>([])
-const hasOrderChange = ref(false)
-const draggedIndex = ref<number | null>(null)
-const configTab = ref<'visibility' | 'order'>('visibility')
+  // 抽屉字段顺序
+  const fieldOrder = ref<string[]>([])
+  const hasOrderChange = ref(false)
+  const draggedIndex = ref<number | null>(null)
+  
+  // 配置面板中的字段顺序（与 fieldOrder 同步）
+  const configOrder = ref<string[]>([])
+  const configDragIndex = ref<number | null>(null)
+
+  // 监听配置面板打开时，同步 fieldOrder 到 configOrder
+  watch(() => configOpen.value, (open) => {
+    if (open && fieldOrder.value.length > 0) {
+      configOrder.value = [...fieldOrder.value]
+    }
+  })
 
 // 字段预览
 const previewData = ref<{ x: number, y: number, field: string, value: unknown } | null>(null)
@@ -349,6 +335,25 @@ async function saveConfig() {
   draftConfigs.value = {}
   hasPendingSave.value = false
   store.pushToast('嵌套字段配置已保存', 'success')
+}
+
+async function saveAllConfig() {
+  // 保存字段配置（可见性+别名）
+  if (hasPendingSave.value) {
+    for (const [pathKey, cfg] of Object.entries(draftConfigs.value)) {
+      store.setNestedFieldConfig(pathKey, cfg)
+    }
+    await store.saveNestedFieldConfigs()
+    draftConfigs.value = {}
+    hasPendingSave.value = false
+  }
+  // 保存字段排序
+  if (hasOrderChange.value && props.isAdmin) {
+    await saveFieldOrder()
+  } else if (hasOrderChange.value && !props.isAdmin) {
+    saveFieldOrderLocal()
+  }
+  store.pushToast('字段配置已保存', 'success')
 }
 
 // 导航路径变化时自动切换配置
@@ -421,9 +426,36 @@ function onDragEnd() {
   draggedIndex.value = null
 }
 
+// 配置面板拖拽排序
+function onDragStartConfig(index: number) {
+  configDragIndex.value = index
+}
+
+function onDragOverConfig(e: DragEvent, index: number) {
+  e.preventDefault()
+  if (configDragIndex.value === null || configDragIndex.value === index) return
+  const items = [...configOrder.value]
+  const item = items[configDragIndex.value]
+  items.splice(configDragIndex.value, 1)
+  items.splice(index, 0, item)
+  configOrder.value = items
+  configDragIndex.value = index
+  hasOrderChange.value = true
+}
+
+function onDragEndConfig() {
+  // 更新 fieldOrder
+  fieldOrder.value = [...configOrder.value]
+  if (!props.isAdmin && hasOrderChange.value) {
+    saveFieldOrderLocal()
+  }
+  configDragIndex.value = null
+}
+
 let hideTimer: ReturnType<typeof setTimeout> | null = null
 
 function showPreview(e: MouseEvent, field: string, value: unknown) {
+  console.log('[showPreview] field:', field, 'value type:', typeof value)
   if (hideTimer) clearTimeout(hideTimer)
   previewData.value = {
     x: e.clientX,
@@ -431,9 +463,11 @@ function showPreview(e: MouseEvent, field: string, value: unknown) {
     field: getFieldAlias(field) || field,
     value
   }
+  console.log('[showPreview] previewData set:', previewData.value)
 }
 
 function hidePreview() {
+  console.log('[hidePreview] called')
   hideTimer = setTimeout(() => {
     previewData.value = null
   }, 200)
@@ -529,6 +563,26 @@ const allConfigFields = computed<string[]>(() => {
   if (isArrayOfObjects.value) return arrayColumns.value
   if (isPureArray.value) return []  // 纯数组无字段维度
   return objectEntries.value.map(([k]) => k)
+})
+
+// 配置面板中排序后的字段列表
+const sortedConfigFields = computed<string[]>(() => {
+  const order = configOpen.value && configOrder.value.length > 0 
+    ? configOrder.value 
+    : fieldOrder.value.length > 0 
+      ? fieldOrder.value 
+      : null
+  
+  if (!order) return allConfigFields.value
+  
+  const fields = [...allConfigFields.value]
+  return fields.sort((a, b) => {
+    const idxA = order.indexOf(a)
+    const idxB = order.indexOf(b)
+    if (idxA === -1) return 1
+    if (idxB === -1) return -1
+    return idxA - idxB
+  })
 })
 
 // 过滤掉被隐藏字段后的可见列（用于实际渲染），按 fieldOrder 排序
@@ -851,8 +905,16 @@ function isObjectOrNumber(val: unknown): boolean {
   padding: 5px 6px;
   border-radius: 6px;
   transition: background 0.1s;
+  cursor: grab;
 }
 .config-row:hover { background: rgba(255,255,255,0.03); }
+.config-row:active { cursor: grabbing; }
+
+.config-row .drag-handle {
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: grab;
+}
 
 .config-row.is-hidden-row {
   opacity: 0.45;
@@ -1146,10 +1208,8 @@ function isObjectOrNumber(val: unknown): boolean {
 .cell-text { cursor: default; }
 .kv-val { display: flex; align-items: center; gap: 4px; }
 .btn-preview {
-  cursor: pointer; font-size: 12px; opacity: 0; transition: opacity 0.2s;
+  cursor: pointer; font-size: 12px; opacity: 1; transition: opacity 0.2s;
 }
-.cell-with-preview:hover .btn-preview,
-.kv-val:hover .btn-preview { opacity: 1; }
 
 .preview-popup {
   position: fixed; z-index: 10000; max-width: 400px; max-height: 300px;

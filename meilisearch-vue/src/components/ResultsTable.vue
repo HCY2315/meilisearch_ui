@@ -1,13 +1,9 @@
 <template>
   <div class="results-wrapper">
     <!-- 空状态 -->
-    <div v-if="!store.lastResults?.value && !store.lastResults" class="empty-state">
+    <div v-if="!hasResults" class="empty-state">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <p>输入搜索关键词开始查询</p>
-    </div>
-    <div v-else-if="!(store.lastResults?.value?.hits ?? store.lastResults?.hits ?? []).length" class="empty-state">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <p>未找到匹配结果</p>
     </div>
     <div v-else class="results-content">
       <!-- 视图模式 -->
@@ -137,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useConnectionStore } from '@/composables/useConnectionStore'
 import { useSearchStore } from '@/composables/useSearchStore'
 import { useUIStore } from '@/composables/useUIStore'
@@ -173,6 +169,29 @@ const store: any = new Proxy({}, {
     if (p in appStore) { (appStore as any)[p] = value; return true }
     return false
   }
+})
+
+onMounted(() => {
+  console.log('[ResultsTable mounted] appStore.lastHits:', appStore.lastHits)
+})
+
+// Helper to get lastHits array properly
+const lastHitsData = computed(() => {
+  const hitsRef = (appStore as any).lastHits
+  return (hitsRef && typeof hitsRef === 'object' && 'value' in hitsRef) ? hitsRef.value : hitsRef
+})
+
+// Helper to get lastResults and check if it has hits
+const hasResults = computed(() => {
+  const res = (appStore as any).lastResults
+  const raw = (res && typeof res === 'object' && 'value' in res) ? res.value : res
+  return raw && raw.hits && raw.hits.length > 0
+})
+
+const sortedHits = computed(() => {
+  const arr = Array.isArray(lastHitsData.value) ? lastHitsData.value : []
+  if (!store.tableSortField || !store.visibleColumns.includes(store.tableSortField)) return arr
+  return sortHits([...arr], store.tableSortField, store.tableSortDir)
 })
 
 // 从 localStorage 获取用户角色
@@ -218,15 +237,6 @@ function onViewFieldResizeStart(e: MouseEvent, colIdx: number) {
   const currentWidth = store.viewLabelWidthsWorking[colIdx] ?? 140
   store.startViewFieldResize(colIdx, e.clientX, currentWidth, containerWidthPx)
 }
-
-const sortedHits = computed(() => {
-  const ref = store.lastHits
-  const raw = ref?.value ?? ref
-  console.log('[sortedHits] raw:', raw, 'type:', typeof raw)
-  const hits = Array.isArray(raw) ? raw : []
-  if (!store.tableSortField || !store.visibleColumns.includes(store.tableSortField)) return hits
-  return sortHits([...hits], store.tableSortField, store.tableSortDir)
-})
 
 const gridStyle = computed(() => {
   const activeCfg = store.activeViewConfig()
