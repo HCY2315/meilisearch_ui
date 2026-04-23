@@ -155,7 +155,7 @@
                           {{ primitiveToStr(row[col]) }}
                         </span>
                         <span 
-                          v-if="isObjectOrNumber(row[col])"
+                          v-if="isObjectOrArray(row[col])"
                           class="btn-preview" 
                           @mouseenter="showPreview($event, col, row[col])" 
                           @mouseleave="hidePreview"
@@ -635,8 +635,7 @@ function primitiveToStr(val: unknown): string {
   return JSON.stringify(val)
 }
 
-function isObjectOrNumber(val: unknown): boolean {
-  if (typeof val === 'number') return true
+function isObjectOrArray(val: unknown): boolean {
   if (val !== null && typeof val === 'object') return true
   return false
 }
