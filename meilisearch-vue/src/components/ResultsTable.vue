@@ -1,11 +1,11 @@
 <template>
   <div class="results-wrapper">
     <!-- 空状态 -->
-    <div v-if="!store.lastResults" class="empty-state">
+    <div v-if="!store.lastResults?.value && !store.lastResults" class="empty-state">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <p>输入搜索关键词开始查询</p>
     </div>
-    <div v-else-if="!(store.lastResults.hits && store.lastResults.hits.length)" class="empty-state">
+    <div v-else-if="!(store.lastResults?.value?.hits ?? store.lastResults?.hits ?? []).length" class="empty-state">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <p>未找到匹配结果</p>
     </div>
@@ -220,7 +220,7 @@ function onViewFieldResizeStart(e: MouseEvent, colIdx: number) {
 }
 
 const sortedHits = computed(() => {
-  const hits = store.lastHits ?? []
+  const hits = store.lastHits?.value ?? store.lastHits ?? []
   if (!store.tableSortField || !store.visibleColumns.includes(store.tableSortField)) return hits
   return sortHits([...hits], store.tableSortField, store.tableSortDir)
 })
