@@ -317,7 +317,7 @@ async function connect() {
       return
     }
 
-    console.log('idxMeta.drawerFieldOrder:', idxMeta.drawerFieldOrder)
+    const idxMeta = indexes.value.find(i => i.uid === uid)
     try {
       const data = await api.loadIndexData(getHost(), getApiKey(), uid)
       availableFields.value = data.availableFields
@@ -392,23 +392,16 @@ async function connect() {
           editLocked.value = !idxMeta.canEdit
         }
         // 5. 抽屉字段顺序（每层独立）
-const idxMeta = indexes.value.find(i => i.uid === uid)
-
-    loading.value = true
-        console.log('idxMeta keys:', Object.keys(idxMeta))
         if (idxMeta.drawerFieldOrder) {
           try {
             const dfo = JSON.parse(idxMeta.drawerFieldOrder)
-            console.log('parsed drawerFieldOrder:', dfo)
             drawerFieldOrder.value = (dfo && typeof dfo === 'object') ? dfo : {}
-            console.log('drawerFieldOrder.value after set:', drawerFieldOrder.value)
           } catch (e) {
             console.error('Parse drawerFieldOrder failed', e)
             drawerFieldOrder.value = {}
           }
         } else {
           drawerFieldOrder.value = {}
-          console.log('no drawerFieldOrder in idxMeta, set to {}')
         }
       }
 
