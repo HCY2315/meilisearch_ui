@@ -92,7 +92,7 @@
         <span class="results-count">找到 <strong>{{ formatNumber(store.resultsCount) }}</strong> 条结果</span>
         <div v-if="userRole === 'admin'" class="results-actions">
           <span>{{ store.processingTimeMs ? `耗时 ${store.processingTimeMs}ms` : '' }}</span>
-          <button class="btn btn-secondary btn-sm" @click="store.advancedSettingsOpen = true">⚙️ 高级设置</button>
+          <button class="btn btn-secondary btn-sm" @click="openAdvancedSettings">⚙️ 高级设置</button>
           <button class="btn btn-secondary btn-sm" @click="openColumnConfig">列设置</button>
           <button class="btn btn-secondary btn-sm" @click="store.openViewConfig()">视图设置</button>
           <button class="btn btn-secondary btn-sm" @click="store.exportCsv()" :disabled="store.exportDownloading">
@@ -210,6 +210,11 @@ onMounted(() => {
   }
   document.addEventListener('click', onDocumentClick)
 })
+
+function openAdvancedSettings() {
+  console.log('[高级设置] 点击了')
+  appStore.advancedSettingsOpen = true
+}
 
 async function saveAllUISettingsToBackend() {
   const token = localStorage.getItem('authToken')
