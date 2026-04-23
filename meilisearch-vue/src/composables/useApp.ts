@@ -281,7 +281,6 @@ async function connect() {
     try {
       const data = await api.connectIndexes(getHost(), getApiKey())
       indexes.value = data.indexes
-      console.log('[connect] indexes loaded:', data.indexes.length, 'currentIndex:', currentIndex.value)
       if (currentIndex.value && indexes.value.some(i => i.uid === currentIndex.value)) {
         await selectIndex(currentIndex.value)
       } else if (currentIndex.value) {
@@ -295,14 +294,15 @@ async function connect() {
     }
   }
 
-  // 监听 currentIndex 或 indexes 变化，自动加载索引数据
-  watch([currentIndex, indexes], async ([newIndex, idxList]) => {
-    console.log('[watch] currentIndex:', newIndex, 'indexes length:', idxList.length)
-    if (!newIndex || !idxList.length) return
-    const exists = idxList.some(i => i.uid === newIndex)
-    console.log('[watch] index exists:', exists)
+  // 监听 currentIndex 变化，自动加载索引数据
+  let isSelecting = false
+  watch(currentIndex, async (newIndex) => {
+    if (!newIndex || !indexes.value.length || isSelecting) return
+    const exists = indexes.value.some(i => i.uid === newIndex)
     if (exists) {
+      isSelecting = true
       await selectIndex(newIndex)
+      isSelecting = false
     } else {
       currentIndex.value = ''
     }
