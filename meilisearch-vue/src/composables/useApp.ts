@@ -384,12 +384,14 @@ export const useAppStore = defineStore('app', () => {
             const dfo = JSON.parse(idxMeta.drawerFieldOrder)
             console.log('parsed drawerFieldOrder:', dfo)
             drawerFieldOrder.value = (dfo && typeof dfo === 'object') ? dfo : {}
+            console.log('drawerFieldOrder.value after set:', drawerFieldOrder.value)
           } catch (e) {
             console.error('Parse drawerFieldOrder failed', e)
             drawerFieldOrder.value = {}
           }
         } else {
           drawerFieldOrder.value = {}
+          console.log('no drawerFieldOrder in idxMeta, set to {}')
         }
       }
 
