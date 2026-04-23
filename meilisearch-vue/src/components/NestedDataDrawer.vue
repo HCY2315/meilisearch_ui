@@ -155,14 +155,13 @@
                           @mouseenter="showPreview($event, col, row[col])" 
                           @mouseleave="hidePreview"
                         >🔎</span>
-                        <!-- 原始类型：显示值 -->
+                        <!-- 原始类型：显示值（支持缩略图） -->
                         <span 
                           v-else
-                          class="cell-text" 
+                          class="cell-text"
                           :title="primitiveToStr(row[col])"
-                        >
-                          {{ primitiveToStr(row[col]) }}
-                        </span>
+                          v-html="renderCell(row, col)"
+                        ></span>
                       </template>
                     </div>
                   </td>
