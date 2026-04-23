@@ -163,16 +163,28 @@
                     <div class="cell-with-preview">
                       <template v-if="isNestedValue(row[col])">
                         <span class="nested-badge-sm">{{ getNestedBadgeText(row[col]) }}</span>
+                        <span 
+                          class="nested-text" 
+                          @mouseenter="showPreview($event, col, row[col])" 
+                          @mouseleave="hidePreview"
+                        >
+                          {{ primitiveToStr(row[col]) }}
+                        </span>
                         <button
                           class="btn-drill"
                           @click="push(`${currentPathLabel}[${ri}].${col}`, row[col])"
                         >🔍</button>
                       </template>
                       <template v-else>
-                        <span class="cell-text" :title="primitiveToStr(row[col])">
+                        <span 
+                          class="cell-text" 
+                          :title="primitiveToStr(row[col])"
+                          @mouseenter="showPreview($event, col, row[col])" 
+                          @mouseleave="hidePreview"
+                        >
                           {{ primitiveToStr(row[col]) }}
                         </span>
-                        <span class="btn-preview" @mouseenter="showPreview($event, col, row[col])" @mouseleave="hidePreview">🔎</span>
+                        <button class="btn-drill" @click="push(`${currentPathLabel}[${ri}].${col}`, row[col])">🔍</button>
                       </template>
                     </div>
                   </td>
@@ -315,7 +327,8 @@ function loadConfig() {
 }
 
 function normalizePath(label: string): string {
-  return label.replace(/\[\d+\]/g, '[*]')
+  // 不替换数组索引，保持原始 key 匹配数据库配置
+  return label
 }
 
 function markDirtyAndSaveDraft(nextConfig: Record<string, NestedFieldConfigItem>) {
@@ -409,7 +422,10 @@ function onDragEnd() {
   draggedIndex.value = null
 }
 
+let hideTimer: ReturnType<typeof setTimeout> | null = null
+
 function showPreview(e: MouseEvent, field: string, value: unknown) {
+  if (hideTimer) clearTimeout(hideTimer)
   previewData.value = {
     x: e.clientX,
     y: e.clientY,
@@ -419,7 +435,9 @@ function showPreview(e: MouseEvent, field: string, value: unknown) {
 }
 
 function hidePreview() {
-  previewData.value = null
+  hideTimer = setTimeout(() => {
+    previewData.value = null
+  }, 200)
 }
 
 function formatPreviewValue(val: unknown): string {
@@ -1119,11 +1137,13 @@ function primitiveToStr(val: unknown): string {
 .order-field-name { font-size: 13px; color: var(--text-primary); }
 
 /* ─── 字段预览弹窗 ───────────────────────────────────────────────────────── */
-.btn-preview {
-  display: none; margin-left: 4px; cursor: pointer; font-size: 12px; opacity: 0.6;
-}
-.btn-preview:hover { opacity: 1; }
 .cell-with-preview, .kv-val { display: flex; align-items: center; gap: 4px; }
+.nested-text { cursor: default; }
+.cell-text { cursor: default; }
+.cell-text:hover ~ .btn-preview,
+.kv-val:hover > .btn-preview { opacity: 1; }
+
+.btn-preview { cursor: pointer; font-size: 12px; opacity: 0; transition: opacity 0.2s; }
 
 .preview-popup {
   position: fixed; z-index: 10000; max-width: 400px; max-height: 300px;

@@ -117,6 +117,7 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 	for _, conf := range configs {
 		configMap[conf.Uid] = conf
 	}
+	log.Printf("[DEBUG] configMap keys: %v", configMap)
 
 	// 1. 直连 Meilisearch 获取真实全部的 indexes
 	client := &http.Client{}
@@ -143,6 +144,8 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 		uid, _ := idx["uid"].(string)
 
 		dbConf, exists := configMap[uid]
+		log.Printf("[DEBUG] uid=%s exists=%v drawer=%q", uid, exists, dbConf.DrawerFieldOrder)
+		log.Printf("[DEBUG] uid=%s, exists=%v, drawerFieldOrder=%q", uid, exists, dbConf.DrawerFieldOrder)
 		isLocked := false
 		alias := uid
 		if exists {

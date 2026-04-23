@@ -283,6 +283,9 @@ export const useAppStore = defineStore('app', () => {
       indexes.value = data.indexes
       if (currentIndex.value && indexes.value.some(i => i.uid === currentIndex.value)) {
         await selectIndex(currentIndex.value)
+      } else if (currentIndex.value) {
+        // indexes 加载后如果 currentIndex 被设置但不在列表中，需要重新选择
+        currentIndex.value = ''
       }
       pushToast('连接成功！', 'success')
     } catch (e) {
@@ -291,6 +294,18 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+
+  // 监听 currentIndex 变化，自动加载索引数据
+  watch([currentIndex, indexes], async ([newIndex, idxList]) => {
+    if (newIndex && idxList.length > 0) {
+      const exists = idxList.some(i => i.uid === newIndex)
+      if (exists) {
+        await selectIndex(newIndex)
+      } else {
+        currentIndex.value = ''
+      }
+    }
+  }, { immediate: true })
 
   async function selectIndex(uid: string) {
     currentIndex.value = uid
@@ -379,6 +394,7 @@ export const useAppStore = defineStore('app', () => {
         }
         // 5. 抽屉字段顺序（每层独立）
         console.log('idxMeta.drawerFieldOrder:', idxMeta.drawerFieldOrder)
+        console.log('idxMeta keys:', Object.keys(idxMeta))
         if (idxMeta.drawerFieldOrder) {
           try {
             const dfo = JSON.parse(idxMeta.drawerFieldOrder)
@@ -417,7 +433,11 @@ export const useAppStore = defineStore('app', () => {
       pushToast(`已选择索引: ${uid}`, 'success')
       await performSearch()
     } catch (e) {
-      pushToast(`加载索引失败: ${e}`, 'error')
+      const errMsg = String(e)
+      // 资源受限时静默处理，不弹出错误 toast
+      if (!errMsg.includes('403') && !errMsg.includes('locked') && !errMsg.includes('Unauthorized')) {
+        pushToast(`加载索引失败: ${e}`, 'error')
+      }
     } finally {
       loading.value = false
     }

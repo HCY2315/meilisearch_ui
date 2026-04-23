@@ -47,7 +47,7 @@
         </div>
       </div>
       <button class="btn btn-primary" @click="store.performSearch()">搜索</button>
-      <button class="btn btn-secondary" @click="store.clearQuery()">清空</button>
+      <button class="btn btn-secondary" @click="handleClearQuery">清空</button>
     </div>
 
     <!-- 查询条件构建器 -->
@@ -75,13 +75,13 @@
             <option value="exists">存在</option>
           </select>
           <input class="form-control value-input" v-model="row.value" placeholder="值" @input="store.scheduleDebouncedSearch()" />
-          <button class="btn btn-icon" @click="store.removeQueryRow(row.id)" title="删除条件">×</button>
+          <button class="btn btn-icon" @click="handleRemoveQueryRow(row.id)" title="删除条件">×</button>
         </div>
       </div>
       <div class="query-actions">
         <button class="btn btn-secondary btn-sm" @click="store.addQueryRow()">➕ 添加查询条件</button>
         <button class="btn btn-primary btn-sm" @click="store.performSearch()">✅ 应用查询</button>
-        <button class="btn btn-secondary btn-sm" @click="store.clearQuery()">🗑️ 清空查询</button>
+        <button class="btn btn-secondary btn-sm" @click="handleClearQuery">🗑️ 清空查询</button>
       </div>
       <div class="filter-preview">当前过滤: {{ filterPreviewText }}</div>
     </div>
@@ -264,6 +264,14 @@ function onAiToggle() {
 function onAiWeightChange() {
   storage.saveAiConfig(store.aiConfig)
   store.performSearch()
+}
+
+function handleClearQuery() {
+  appStore.clearQuery()
+}
+
+function handleRemoveQueryRow(id: number) {
+  appStore.removeQueryRow(id)
 }
 
 function onDocumentClick(e: MouseEvent) {

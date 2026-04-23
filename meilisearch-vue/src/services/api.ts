@@ -69,7 +69,8 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
         viewConfigs: idx.viewConfigs,
         tableConfigs: idx.tableConfigs,
         nestedFieldConfigs: idx.nestedFieldConfigs,
-        canEdit: idx.canEdit
+        canEdit: idx.canEdit,
+        drawerFieldOrder: idx.drawerFieldOrder
       })
     } catch {
       results.push({ 
@@ -81,7 +82,8 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
         viewConfigs: idx.viewConfigs,
         tableConfigs: idx.tableConfigs,
         nestedFieldConfigs: idx.nestedFieldConfigs,
-        canEdit: idx.canEdit
+        canEdit: idx.canEdit,
+        drawerFieldOrder: idx.drawerFieldOrder
       })
     }
   }
