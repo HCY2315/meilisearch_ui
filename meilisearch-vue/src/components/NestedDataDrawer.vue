@@ -353,10 +353,16 @@ function loadFieldOrder() {
   }
   const pathKey = normalizePath(currentPathLabel.value)
   console.log('loadFieldOrder pathKey:', pathKey)
+  
   const dfo = store.drawerFieldOrder
-  const dfoValue = (dfo as any)?.value || dfo
-  console.log('dfoValue:', dfoValue)
+  console.log('dfo:', dfo)
+  console.log('dfo type:', typeof dfo)
+  console.log('dfo.value:', (dfo as any).value)
+  console.log('Object.keys(dfo):', Object.keys(dfo))
+  
+  const dfoValue = (dfo as any).value || dfo
   const saved = dfoValue?.[pathKey]
+  console.log('saved:', saved)
   console.log('saved:', saved)
   if (saved && saved.length > 0) {
     fieldOrder.value = [...saved]
