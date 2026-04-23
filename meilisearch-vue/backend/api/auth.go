@@ -173,21 +173,25 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 		idx["isUnlocked"] = isUnlocked
 		idx["displayName"] = alias
 
-		if exists {
-			idx["fieldConfigs"] = dbConf.FieldConfigs
-			idx["viewConfigs"] = dbConf.ViewConfigs
-			idx["tableConfigs"] = dbConf.TableConfigs
-			idx["canEdit"] = dbConf.CanEdit
-			idx["nestedFieldConfigs"] = dbConf.NestedFieldConfigs
-			idx["drawerFieldOrder"] = dbConf.DrawerFieldOrder
-		} else {
-			idx["fieldConfigs"] = ""
-			idx["viewConfigs"] = ""
-			idx["tableConfigs"] = ""
-			idx["canEdit"] = false
-			idx["nestedFieldConfigs"] = ""
-			idx["drawerFieldOrder"] = ""
-		}
+        if exists {
+            idx["fieldConfigs"] = dbConf.FieldConfigs
+            idx["viewConfigs"] = dbConf.ViewConfigs
+            idx["tableConfigs"] = dbConf.TableConfigs
+            idx["canEdit"] = dbConf.CanEdit
+            idx["nestedFieldConfigs"] = dbConf.NestedFieldConfigs
+            if dbConf.DrawerFieldOrder != "" {
+                idx["drawerFieldOrder"] = dbConf.DrawerFieldOrder
+            } else {
+                idx["drawerFieldOrder"] = "{}"
+            }
+        } else {
+            idx["fieldConfigs"] = ""
+            idx["viewConfigs"] = ""
+            idx["tableConfigs"] = ""
+            idx["canEdit"] = false
+            idx["nestedFieldConfigs"] = ""
+            idx["drawerFieldOrder"] = "{}"
+        }
 
 		enhancedResults = append(enhancedResults, idx)
 	}
