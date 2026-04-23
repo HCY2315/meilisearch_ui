@@ -86,11 +86,11 @@
       <div class="filter-preview">当前过滤: {{ filterPreviewText }}</div>
     </div>
 
-    <!-- 结果面板 -->
+<!-- 结果面板 -->
     <div v-if="store.lastResults" class="results-panel">
       <div class="results-stats">
         <span class="results-count">找到 <strong>{{ formatNumber(store.resultsCount) }}</strong> 条结果</span>
-        <div class="results-actions">
+        <div v-if="userRole === 'admin'" class="results-actions">
           <span>{{ store.processingTimeMs ? `耗时 ${store.processingTimeMs}ms` : '' }}</span>
           <button class="btn btn-secondary btn-sm" @click="store.advancedSettingsOpen = true">⚙️ 高级设置</button>
           <button class="btn btn-secondary btn-sm" @click="openColumnConfig">列设置</button>
@@ -98,7 +98,7 @@
           <button class="btn btn-secondary btn-sm" @click="store.exportCsv()" :disabled="store.exportDownloading">
             {{ store.exportDownloading ? `📥 导出 ${store.exportProgress}/${store.exportTotal}` : '📥 导出 CSV' }}
           </button>
-<select class="form-control" style="min-width: 120px; padding: 6px 10px;" v-model="store.viewMode">
+          <select class="form-control" style="min-width: 120px; padding: 6px 10px;" v-model="store.viewMode">
             <option value="table">表格</option>
             <option v-for="cfg in store.viewConfigs" :key="cfg.name" :value="cfg.name">{{ cfg.name }}</option>
           </select>
@@ -127,6 +127,13 @@
             💾 保存修改
           </button>
           <button v-if="isAdmin" class="btn btn-primary btn-sm" @click="saveAllUISettingsToBackend">推送同步配置</button>
+        </div>
+        <div v-else class="results-actions">
+          <!-- 普通用户只能选择视图 -->
+          <select class="form-control" style="min-width: 120px; padding: 6px 10px;" v-model="store.viewMode">
+            <option value="table">表格</option>
+            <option v-for="cfg in store.viewConfigs" :key="cfg.name" :value="cfg.name">{{ cfg.name }}</option>
+          </select>
         </div>
       </div>
     </div>
