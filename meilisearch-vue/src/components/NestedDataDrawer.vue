@@ -228,6 +228,20 @@ import { useAppStore } from '@/composables/useApp'
 import type { NestedFieldConfigItem } from '@/types'
 import { isNestedValue, getNestedBadgeText } from '@/utils'
 
+// ─── 辅助函数 ───────────────────────────────────────────────────────────────
+function primitiveToStr(val: unknown): string {
+  if (val === null) return 'null'
+  if (val === undefined) return ''
+  if (typeof val === 'string') return val
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val)
+  return JSON.stringify(val)
+}
+
+function isObjectOrArray(val: unknown): boolean {
+  if (val !== null && typeof val === 'object') return true
+  return false
+}
+
 // ─── 类型定义 ─────────────────────────────────────────────────────────────────
 
 interface NestedFrame {
@@ -623,21 +637,6 @@ function jumpTo(index: number) {
 
 function handleClose() {
   emit('update:modelValue', false)
-}
-
-// ─── 原始值渲染 ───────────────────────────────────────────────────────────────
-
-function primitiveToStr(val: unknown): string {
-  if (val === null) return 'null'
-  if (val === undefined) return ''
-  if (typeof val === 'string') return val
-  if (typeof val === 'number' || typeof val === 'boolean') return String(val)
-  return JSON.stringify(val)
-}
-
-function isObjectOrArray(val: unknown): boolean {
-  if (val !== null && typeof val === 'object') return true
-  return false
 }
 </script>
 
