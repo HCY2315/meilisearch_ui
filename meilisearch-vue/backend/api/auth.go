@@ -179,12 +179,14 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 			idx["tableConfigs"] = dbConf.TableConfigs
 			idx["canEdit"] = dbConf.CanEdit
 			idx["nestedFieldConfigs"] = dbConf.NestedFieldConfigs
+			idx["drawerFieldOrder"] = dbConf.DrawerFieldOrder
 		} else {
 			idx["fieldConfigs"] = ""
 			idx["viewConfigs"] = ""
 			idx["tableConfigs"] = ""
 			idx["canEdit"] = false
 			idx["nestedFieldConfigs"] = ""
+			idx["drawerFieldOrder"] = ""
 		}
 
 		enhancedResults = append(enhancedResults, idx)

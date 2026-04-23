@@ -378,9 +378,11 @@ export const useAppStore = defineStore('app', () => {
           editLocked.value = !idxMeta.canEdit
         }
         // 5. 抽屉字段顺序（每层独立）
+        console.log('idxMeta.drawerFieldOrder:', idxMeta.drawerFieldOrder)
         if (idxMeta.drawerFieldOrder) {
           try {
             const dfo = JSON.parse(idxMeta.drawerFieldOrder)
+            console.log('parsed drawerFieldOrder:', dfo)
             drawerFieldOrder.value = (dfo && typeof dfo === 'object') ? dfo : {}
           } catch (e) {
             console.error('Parse drawerFieldOrder failed', e)
@@ -1159,7 +1161,7 @@ export const useAppStore = defineStore('app', () => {
     lastHits, lastResults, lastBaseColumns, tableSortField, tableSortDir,
     columnOrder, hiddenColumns, columnWidths, drawerFieldOrder, aiConfig, aiDropdownOpen,
     highlightEnabled, showRankingScore, cropLength, sortValue,
-    filtersDrawerOpen, columnConfigOpen: columnConfigOpen.value, fieldConfigOpen, viewModalOpen, advancedSettingsOpen,
+    filtersDrawerOpen, columnConfigOpen, fieldConfigOpen, viewModalOpen, advancedSettingsOpen,
     viewMode, viewNameInput, viewConfigs, exportDownloading, exportProgress,
     exportTotal, loading, toasts, resultModalOpen, resultDetail, editLocked,
     primaryKeyField, pendingEdits, imagePreviewEnabled, imagePreviewLinksOnly,

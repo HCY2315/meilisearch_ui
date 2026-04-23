@@ -352,7 +352,12 @@ function loadFieldOrder() {
     return
   }
   const pathKey = normalizePath(currentPathLabel.value)
-  const saved = store.drawerFieldOrder[pathKey]
+  console.log('loadFieldOrder pathKey:', pathKey)
+  const dfo = store.drawerFieldOrder
+  const dfoValue = (dfo as any)?.value || dfo
+  console.log('dfoValue:', dfoValue)
+  const saved = dfoValue?.[pathKey]
+  console.log('saved:', saved)
   if (saved && saved.length > 0) {
     fieldOrder.value = [...saved]
   } else if (!props.isAdmin) {

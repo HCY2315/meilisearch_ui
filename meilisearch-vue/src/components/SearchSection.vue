@@ -252,7 +252,8 @@ function onAiBadgeClick() {
 }
 
 function openColumnConfig() {
-  store.columnConfigOpen = !store.columnConfigOpen
+  appStore.columnConfigOpen = !appStore.columnConfigOpen
+  console.log('appStore.columnConfigOpen:', appStore.columnConfigOpen)
 }
 
 function onAiToggle() {
