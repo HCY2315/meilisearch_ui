@@ -90,7 +90,7 @@
     <div v-if="store.lastResults" class="results-panel">
       <div class="results-stats">
         <span class="results-count">找到 <strong>{{ formatNumber(store.resultsCount) }}</strong> 条结果</span>
-        <div v-if="userRole === 'admin'" class="results-actions">
+        <div class="results-actions">
           <span>{{ store.processingTimeMs ? `耗时 ${store.processingTimeMs}ms` : '' }}</span>
           <button class="btn btn-secondary btn-sm" @click="openAdvancedSettings">⚙️ 高级设置</button>
           <button class="btn btn-secondary btn-sm" @click="openColumnConfig">列设置</button>

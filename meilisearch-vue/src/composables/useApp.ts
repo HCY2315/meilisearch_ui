@@ -111,9 +111,9 @@ export const useAppStore = defineStore('app', () => {
   const primaryKeyField = ref('id')
   const pendingEdits = ref<Record<string, Record<string, unknown>>>({})
 
-  const imagePreviewEnabled = ref(storage.loadImagePreviewEnabled())
-  const imagePreviewLinksOnly = ref(storage.loadImagePreviewLinksOnly())
-  const imagePreviewSize = ref(storage.loadImagePreviewSize())
+  const imagePreviewEnabled = ref(true)
+  const imagePreviewLinksOnly = ref(true)
+  const imagePreviewSize = ref(100)
 
   const currentTab = ref<CurrentTab>('search')
   const assetForm = ref<DeviceAsset>({ id: generateUUID(), name: '', brand: '', model: '' })
