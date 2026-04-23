@@ -204,7 +204,7 @@
                 </template>
                 <template v-else>
                   <span class="val-text" :title="primitiveToStr(val)">{{ primitiveToStr(val) }}</span>
-                  <span v-if="isObjectOrNumber(val)" class="btn-preview" @mouseenter="showPreview($event, key, val)" @mouseleave="hidePreview">🔎</span>
+                  <span v-if="isObjectOrArray(val)" class="btn-preview" @mouseenter="showPreview($event, key, val)" @mouseleave="hidePreview">🔎</span>
                 </template>
               </span>
             </div>
