@@ -486,14 +486,21 @@ async function connect() {
   }
 
   async function performSearch() {
-    if (!currentIndex.value) return
+    if (!currentIndex.value) {
+      console.log('[performSearch] no currentIndex, skip')
+      return
+    }
+    console.log('[performSearch]', currentIndex.value, 'loading:', loading.value)
     loading.value = true
     try {
       const params = buildSearchParams()
-      let res = await api.performSearch(getHost(), getApiKey(), currentIndex.value, searchInput.value.trim(), params)
+      console.log('[performSearch] params:', params)
+      const res = await api.performSearch(getHost(), getApiKey(), currentIndex.value, searchInput.value.trim(), params)
       if (searchInput.value.trim()) addToHistory(searchInput.value.trim())
+      console.log('[performSearch] result hits:', res.hits?.length)
       lastHits.value = res.hits ?? []
       lastResults.value = { ...res, hits: res.hits ?? [] }
+      console.log('[performSearch] lastHits set to:', lastHits.value.length)
       applyResultsColumns(res)
       updateStats(res)
       updateFacetsFromResponse(res)
