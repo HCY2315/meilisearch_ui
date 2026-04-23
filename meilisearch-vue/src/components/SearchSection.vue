@@ -128,13 +128,6 @@
           </button>
           <button v-if="isAdmin" class="btn btn-primary btn-sm" @click="saveAllUISettingsToBackend">推送同步配置</button>
         </div>
-        <div v-else class="results-actions">
-          <!-- 普通用户只能选择视图 -->
-          <select class="form-control" style="min-width: 120px; padding: 6px 10px;" v-model="store.viewMode">
-            <option value="table">表格</option>
-            <option v-for="cfg in store.viewConfigs" :key="cfg.name" :value="cfg.name">{{ cfg.name }}</option>
-          </select>
-        </div>
       </div>
     </div>
   </div>
