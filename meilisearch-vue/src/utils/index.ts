@@ -369,3 +369,33 @@ export function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: numb
     timer = setTimeout(() => fn(...args), ms)
   }
 }
+
+/**
+ * 判断字段值是否需要"嵌套查看"按钮。
+ * 满足以下任一条件即为嵌套类型：
+ *   - 值本身是非 null 的普通对象
+ *   - 值是数组且第一个元素是对象（对象数组）
+ */
+export function isNestedValue(val: unknown): boolean {
+  if (val === null || val === undefined) return false
+  // 单个对象
+  if (typeof val === 'object' && !Array.isArray(val)) return true
+  // 对象数组：至少第一个元素是非 null 对象
+  if (Array.isArray(val) && val.length > 0 && val[0] !== null && typeof val[0] === 'object') return true
+  return false
+}
+
+/**
+ * 根据嵌套值的类型生成简短的徽章描述文字，用于主表格单元格展示。
+ * 例如：对象数组显示「数组 · 3条」，单个对象显示「对象 · 4个字段」。
+ */
+export function getNestedBadgeText(val: unknown): string {
+  if (Array.isArray(val)) {
+    return `数组 · ${val.length} 条`
+  }
+  if (val !== null && typeof val === 'object') {
+    const count = Object.keys(val as object).length
+    return `对象 · ${count} 个字段`
+  }
+  return ''
+}

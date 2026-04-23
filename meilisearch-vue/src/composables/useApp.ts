@@ -16,6 +16,8 @@ import type {
   ViewConfig,
   FieldConfigItem,
   CurrentTab,
+  NestedFieldConfigsMap,
+  NestedFieldConfigItem,
 } from '@/types'
 import * as api from '@/services/api'
 import * as storage from '@/services/storage'
@@ -76,6 +78,7 @@ export const useAppStore = defineStore('app', () => {
   const columnOrder = ref<string[]>([])
   const hiddenColumns = ref<string[]>([])
   const columnWidths = ref<Record<string, number>>({})
+  const drawerFieldOrder = ref<Record<string, string[]>>({})
 
   const aiConfig = ref<AiConfig>(storage.loadAiConfig())
   const aiDropdownOpen = ref(false)
@@ -108,9 +111,9 @@ export const useAppStore = defineStore('app', () => {
   const primaryKeyField = ref('id')
   const pendingEdits = ref<Record<string, Record<string, unknown>>>({})
 
-  const imagePreviewEnabled = ref(storage.loadImagePreviewEnabled())
-  const imagePreviewLinksOnly = ref(storage.loadImagePreviewLinksOnly())
-  const imagePreviewSize = ref(storage.loadImagePreviewSize())
+  const imagePreviewEnabled = ref(true)
+  const imagePreviewLinksOnly = ref(true)
+  const imagePreviewSize = ref(100)
 
   const currentTab = ref<CurrentTab>('search')
   const assetForm = ref<DeviceAsset>({ id: generateUUID(), name: '', brand: '', model: '' })
@@ -149,6 +152,8 @@ export const useAppStore = defineStore('app', () => {
   const viewResizeState = ref<{ colIdx: number; startX: number; startWidthPx: number; containerWidthPx: number; baseWidths: number[] } | null>(null)
 
   const viewFieldResizeState = ref<{ colIdx: number; startX: number; startWidthPx: number; containerWidthPx: number; baseWidths: number[] } | null>(null)
+  const nestedFieldConfigs = ref<NestedFieldConfigsMap>({})
+  let nestedConfigSaveTimer: ReturnType<typeof setTimeout> | null = null
 
   const visibleColumns = computed(() => {
     let cols = [...lastBaseColumns.value]
@@ -189,6 +194,77 @@ export const useAppStore = defineStore('app', () => {
   const getHost = () => hostInput.value.trim()
   const getApiKey = () => apiKeyInput.value.trim()
 
+  function normalizeNestedPath(pathLabel: string): string {
+    return pathLabel.replace(/\[\d+\]/g, '[*]')
+  }
+
+  function getNestedFieldConfig(pathLabel: string): Record<string, NestedFieldConfigItem> {
+    return nestedFieldConfigs.value[normalizeNestedPath(pathLabel)] || {}
+  }
+
+  function setNestedFieldConfig(pathLabel: string, fieldConfig: Record<string, NestedFieldConfigItem>) {
+    const normalizedPath = normalizeNestedPath(pathLabel)
+    nestedFieldConfigs.value = {
+      ...nestedFieldConfigs.value,
+      [normalizedPath]: fieldConfig,
+    }
+  }
+
+  function scheduleSaveNestedFieldConfigs() {
+    if (nestedConfigSaveTimer) clearTimeout(nestedConfigSaveTimer)
+    nestedConfigSaveTimer = setTimeout(() => {
+      saveNestedFieldConfigs()
+    }, 300)
+  }
+
+  async function saveNestedFieldConfigs() {
+    const token = localStorage.getItem('authToken')
+    if (!token) return
+    if (!currentIndex.value) return
+    try {
+      const res = await fetch('/api/v1/admin/nested_field_configs', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uid: currentIndex.value,
+          nestedFieldConfigs: JSON.stringify(nestedFieldConfigs.value),
+        }),
+      })
+      if (!res.ok) {
+        pushToast(`保存嵌套字段配置失败: ${res.status}`, 'error')
+      }
+    } catch {
+      pushToast('保存嵌套字段配置失败: 网络错误', 'error')
+    }
+  }
+
+  async function saveDrawerFieldOrder() {
+    const token = localStorage.getItem('authToken')
+    if (!token) return
+    if (!currentIndex.value) return
+    try {
+      const res = await fetch('/api/v1/admin/drawer_field_order', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uid: currentIndex.value,
+          drawerFieldOrder: JSON.stringify(drawerFieldOrder.value),
+        }),
+      })
+      if (!res.ok) {
+        pushToast(`保存抽屉字段顺序失败: ${res.status}`, 'error')
+      }
+    } catch {
+      pushToast('保存抽屉字段顺序失败: 网络错误', 'error')
+    }
+  }
+
   function pushToast(message: string, kind: ToastTypeEnum) {
     toasts.value.push({ id: nextToastId++, message, kind })
     setTimeout(() => {
@@ -196,7 +272,7 @@ export const useAppStore = defineStore('app', () => {
     }, 3000)
   }
 
-  async function connect() {
+async function connect() {
     if (!hostInput.value.trim()) {
       pushToast('请输入服务器地址', 'error')
       return
@@ -207,6 +283,8 @@ export const useAppStore = defineStore('app', () => {
       indexes.value = data.indexes
       if (currentIndex.value && indexes.value.some(i => i.uid === currentIndex.value)) {
         await selectIndex(currentIndex.value)
+      } else if (currentIndex.value) {
+        currentIndex.value = ''
       }
       pushToast('连接成功！', 'success')
     } catch (e) {
@@ -215,6 +293,20 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+
+  // 监听 currentIndex 变化，自动加载索引数据
+  let isSelecting = false
+  watch(currentIndex, async (newIndex) => {
+    if (!newIndex || !indexes.value.length || isSelecting) return
+    const exists = indexes.value.some(i => i.uid === newIndex)
+    if (exists) {
+      isSelecting = true
+      await selectIndex(newIndex)
+      isSelecting = false
+    } else {
+      currentIndex.value = ''
+    }
+  })
 
   async function selectIndex(uid: string) {
     currentIndex.value = uid
@@ -226,8 +318,6 @@ export const useAppStore = defineStore('app', () => {
     }
 
     const idxMeta = indexes.value.find(i => i.uid === uid)
-
-    loading.value = true
     try {
       const data = await api.loadIndexData(getHost(), getApiKey(), uid)
       availableFields.value = data.availableFields
@@ -285,9 +375,33 @@ export const useAppStore = defineStore('app', () => {
             if (tConf.hidden) hiddenColumns.value = tConf.hidden
           } catch (e) { console.error('Parse tableConfigs failed', e) }
         }
+        // 4. 嵌套抽屉字段配置（按路径）
+        if (idxMeta.nestedFieldConfigs) {
+          try {
+            const parsedNested = JSON.parse(idxMeta.nestedFieldConfigs)
+            nestedFieldConfigs.value = parsedNested && typeof parsedNested === 'object' ? parsedNested : {}
+          } catch (e) {
+            console.error('Parse nestedFieldConfigs failed', e)
+            nestedFieldConfigs.value = {}
+          }
+        } else {
+          nestedFieldConfigs.value = {}
+        }
         // 4. 编辑权限
         if (idxMeta.canEdit !== undefined) {
           editLocked.value = !idxMeta.canEdit
+        }
+        // 5. 抽屉字段顺序（每层独立）
+        if (idxMeta.drawerFieldOrder) {
+          try {
+            const dfo = JSON.parse(idxMeta.drawerFieldOrder)
+            drawerFieldOrder.value = (dfo && typeof dfo === 'object') ? dfo : {}
+          } catch (e) {
+            console.error('Parse drawerFieldOrder failed', e)
+            drawerFieldOrder.value = {}
+          }
+        } else {
+          drawerFieldOrder.value = {}
         }
       }
 
@@ -313,7 +427,11 @@ export const useAppStore = defineStore('app', () => {
       pushToast(`已选择索引: ${uid}`, 'success')
       await performSearch()
     } catch (e) {
-      pushToast(`加载索引失败: ${e}`, 'error')
+      const errMsg = String(e)
+      // 资源受限时静默处理，不弹出错误 toast
+      if (!errMsg.includes('403') && !errMsg.includes('locked') && !errMsg.includes('Unauthorized')) {
+        pushToast(`加载索引失败: ${e}`, 'error')
+      }
     } finally {
       loading.value = false
     }
@@ -355,6 +473,11 @@ export const useAppStore = defineStore('app', () => {
     processingTimeMs.value = null
     facetDistribution.value = null
     sortableAttributes.value = []
+    nestedFieldConfigs.value = {}
+    if (nestedConfigSaveTimer) {
+      clearTimeout(nestedConfigSaveTimer)
+      nestedConfigSaveTimer = null
+    }
   }
 
   function scheduleDebouncedSearch() {
@@ -363,14 +486,21 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function performSearch() {
-    if (!currentIndex.value) return
+    if (!currentIndex.value) {
+      console.log('[performSearch] no currentIndex, skip')
+      return
+    }
+    console.log('[performSearch]', currentIndex.value, 'loading:', loading.value)
     loading.value = true
     try {
       const params = buildSearchParams()
-      let res = await api.performSearch(getHost(), getApiKey(), currentIndex.value, searchInput.value.trim(), params)
+      console.log('[performSearch] params:', params)
+      const res = await api.performSearch(getHost(), getApiKey(), currentIndex.value, searchInput.value.trim(), params)
       if (searchInput.value.trim()) addToHistory(searchInput.value.trim())
+      console.log('[performSearch] result hits:', res.hits?.length)
       lastHits.value = res.hits ?? []
       lastResults.value = { ...res, hits: res.hits ?? [] }
+      console.log('[performSearch] lastHits set to:', lastHits.value.length)
       applyResultsColumns(res)
       updateStats(res)
       updateFacetsFromResponse(res)
@@ -761,6 +891,16 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  function openResultModalByHit(hit: SearchHit | null) {
+    if (!hit) {
+      resultModalOpen.value = false
+      resultDetail.value = null
+      return
+    }
+    resultDetail.value = hit
+    resultModalOpen.value = true
+  }
+
   async function createIndex() {
     if (!newIndexUid.value.trim()) { pushToast('请提供索引 UID', 'error'); return }
     loading.value = true
@@ -1042,7 +1182,7 @@ export const useAppStore = defineStore('app', () => {
     popularSearches, popularSearchField, currentPage, pageSize, maxResultsPerPage,
     resultsCount, processingTimeMs, facetDistribution, sortableAttributes,
     lastHits, lastResults, lastBaseColumns, tableSortField, tableSortDir,
-    columnOrder, hiddenColumns, columnWidths, aiConfig, aiDropdownOpen,
+    columnOrder, hiddenColumns, columnWidths, drawerFieldOrder, aiConfig, aiDropdownOpen,
     highlightEnabled, showRankingScore, cropLength, sortValue,
     filtersDrawerOpen, columnConfigOpen, fieldConfigOpen, viewModalOpen, advancedSettingsOpen,
     viewMode, viewNameInput, viewConfigs, exportDownloading, exportProgress,
@@ -1055,6 +1195,7 @@ export const useAppStore = defineStore('app', () => {
     newIndexUid, newIndexPk, visibleColumns, visibleAvailableFields, visibleFilterableFields, visibleFacetDistribution, totalPages,
     draggingCol, dragOverCol, isResizingColumns,
     viewLayoutWorking, viewWidthsWorking, viewLabelWidthsWorking,
+    nestedFieldConfigs,
     startViewColumnResize, viewColumnResizeMove, endViewColumnResize,
     startViewFieldResize, viewFieldResizeMove, endViewFieldResize,
     viewDragField, viewDragFromColumn, viewDragColumn, viewDragOverIndex,
@@ -1065,9 +1206,10 @@ export const useAppStore = defineStore('app', () => {
     saveColumnWidthPrefs, loadColumnWidthPrefs, loadColumnPrefs, saveColumnPrefs,
     loadFieldLabels, saveFieldLabels, loadViewConfigs, saveViewConfigs, saveViewMode,
     activeViewConfig, saveFieldConfig, toggleEditLock, updateCellEdit, saveEdits,
-    openResultModal, createIndex, parseUploadData, batchImport, exportCsv,
+    openResultModal, openResultModalByHit, createIndex, parseUploadData, batchImport, exportCsv,
     saveAsset, deleteAsset, applySearchHistory, applyPopularSearch,
     saveViewConfig, openViewConfig, setAiEnabled, setAiWeight, setCurrentTab,
     currentFieldConfigsForSync,
+    getNestedFieldConfig, setNestedFieldConfig, saveNestedFieldConfigs, scheduleSaveNestedFieldConfigs, saveDrawerFieldOrder,
   }
 })

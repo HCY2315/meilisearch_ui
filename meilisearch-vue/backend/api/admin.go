@@ -126,14 +126,15 @@ func HandleSaveIndexConfig(c *gin.Context) {
 	if err := repository.DB.Where("uid = ?", req.Uid).First(&config).Error; err != nil {
 		// Create new
 		config = model.IndexConfig{
-			Uid:          req.Uid,
-			Alias:        req.Alias,
-			Description:  req.Description,
-			IsLocked:     req.IsLocked,
-			FieldConfigs: req.FieldConfigs,
-			ViewConfigs:  req.ViewConfigs,
-			TableConfigs: req.TableConfigs,
-			CanEdit:      req.CanEdit,
+			Uid:                req.Uid,
+			Alias:              req.Alias,
+			Description:        req.Description,
+			IsLocked:           req.IsLocked,
+			FieldConfigs:       req.FieldConfigs,
+			ViewConfigs:        req.ViewConfigs,
+			TableConfigs:       req.TableConfigs,
+			CanEdit:            req.CanEdit,
+			NestedFieldConfigs: req.NestedFieldConfigs,
 		}
 		repository.DB.Create(&config)
 	} else {
@@ -145,6 +146,7 @@ func HandleSaveIndexConfig(c *gin.Context) {
 		config.ViewConfigs = req.ViewConfigs
 		config.TableConfigs = req.TableConfigs
 		config.CanEdit = req.CanEdit
+		config.NestedFieldConfigs = req.NestedFieldConfigs
 		repository.DB.Save(&config)
 	}
 	c.JSON(http.StatusOK, config)
@@ -229,4 +231,54 @@ func HandleUpdateAdminPassword(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "密码修改成功"})
+}
+
+// HandleSaveNestedFieldConfigs 单独更新嵌套查看器的字段配置，不影响其他索引设置
+func HandleSaveNestedFieldConfigs(c *gin.Context) {
+	var req schema.NestedFieldConfigsUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	var config model.IndexConfig
+	if err := repository.DB.Where("uid = ?", req.Uid).First(&config).Error; err != nil {
+		// NOTE: 该索引尚无完整 IndexConfig 记录，创建一条只含 uid 和嵌套配置的记录
+		config = model.IndexConfig{
+			Uid:                req.Uid,
+			NestedFieldConfigs: req.NestedFieldConfigs,
+		}
+		repository.DB.Create(&config)
+	} else {
+		// 仅更新 NestedFieldConfigs 字段，避免覆盖其他配置
+		repository.DB.Model(&config).Update("nested_field_configs", req.NestedFieldConfigs)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"uid": req.Uid, "nestedFieldConfigs": req.NestedFieldConfigs})
+}
+
+type DrawerFieldOrderRequest struct {
+	Uid              string `json:"uid" binding:"required"`
+	DrawerFieldOrder string `json:"drawerFieldOrder" binding:"required"`
+}
+
+func HandleSaveDrawerFieldOrder(c *gin.Context) {
+	var req DrawerFieldOrderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	var config model.IndexConfig
+	if err := repository.DB.Where("uid = ?", req.Uid).First(&config).Error; err != nil {
+		config = model.IndexConfig{
+			Uid:              req.Uid,
+			DrawerFieldOrder: req.DrawerFieldOrder,
+		}
+		repository.DB.Create(&config)
+	} else {
+		repository.DB.Model(&config).Update("drawer_field_order", req.DrawerFieldOrder)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"uid": req.Uid, "drawerFieldOrder": req.DrawerFieldOrder})
 }

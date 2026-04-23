@@ -198,3 +198,328 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
 }
+
+html[data-theme="light"] {
+  --bg-main: #f0f2f5;
+  --bg-app: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fafafa;
+  --text-main: #1f2937;
+  --text-sub: #4b5563;
+  --text-muted: #9ca3af;
+  --border: #e5e7eb;
+  --border-active: #6366f1;
+  --glass-bg: rgba(255, 255, 255, 0.95);
+  --glass-blur: blur(10px);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-primary: 0 2px 4px rgba(99, 102, 241, 0.2);
+  --transition: all 0.2s ease;
+}
+
+html[data-theme="light"] body {
+  background: #f0f2f5;
+}
+
+html[data-theme="light"] .card {
+  background: #ffffff;
+  box-shadow: var(--shadow-md);
+  border: 1px solid #e5e7eb;
+}
+
+html[data-theme="light"] .card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+html[data-theme="light"] .card-header h3 {
+  color: #6366f1;
+}
+
+html[data-theme="light"] .btn-secondary {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #1f2937;
+}
+
+html[data-theme="light"] .btn-secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+html[data-theme="light"] .form-control {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #1f2937;
+}
+
+html[data-theme="light"] .form-control:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+html[data-theme="light"] .form-control::placeholder {
+  color: #9ca3af;
+}
+
+html[data-theme="light"] .app-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+html[data-theme="light"] .glass-btn {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #1f2937;
+}
+
+html[data-theme="light"] .glass-btn:hover {
+  background: #e5e7eb;
+}
+
+html[data-theme="light"] .user-pill {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+html[data-theme="light"] .brand-text h1 {
+  color: #1f2937;
+}
+
+html[data-theme="light"] .brand-text p {
+  color: #9ca3af;
+}
+
+html[data-theme="light"] .nav-pill {
+  background: transparent;
+  color: #6b7280;
+}
+
+html[data-theme="light"] .nav-pill:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+html[data-theme="light"] .nav-pill.active {
+  background: #6366f1;
+  color: white;
+}
+
+html[data-theme="light"] .data-table th {
+  color: #6b7280;
+  border-bottom: 2px solid #e5e7eb;
+  font-weight: 600;
+}
+
+html[data-theme="light"] .data-table td {
+  border-bottom: 1px solid #e5e7eb;
+  color: #1f2937;
+}
+
+html[data-theme="light"] .data-table tr:hover td {
+  background: #f9fafb;
+}
+
+html[data-theme="light"] .card-header {
+  border-bottom-color: var(--border);
+}
+
+html[data-theme="light"] .card-header h3 {
+  color: var(--primary);
+}
+
+html[data-theme="light"] select,
+html[data-theme="light"] .form-select {
+  background: #ffffff;
+  border-color: #d1d5db;
+  color: #1f2937;
+}
+
+html[data-theme="light"] .modal,
+html[data-theme="light"] .drawer,
+html[data-theme="light"] .nd-drawer {
+  background: #ffffff;
+}
+
+html[data-theme="light"] .nd-backdrop {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="light"] .config-panel {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+html[data-theme="light"] .config-list {
+  background: transparent;
+}
+
+html[data-theme="light"] .config-item {
+  border-bottom-color: #e5e7eb;
+}
+
+html[data-theme="light"] .btn-icon {
+  color: #6b7280;
+}
+
+html[data-theme="light"] .btn-icon:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+html[data-theme="light"] .dropdown-menu,
+html[data-theme="light"] .dropdown-content {
+  background: #ffffff;
+  border-color: #e5e7eb;
+}
+
+html[data-theme="light"] .dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+html[data-theme="light"] input[type="checkbox"],
+html[data-theme="light"] input[type="radio"] {
+  accent-color: #6366f1;
+}
+
+html[data-theme="light"] .badge,
+html[data-theme="light"] .status-badge {
+  background: #e0e7ff;
+  color: #6366f1;
+}
+
+html[data-theme="light"] .token-unlock-pill {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+html[data-theme="light"] .token-unlock-pill input {
+  background: transparent;
+  color: #1f2937;
+}
+
+html[data-theme="light"] .token-unlock-pill input::placeholder {
+  color: #9ca3af;
+}
+
+html[data-theme="light"] .type-badge {
+  background: #e0e7ff;
+  color: #6366f1;
+}
+
+html[data-theme="light"] .nd-subheader {
+  border-bottom-color: #e5e7eb;
+}
+
+html[data-theme="light"] .bc-item {
+  color: #6b7280;
+}
+
+html[data-theme="light"] .bc-item:hover {
+  color: #6366f1;
+}
+
+html[data-theme="light"] .path-hint {
+  color: #9ca3af;
+}
+
+html[data-theme="light"] .hidden-hint {
+  color: #9ca3af;
+}
+
+html[data-theme="light"] .loading-state p {
+  color: #9ca3af;
+}
+
+html[data-theme="light"] .app-footer {
+  color: #9ca3af;
+}
+
+html[data-theme="light"] .footer-divider {
+  border-top-color: #e5e7eb;
+}
+
+html[data-theme="light"] .nd-subheader {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="light"] .bc-item {
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .bc-item:hover {
+  color: #fff;
+}
+
+html[data-theme="light"] .path-hint {
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .hidden-hint {
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .loading-state p {
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .app-footer {
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .brand-text h1 {
+  color: var(--text-main);
+}
+
+html[data-theme="light"] .brand-text p {
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .app-footer {
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .footer-divider {
+  border-top-color: var(--border);
+}
+
+html[data-theme="light"] .login-wrapper {
+  background: linear-gradient(135deg, #f0f2f5 0%, #e5e7eb 100%);
+}
+
+html[data-theme="light"] .login-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: var(--shadow-lg);
+}
+
+html[data-theme="light"] .login-header h1 {
+  background: linear-gradient(135deg, #1f2937, #6366f1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+html[data-theme="light"] .login-header p {
+  color: #9ca3af;
+}
+
+html[data-theme="light"] .input-wrapper input {
+  background: #f9fafb;
+  border: 1px solid #d1d5db;
+  color: #1f2937;
+}
+
+html[data-theme="light"] .input-wrapper input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+html[data-theme="light"] .login-footer {
+  color: #9ca3af;
+}
+
+html[data-theme="light"] .error-banner {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #dc2626;
+}

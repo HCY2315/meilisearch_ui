@@ -49,6 +49,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { login } from '@/services/api'
 
 const router = useRouter()
 const username = ref('')
@@ -64,20 +65,12 @@ async function handleLogin() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const res = await fetch('/api/v1/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: username.value, password: password.value })
-    })
-    const data = await res.json()
-    if (!res.ok) {
-      throw new Error(data.error || '登录失败')
-    }
+    const data = await login(username.value, password.value)
     localStorage.setItem('authToken', data.token)
     localStorage.setItem('authUser', JSON.stringify(data.user))
     router.push('/')
-  } catch (err: any) {
-    errorMsg.value = err.message
+  } catch (err: unknown) {
+    errorMsg.value = err instanceof Error ? err.message : '登录失败'
   } finally {
     loading.value = false
   }

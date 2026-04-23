@@ -47,7 +47,7 @@
         </div>
       </div>
       <button class="btn btn-primary" @click="store.performSearch()">搜索</button>
-      <button class="btn btn-secondary" @click="store.clearQuery()">清空</button>
+      <button class="btn btn-secondary" @click="handleClearQuery">清空</button>
     </div>
 
     <!-- 查询条件构建器 -->
@@ -75,25 +75,25 @@
             <option value="exists">存在</option>
           </select>
           <input class="form-control value-input" v-model="row.value" placeholder="值" @input="store.scheduleDebouncedSearch()" />
-          <button class="btn btn-icon" @click="store.removeQueryRow(row.id)" title="删除条件">×</button>
+          <button class="btn btn-icon" @click="handleRemoveQueryRow(row.id)" title="删除条件">×</button>
         </div>
       </div>
       <div class="query-actions">
         <button class="btn btn-secondary btn-sm" @click="store.addQueryRow()">➕ 添加查询条件</button>
         <button class="btn btn-primary btn-sm" @click="store.performSearch()">✅ 应用查询</button>
-        <button class="btn btn-secondary btn-sm" @click="store.clearQuery()">🗑️ 清空查询</button>
+        <button class="btn btn-secondary btn-sm" @click="handleClearQuery">🗑️ 清空查询</button>
       </div>
       <div class="filter-preview">当前过滤: {{ filterPreviewText }}</div>
     </div>
 
-    <!-- 结果面板 -->
+<!-- 结果面板 -->
     <div v-if="store.lastResults" class="results-panel">
       <div class="results-stats">
         <span class="results-count">找到 <strong>{{ formatNumber(store.resultsCount) }}</strong> 条结果</span>
-        <div v-if="userRole === 'admin'" class="results-actions">
+        <div class="results-actions">
           <span>{{ store.processingTimeMs ? `耗时 ${store.processingTimeMs}ms` : '' }}</span>
-          <button class="btn btn-secondary btn-sm" @click="store.advancedSettingsOpen = true">⚙️ 高级设置</button>
-          <button class="btn btn-secondary btn-sm" @click="store.columnConfigOpen = true">列设置</button>
+          <button class="btn btn-secondary btn-sm" @click="openAdvancedSettings">⚙️ 高级设置</button>
+          <button class="btn btn-secondary btn-sm" @click="openColumnConfig">列设置</button>
           <button class="btn btn-secondary btn-sm" @click="store.openViewConfig()">视图设置</button>
           <button class="btn btn-secondary btn-sm" @click="store.exportCsv()" :disabled="store.exportDownloading">
             {{ store.exportDownloading ? `📥 导出 ${store.exportProgress}/${store.exportTotal}` : '📥 导出 CSV' }}
@@ -126,14 +126,7 @@
           >
             💾 保存修改
           </button>
-          <button class="btn btn-primary btn-sm" @click="saveAllUISettingsToBackend">推送同步配置</button>
-        </div>
-        <div v-else class="results-actions">
-           <!-- 普通用户只能选择视图 -->
-           <select class="form-control" style="min-width: 120px; padding: 6px 10px;" v-model="store.viewMode">
-            <option value="table">表格</option>
-            <option v-for="cfg in store.viewConfigs" :key="cfg.name" :value="cfg.name">{{ cfg.name }}</option>
-          </select>
+          <button v-if="isAdmin" class="btn btn-primary btn-sm" @click="saveAllUISettingsToBackend">推送同步配置</button>
         </div>
       </div>
     </div>
@@ -142,12 +135,43 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { useConnectionStore } from '@/composables/useConnectionStore'
+import { useSearchStore } from '@/composables/useSearchStore'
+import { useUIStore } from '@/composables/useUIStore'
 import { useAppStore } from '@/composables/useApp'
 import { formatNumber, buildFilterExpression } from '@/utils'
 import * as storage from '@/services/storage'
+import { saveIndexConfig } from '@/services/api'
 import type { IndexInfo } from '@/types'
 
-const store = useAppStore()
+const connectionStore = useConnectionStore()
+const searchStore = useSearchStore()
+const uiStore = useUIStore()
+
+const appStore = useAppStore()
+const store: any = new Proxy({}, {
+  get(_target, prop: string) {
+    const p = prop as keyof typeof store
+    if (p in searchStore) return (searchStore as any)[p]
+    if (p in connectionStore) return (connectionStore as any)[p]
+    if (p in uiStore) return (uiStore as any)[p]
+    if (p in appStore) return (appStore as any)[p]
+    return undefined
+  },
+  set(_target, prop: string, value: any) {
+    const p = prop as keyof typeof store
+    if (p in searchStore) { (searchStore as any)[p] = value; return true }
+    if (p in connectionStore) { (connectionStore as any)[p] = value; return true }
+    if (p in uiStore) {
+      const propVal = (uiStore as any)[p]
+      if (propVal && typeof propVal === 'object' && 'value' in propVal) (propVal as any).value = value
+      else (uiStore as any)[p] = value
+      return true
+    }
+    if (p in appStore) { (appStore as any)[p] = value; return true }
+    return false
+  }
+})
 
 const aiBadgeRef = ref<HTMLElement | null>(null)
 const aiDropdownRef = ref<HTMLElement | null>(null)
@@ -167,16 +191,23 @@ const dropdownStyle = computed(() => {
 })
 
 const userRole = ref('user')
+const isAdmin = ref(false)
 onMounted(() => {
   const authUserStr = localStorage.getItem('authUser')
   if (authUserStr) {
     try {
       const authUser = JSON.parse(authUserStr)
       userRole.value = authUser.role || 'user'
+      isAdmin.value = authUser.role === 'admin'
     } catch {}
   }
   document.addEventListener('click', onDocumentClick)
 })
+
+function openAdvancedSettings() {
+  console.log('[高级设置] 点击了')
+  appStore.advancedSettingsOpen = true
+}
 
 async function saveAllUISettingsToBackend() {
   const token = localStorage.getItem('authToken')
@@ -184,7 +215,6 @@ async function saveAllUISettingsToBackend() {
 
   const currentIdx = store.indexes.find((i: IndexInfo) => i.uid === store.currentIndex)
 
-  // 整理数据
   const payload = {
     uid: store.currentIndex,
     alias: currentIdx?.displayName || store.currentIndex,
@@ -195,18 +225,15 @@ async function saveAllUISettingsToBackend() {
        hidden: store.hiddenColumns,
        order: store.columnOrder
     }),
-    canEdit: !store.editLocked
+    canEdit: !store.editLocked,
+    nestedFieldConfigs: JSON.stringify(store.nestedFieldConfigs)
   }
 
   try {
-     const res = await fetch('/api/v1/admin/index_configs', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-     })
+     const res = await saveIndexConfig(payload)
      if(res.ok) alert('前台视图/列配置已同步至后端，永久保存成功！')
      else alert('同步失败：' + res.status)
-  } catch (e) {
+  } catch {
      alert('请求发生错误')
   }
 }
@@ -222,6 +249,11 @@ function onAiBadgeClick() {
   store.aiDropdownOpen = !store.aiDropdownOpen
 }
 
+function openColumnConfig() {
+  appStore.columnConfigOpen = !appStore.columnConfigOpen
+  console.log('appStore.columnConfigOpen:', appStore.columnConfigOpen)
+}
+
 function onAiToggle() {
   storage.saveAiConfig(store.aiConfig)
   store.performSearch()
@@ -230,6 +262,14 @@ function onAiToggle() {
 function onAiWeightChange() {
   storage.saveAiConfig(store.aiConfig)
   store.performSearch()
+}
+
+function handleClearQuery() {
+  appStore.clearQuery()
+}
+
+function handleRemoveQueryRow(id: number) {
+  appStore.removeQueryRow(id)
 }
 
 function onDocumentClick(e: MouseEvent) {

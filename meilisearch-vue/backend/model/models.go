@@ -14,17 +14,19 @@ type User struct {
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
-// IndexConfig 后台配置的索引展示项及加密状态
 type IndexConfig struct {
-	ID           uint   `gorm:"primarykey" json:"id"`
-	Uid          string `gorm:"uniqueIndex;not null" json:"uid"`
-	Alias        string `gorm:"size:255" json:"alias"`
-	Description  string `gorm:"size:512" json:"description"`
-	IsLocked     bool   `gorm:"default:false" json:"isLocked"`
-	FieldConfigs string `gorm:"type:text" json:"fieldConfigs"` // JSON: Field settings
-	ViewConfigs  string `gorm:"type:text" json:"viewConfigs"`  // JSON: Custom views
-	TableConfigs string `gorm:"type:text" json:"tableConfigs"` // JSON: Table order/hidden
-	CanEdit      bool   `gorm:"default:false" json:"canEdit"`  // Whether front-end can edit docs
+	ID                 uint   `gorm:"primarykey" json:"id"`
+	Uid                string `gorm:"uniqueIndex;not null" json:"uid"`
+	Alias              string `gorm:"size:255" json:"alias"`
+	Description        string `gorm:"size:512" json:"description"`
+	IsLocked           bool   `gorm:"default:false" json:"isLocked"`
+	FieldConfigs       string `gorm:"type:text" json:"fieldConfigs"`       // JSON: Field settings
+	ViewConfigs        string `gorm:"type:text" json:"viewConfigs"`        // JSON: Custom views
+	TableConfigs       string `gorm:"type:text" json:"tableConfigs"`       // JSON: Table order/hidden
+	CanEdit            bool   `gorm:"default:false" json:"canEdit"`        // Whether front-end can edit docs
+	NestedFieldConfigs string `gorm:"type:text" json:"nestedFieldConfigs"` // JSON: Nested viewer field configs
+	// 抽屉字段显示顺序，JSON 数组：["field1", "field2", ...]
+	DrawerFieldOrder string `gorm:"type:text" json:"drawerFieldOrder"`
 }
 
 // AccessToken 前台解锁用的专属凭证

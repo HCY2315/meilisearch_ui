@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios'
 import type {
   ConnectData,
   IndexData,
@@ -13,10 +13,16 @@ import type {
   PopularItem,
 } from '@/types'
 
+let errorHandler: ((err: Error) => void) | null = null
+
+export function setGlobalErrorHandler(handler: (err: Error) => void) {
+  errorHandler = handler
+}
+
 function createClient(host: string, apiKey: string): AxiosInstance {
   const trimmed = host.trim().replace(/\/$/, '')
   const adminToken = localStorage.getItem('authToken')
-  return axios.create({
+  const instance = axios.create({
     baseURL: trimmed,
     headers: {
       'Content-Type': 'application/json',
@@ -24,6 +30,18 @@ function createClient(host: string, apiKey: string): AxiosInstance {
       ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {}),
     },
   })
+  
+  instance.interceptors.response.use(
+    response => response,
+    (error: AxiosError) => {
+      if (errorHandler && error instanceof Error) {
+        errorHandler(error)
+      }
+      return Promise.reject(error)
+    }
+  )
+  
+  return instance
 }
 
 export async function connectIndexes(host: string, apiKey: string): Promise<ConnectData> {
@@ -50,7 +68,9 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
         fieldConfigs: idx.fieldConfigs,
         viewConfigs: idx.viewConfigs,
         tableConfigs: idx.tableConfigs,
-        canEdit: idx.canEdit
+        nestedFieldConfigs: idx.nestedFieldConfigs,
+        canEdit: idx.canEdit,
+        drawerFieldOrder: idx.drawerFieldOrder
       })
     } catch {
       results.push({ 
@@ -61,7 +81,9 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
         fieldConfigs: idx.fieldConfigs,
         viewConfigs: idx.viewConfigs,
         tableConfigs: idx.tableConfigs,
-        canEdit: idx.canEdit
+        nestedFieldConfigs: idx.nestedFieldConfigs,
+        canEdit: idx.canEdit,
+        drawerFieldOrder: idx.drawerFieldOrder
       })
     }
   }
@@ -334,4 +356,178 @@ function downloadBlob(content: string, filename: string, type: string): void {
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('authToken')
+  return token ? { 'Authorization': `Bearer ${token}` } : {}
+}
+
+export async function saveIndexConfig(config: Record<string, unknown>): Promise<{ ok: boolean; status: number }> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch('/api/v1/admin/index_configs', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(config)
+  })
+  return { ok: res.ok, status: res.status }
+}
+
+export async function getIndexConfig(uid: string): Promise<Record<string, unknown> | null> {
+  const headers = getAuthHeaders()
+  const res = await fetch(`/api/v1/admin/index_configs/${uid}`, { headers })
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function getAppConfig(): Promise<Record<string, unknown> | null> {
+  const headers = getAuthHeaders()
+  const res = await fetch('/api/v1/app/config', { headers })
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function login(username: string, password: string): Promise<{ token: string; user: Record<string, unknown> }> {
+  const res = await fetch('/api/v1/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: '登录失败' }))
+    throw new Error(err.error || '登录失败')
+  }
+  return res.json()
+}
+
+export async function getAdminIndexConfigs(): Promise<unknown[]> {
+  const headers = getAuthHeaders()
+  const res = await fetch('/api/v1/admin/index_configs', { headers })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function getAdminAccessTokens(): Promise<unknown[]> {
+  const headers = getAuthHeaders()
+  const res = await fetch('/api/v1/admin/access_tokens', { headers })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function getAdminApps(): Promise<unknown[]> {
+  const headers = getAuthHeaders()
+  const res = await fetch('/api/v1/admin/apps', { headers })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function getProxyIndexes(): Promise<{ results: { uid: string }[] }> {
+  const headers = getAuthHeaders()
+  const res = await fetch('/api/v1/proxy/indexes', { headers })
+  if (!res.ok) return { results: [] }
+  return res.json()
+}
+
+export async function getAdminInstances(): Promise<unknown[]> {
+  const headers = getAuthHeaders()
+  const res = await fetch('/api/v1/admin/instances', { headers })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function createAdminInstance(data: Record<string, unknown>): Promise<boolean> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch('/api/v1/admin/instances', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(data)
+  })
+  return res.ok
+}
+
+export async function updateAdminInstance(data: Record<string, unknown>): Promise<boolean> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch('/api/v1/admin/instances', {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(data)
+  })
+  return res.ok
+}
+
+export async function deleteAdminInstance(id: number): Promise<boolean> {
+  const headers = getAuthHeaders()
+  const res = await fetch(`/api/v1/admin/instances/${id}`, {
+    method: 'DELETE',
+    headers
+  })
+  return res.ok
+}
+
+export async function saveAdminIndexConfig(data: Record<string, unknown>): Promise<boolean> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch('/api/v1/admin/index_configs', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(data)
+  })
+  return res.ok
+}
+
+export async function deleteAdminIndexConfig(uid: string): Promise<boolean> {
+  const headers = getAuthHeaders()
+  const res = await fetch(`/api/v1/admin/index_configs/${uid}`, {
+    method: 'DELETE',
+    headers
+  })
+  return res.ok
+}
+
+export async function createAccessToken(data: Record<string, unknown>): Promise<boolean> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch('/api/v1/admin/access_tokens', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(data)
+  })
+  return res.ok
+}
+
+export async function updateAccessToken(data: Record<string, unknown>): Promise<boolean> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch('/api/v1/admin/access_tokens', {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(data)
+  })
+  return res.ok
+}
+
+export async function deleteAccessToken(id: number): Promise<boolean> {
+  const headers = getAuthHeaders()
+  const res = await fetch(`/api/v1/admin/access_tokens/${id}`, {
+    method: 'DELETE',
+    headers
+  })
+  return res.ok
+}
+
+export async function updateApp(id: number, data: Record<string, unknown>): Promise<boolean> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch(`/api/v1/admin/apps/${id}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(data)
+  })
+  return res.ok
+}
+
+export async function updateAdminPassword(password: string): Promise<boolean> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch('/api/v1/admin/password', {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ password })
+  })
+  return res.ok
 }

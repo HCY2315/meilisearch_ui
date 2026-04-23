@@ -1,9 +1,10 @@
 <template>
   <router-view />
+  <ToastContainer />
 </template>
 
 <script setup lang="ts">
-// 全局入口，由 router 负责分发页面
+import ToastContainer from '@/components/ToastContainer.vue'
 </script>
 
 <style>

@@ -117,6 +117,7 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 	for _, conf := range configs {
 		configMap[conf.Uid] = conf
 	}
+	log.Printf("[DEBUG] configMap keys: %v", configMap)
 
 	// 1. 直连 Meilisearch 获取真实全部的 indexes
 	client := &http.Client{}
@@ -143,6 +144,8 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 		uid, _ := idx["uid"].(string)
 
 		dbConf, exists := configMap[uid]
+		log.Printf("[DEBUG] uid=%s exists=%v drawer=%q", uid, exists, dbConf.DrawerFieldOrder)
+		log.Printf("[DEBUG] uid=%s, exists=%v, drawerFieldOrder=%q", uid, exists, dbConf.DrawerFieldOrder)
 		isLocked := false
 		alias := uid
 		if exists {
@@ -173,17 +176,25 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 		idx["isUnlocked"] = isUnlocked
 		idx["displayName"] = alias
 
-		if exists {
-			idx["fieldConfigs"] = dbConf.FieldConfigs
-			idx["viewConfigs"] = dbConf.ViewConfigs
-			idx["tableConfigs"] = dbConf.TableConfigs
-			idx["canEdit"] = dbConf.CanEdit
-		} else {
-			idx["fieldConfigs"] = ""
-			idx["viewConfigs"] = ""
-			idx["tableConfigs"] = ""
-			idx["canEdit"] = false
-		}
+        if exists {
+            idx["fieldConfigs"] = dbConf.FieldConfigs
+            idx["viewConfigs"] = dbConf.ViewConfigs
+            idx["tableConfigs"] = dbConf.TableConfigs
+            idx["canEdit"] = dbConf.CanEdit
+            idx["nestedFieldConfigs"] = dbConf.NestedFieldConfigs
+            if dbConf.DrawerFieldOrder != "" {
+                idx["drawerFieldOrder"] = dbConf.DrawerFieldOrder
+            } else {
+                idx["drawerFieldOrder"] = "{}"
+            }
+        } else {
+            idx["fieldConfigs"] = ""
+            idx["viewConfigs"] = ""
+            idx["tableConfigs"] = ""
+            idx["canEdit"] = false
+            idx["nestedFieldConfigs"] = ""
+            idx["drawerFieldOrder"] = "{}"
+        }
 
 		enhancedResults = append(enhancedResults, idx)
 	}
