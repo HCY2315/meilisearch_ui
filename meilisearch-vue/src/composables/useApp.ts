@@ -295,17 +295,16 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  // 监听 currentIndex 变化，自动加载索引数据
+  // 监听 currentIndex 或 indexes 变化，自动加载索引数据
   watch([currentIndex, indexes], async ([newIndex, idxList]) => {
-    if (newIndex && idxList.length > 0) {
-      const exists = idxList.some(i => i.uid === newIndex)
-      if (exists) {
-        await selectIndex(newIndex)
-      } else {
-        currentIndex.value = ''
-      }
+    if (!newIndex || !idxList.length) return
+    const exists = idxList.some(i => i.uid === newIndex)
+    if (exists) {
+      await selectIndex(newIndex)
+    } else {
+      currentIndex.value = ''
     }
-  }, { immediate: true })
+  })
 
   async function selectIndex(uid: string) {
     currentIndex.value = uid
