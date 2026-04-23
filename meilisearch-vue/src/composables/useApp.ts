@@ -272,7 +272,7 @@ export const useAppStore = defineStore('app', () => {
     }, 3000)
   }
 
-  async function connect() {
+async function connect() {
     if (!hostInput.value.trim()) {
       pushToast('请输入服务器地址', 'error')
       return
@@ -281,10 +281,10 @@ export const useAppStore = defineStore('app', () => {
     try {
       const data = await api.connectIndexes(getHost(), getApiKey())
       indexes.value = data.indexes
+      console.log('[connect] indexes loaded:', data.indexes.length, 'currentIndex:', currentIndex.value)
       if (currentIndex.value && indexes.value.some(i => i.uid === currentIndex.value)) {
         await selectIndex(currentIndex.value)
       } else if (currentIndex.value) {
-        // indexes 加载后如果 currentIndex 被设置但不在列表中，需要重新选择
         currentIndex.value = ''
       }
       pushToast('连接成功！', 'success')
@@ -297,8 +297,10 @@ export const useAppStore = defineStore('app', () => {
 
   // 监听 currentIndex 或 indexes 变化，自动加载索引数据
   watch([currentIndex, indexes], async ([newIndex, idxList]) => {
+    console.log('[watch] currentIndex:', newIndex, 'indexes length:', idxList.length)
     if (!newIndex || !idxList.length) return
     const exists = idxList.some(i => i.uid === newIndex)
+    console.log('[watch] index exists:', exists)
     if (exists) {
       await selectIndex(newIndex)
     } else {
@@ -491,7 +493,11 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function performSearch() {
-    if (!currentIndex.value) return
+    if (!currentIndex.value) {
+      console.log('[performSearch] no currentIndex, skipping')
+      return
+    }
+    console.log('[performSearch] starting search for', currentIndex.value)
     loading.value = true
     try {
       const params = buildSearchParams()
