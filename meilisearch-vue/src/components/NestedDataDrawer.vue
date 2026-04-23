@@ -352,9 +352,13 @@ function loadFieldOrder() {
     return
   }
   const pathKey = normalizePath(currentPathLabel.value)
-  // Drawer field order map 来自全局 store，按 pathKey 查找
-  const map = (store.drawerFieldOrder as any) || {}
-  const saved = map[pathKey] || []
+  // 直接从 appStore 获取原始值，避免 Proxy 干扰
+  const appStore = useAppStore()
+  const dfo = appStore.drawerFieldOrder
+  const dfoObj = dfo && typeof dfo === 'object' ? dfo : {}
+
+  // 优先从数据库配置加载，否则使用字段默认顺序
+  const saved = dfoObj[pathKey] as string[] | undefined
   if (Array.isArray(saved) && saved.length > 0) {
     fieldOrder.value = [...saved]
   } else if (!props.isAdmin) {
@@ -429,10 +433,12 @@ function formatPreviewValue(val: unknown): string {
 
 async function saveFieldOrder() {
   const pathKey = normalizePath(currentPathLabel.value)
-  const map = (store.drawerFieldOrder as any) || {}
-  map[pathKey] = [...fieldOrder.value]
-  store.drawerFieldOrder = map
-  await store.saveDrawerFieldOrder()
+  const appStore = useAppStore()
+  const dfo = appStore.drawerFieldOrder
+  const dfoObj = dfo && typeof dfo === 'object' ? dfo : {}
+  dfoObj[pathKey] = [...fieldOrder.value]
+  appStore.drawerFieldOrder = { ...dfoObj }
+  await appStore.saveDrawerFieldOrder()
   hasOrderChange.value = false
   store.pushToast('抽屉字段顺序已保存', 'success')
 }
