@@ -163,11 +163,7 @@
                     <div class="cell-with-preview">
                       <template v-if="isNestedValue(row[col])">
                         <span class="nested-badge-sm">{{ getNestedBadgeText(row[col]) }}</span>
-                        <span 
-                          class="nested-text" 
-                          @mouseenter="showPreview($event, col, row[col])" 
-                          @mouseleave="hidePreview"
-                        >
+                        <span class="nested-text">
                           {{ primitiveToStr(row[col]) }}
                         </span>
                         <button
@@ -179,12 +175,15 @@
                         <span 
                           class="cell-text" 
                           :title="primitiveToStr(row[col])"
-                          @mouseenter="showPreview($event, col, row[col])" 
-                          @mouseleave="hidePreview"
                         >
                           {{ primitiveToStr(row[col]) }}
                         </span>
-                        <button class="btn-drill" @click="push(`${currentPathLabel}[${ri}].${col}`, row[col])">🔍</button>
+                        <span 
+                          v-if="isObjectOrNumber(row[col])"
+                          class="btn-preview" 
+                          @mouseenter="showPreview($event, col, row[col])" 
+                          @mouseleave="hidePreview"
+                        >🔎</span>
                       </template>
                     </div>
                   </td>
@@ -229,7 +228,7 @@
                 </template>
                 <template v-else>
                   <span class="val-text" :title="primitiveToStr(val)">{{ primitiveToStr(val) }}</span>
-                  <span class="btn-preview" @mouseenter="showPreview($event, key, val)" @mouseleave="hidePreview">🔎</span>
+                  <span v-if="isObjectOrNumber(val)" class="btn-preview" @mouseenter="showPreview($event, key, val)" @mouseleave="hidePreview">🔎</span>
                 </template>
               </span>
             </div>
@@ -580,6 +579,12 @@ function primitiveToStr(val: unknown): string {
   if (typeof val === 'string') return val
   if (typeof val === 'number' || typeof val === 'boolean') return String(val)
   return JSON.stringify(val)
+}
+
+function isObjectOrNumber(val: unknown): boolean {
+  if (typeof val === 'number') return true
+  if (val !== null && typeof val === 'object') return true
+  return false
 }
 </script>
 
@@ -1138,12 +1143,11 @@ function primitiveToStr(val: unknown): string {
 
 /* ─── 字段预览弹窗 ───────────────────────────────────────────────────────── */
 .cell-with-preview, .kv-val { display: flex; align-items: center; gap: 4px; }
-.nested-text { cursor: default; }
-.cell-text { cursor: default; }
-.cell-text:hover ~ .btn-preview,
-.kv-val:hover > .btn-preview { opacity: 1; }
-
-.btn-preview { cursor: pointer; font-size: 12px; opacity: 0; transition: opacity 0.2s; }
+.btn-preview {
+  cursor: pointer; font-size: 12px; opacity: 0; transition: opacity 0.2s;
+}
+.cell-with-preview:hover .btn-preview,
+.kv-val:hover .btn-preview { opacity: 1; }
 
 .preview-popup {
   position: fixed; z-index: 10000; max-width: 400px; max-height: 300px;
