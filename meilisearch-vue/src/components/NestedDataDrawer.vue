@@ -1041,7 +1041,7 @@ function handleClose() {
   padding: 8px 12px;
   text-align: left;
   border-bottom: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.7);
+  color: var(--text-main, #111827);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1250,5 +1250,132 @@ function handleClose() {
   padding: 10px; margin: 0; font-size: 12px; font-family: monospace;
   white-space: pre-wrap; word-break: break-all; overflow-y: auto;
   color: var(--text-primary); max-height: 250px;
+}
+
+/* 浅色主题：Clean Gray 抽屉配色 */
+:global(html[data-theme="light"]) .nd-drawer {
+  --nd-bg: #ffffff;
+  --nd-subtle-bg: #f5f7fa;
+  --nd-hover-bg: #f9fafb;
+  --nd-border: #e5e7eb;
+  --nd-text: #111827;
+  --nd-text-secondary: #6b7280;
+  --nd-accent: #2563eb;
+  background: var(--nd-bg);
+  border-left: 1px solid var(--nd-border);
+  box-shadow: -12px 0 36px rgba(15, 23, 42, 0.12);
+}
+
+:global(html[data-theme="light"]) .nd-header,
+:global(html[data-theme="light"]) .nd-subheader {
+  background: var(--nd-subtle-bg);
+  border-bottom-color: var(--nd-border);
+}
+
+:global(html[data-theme="light"]) .path-hint,
+:global(html[data-theme="light"]) .hidden-hint,
+:global(html[data-theme="light"]) .bc-sep,
+:global(html[data-theme="light"]) .bc-item,
+:global(html[data-theme="light"]) .config-panel-desc,
+:global(html[data-theme="light"]) .config-arrow,
+:global(html[data-theme="light"]) .row-num-th,
+:global(html[data-theme="light"]) .row-num {
+  color: var(--nd-text-secondary);
+}
+
+:global(html[data-theme="light"]) .bc-item:not(:disabled):hover,
+:global(html[data-theme="light"]) .bc-current,
+:global(html[data-theme="light"]) .bc-root {
+  color: var(--nd-accent);
+}
+
+:global(html[data-theme="light"]) .bc-item:not(:disabled):hover,
+:global(html[data-theme="light"]) .bc-root:hover {
+  background: #eef2ff;
+}
+
+:global(html[data-theme="light"]) .btn-config-toggle {
+  border-color: var(--nd-border);
+  color: var(--nd-text-secondary);
+  background: #fff;
+}
+
+:global(html[data-theme="light"]) .btn-config-toggle:hover {
+  border-color: #cbd5e1;
+  color: var(--nd-text);
+  background: var(--nd-hover-bg);
+}
+
+:global(html[data-theme="light"]) .btn-config-toggle.active {
+  background: #eff6ff;
+  color: var(--nd-accent);
+  border-color: #bfdbfe;
+}
+
+:global(html[data-theme="light"]) .nd-close-btn {
+  color: var(--nd-text-secondary);
+}
+
+:global(html[data-theme="light"]) .nd-close-btn:hover {
+  color: var(--nd-text);
+  background: #f3f4f6;
+}
+
+:global(html[data-theme="light"]) .config-panel {
+  background: #fcfcfd;
+  border-bottom-color: var(--nd-border);
+}
+
+:global(html[data-theme="light"]) .config-panel-hd {
+  background: #f8fafc;
+  border-bottom-color: var(--nd-border);
+}
+
+:global(html[data-theme="light"]) .config-panel-title,
+:global(html[data-theme="light"]) .config-field-name,
+:global(html[data-theme="light"]) .kv-key,
+:global(html[data-theme="light"]) .kv-val,
+:global(html[data-theme="light"]) .prim-val,
+:global(html[data-theme="light"]) .cell-text,
+:global(html[data-theme="light"]) .mini-table td {
+  color: var(--nd-text);
+}
+
+:global(html[data-theme="light"]) .config-row:hover,
+:global(html[data-theme="light"]) .kv-row:hover,
+:global(html[data-theme="light"]) .mini-table tr:hover td {
+  background: var(--nd-hover-bg);
+}
+
+:global(html[data-theme="light"]) .alias-input {
+  background: #fff;
+  border-color: #d1d5db;
+  color: var(--nd-text);
+}
+
+:global(html[data-theme="light"]) .alias-input:focus {
+  border-color: var(--nd-accent);
+  background: #fff;
+}
+
+:global(html[data-theme="light"]) .alias-input::placeholder,
+:global(html[data-theme="light"]) .mini-table th .alias-tag,
+:global(html[data-theme="light"]) .alias-raw-tag {
+  color: var(--nd-text-secondary);
+}
+
+:global(html[data-theme="light"]) .mini-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--nd-subtle-bg);
+  border-bottom: 1px solid var(--nd-border);
+  color: var(--nd-text);
+}
+
+:global(html[data-theme="light"]) .mini-table td,
+:global(html[data-theme="light"]) .kv-row,
+:global(html[data-theme="light"]) .prim-array-item {
+  border-bottom-color: var(--nd-border);
 }
 </style>
