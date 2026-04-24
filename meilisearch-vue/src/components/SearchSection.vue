@@ -91,7 +91,7 @@
       <div class="results-stats">
         <span class="results-count">找到 <strong>{{ formatNumber(store.resultsCount) }}</strong> 条结果</span>
         <div class="results-actions">
-          <span>{{ store.processingTimeMs ? `耗时 ${store.processingTimeMs}ms` : '' }}</span>
+          <span class="search-meta">{{ store.searching ? '检索中...' : (store.processingTimeMs ? `耗时 ${store.processingTimeMs}ms` : '') }}</span>
           <button class="btn btn-secondary btn-sm" @click="openAdvancedSettings">⚙️ 高级设置</button>
           <button class="btn btn-secondary btn-sm" @click="openColumnConfig">列设置</button>
           <button class="btn btn-secondary btn-sm" @click="store.openViewConfig()">视图设置</button>
@@ -152,23 +152,33 @@ const appStore = useAppStore()
 const store: any = new Proxy({}, {
   get(_target, prop: string) {
     const p = prop as keyof typeof store
+    if (p in appStore) return (appStore as any)[p]
     if (p in searchStore) return (searchStore as any)[p]
     if (p in connectionStore) return (connectionStore as any)[p]
     if (p in uiStore) return (uiStore as any)[p]
-    if (p in appStore) return (appStore as any)[p]
     return undefined
   },
   set(_target, prop: string, value: any) {
     const p = prop as keyof typeof store
-    if (p in searchStore) { (searchStore as any)[p] = value; return true }
-    if (p in connectionStore) { (connectionStore as any)[p] = value; return true }
+    if (p in appStore) { (appStore as any)[p] = value; return true }
+    if (p in searchStore) {
+      const propVal = (searchStore as any)[p]
+      if (propVal && typeof propVal === 'object' && 'value' in propVal) (propVal as any).value = value
+      else (searchStore as any)[p] = value
+      return true
+    }
+    if (p in connectionStore) {
+      const propVal = (connectionStore as any)[p]
+      if (propVal && typeof propVal === 'object' && 'value' in propVal) (propVal as any).value = value
+      else (connectionStore as any)[p] = value
+      return true
+    }
     if (p in uiStore) {
       const propVal = (uiStore as any)[p]
       if (propVal && typeof propVal === 'object' && 'value' in propVal) (propVal as any).value = value
       else (uiStore as any)[p] = value
       return true
     }
-    if (p in appStore) { (appStore as any)[p] = value; return true }
     return false
   }
 })
@@ -336,6 +346,7 @@ onBeforeUnmount(() => {
 .results-count { color: var(--text-secondary); font-size: 0.9rem; }
 .results-count strong { color: var(--primary-color); font-size: 1.05rem; }
 .results-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.search-meta { min-width: 72px; color: var(--text-muted); }
 
 .ai-badge {
   position: absolute;

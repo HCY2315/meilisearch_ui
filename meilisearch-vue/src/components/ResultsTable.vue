@@ -150,23 +150,33 @@ const appStore = useAppStore()
 const store: any = new Proxy({}, {
   get(_target, prop: string) {
     const p = prop as keyof typeof store
+    if (p in appStore) return (appStore as any)[p]
     if (p in searchStore) return (searchStore as any)[p]
     if (p in connectionStore) return (connectionStore as any)[p]
     if (p in uiStore) return (uiStore as any)[p]
-    if (p in appStore) return (appStore as any)[p]
     return undefined
   },
   set(_target, prop: string, value: any) {
     const p = prop as keyof typeof store
-    if (p in searchStore) { (searchStore as any)[p] = value; return true }
-    if (p in connectionStore) { (connectionStore as any)[p] = value; return true }
+    if (p in appStore) { (appStore as any)[p] = value; return true }
+    if (p in searchStore) {
+      const propVal = (searchStore as any)[p]
+      if (propVal && typeof propVal === 'object' && 'value' in propVal) (propVal as any).value = value
+      else (searchStore as any)[p] = value
+      return true
+    }
+    if (p in connectionStore) {
+      const propVal = (connectionStore as any)[p]
+      if (propVal && typeof propVal === 'object' && 'value' in propVal) (propVal as any).value = value
+      else (connectionStore as any)[p] = value
+      return true
+    }
     if (p in uiStore) {
       const propVal = (uiStore as any)[p]
       if (propVal && typeof propVal === 'object' && 'value' in propVal) (propVal as any).value = value
       else (uiStore as any)[p] = value
       return true
     }
-    if (p in appStore) { (appStore as any)[p] = value; return true }
     return false
   }
 })
@@ -443,7 +453,7 @@ function startResize(e: MouseEvent, col: string) {
   opacity: 1;
 }
 .cell-input { padding: 4px 6px; font-size: 12px; width: 100%; min-width: 60px; }
-.edited-cell { background: rgba(var(--warning-color), 0.15); border-radius: 3px; padding: 2px 4px; font-style: italic; }
+.edited-cell { background: rgba(var(--warning-color-rgb), 0.15); border-radius: 3px; padding: 2px 4px; font-style: italic; }
 .rank-score { color: var(--text-muted); font-size: 11px; }
 .custom-results { display: flex; flex-direction: column; gap: 12px; }
 .custom-row { background: var(--surface); border-radius: var(--radius); padding: 12px; border: 1px solid var(--border); }
