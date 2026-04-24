@@ -155,7 +155,12 @@ const store: any = new Proxy({}, {
     if (p in searchStore) return (searchStore as any)[p]
     if (p in connectionStore) return (connectionStore as any)[p]
     if (p in uiStore) return (uiStore as any)[p]
-    if (p in appStore) return (appStore as any)[p]
+    if (p in appStore) {
+      const val = (appStore as any)[p]
+      console.log('[store.get]', p, '=', val)
+      return val
+    }
+    console.log('[store.get] undefined:', prop)
     return undefined
   },
   set(_target, prop: string, value: any) {
