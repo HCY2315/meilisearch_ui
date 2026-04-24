@@ -134,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useConnectionStore } from '@/composables/useConnectionStore'
 import { useSearchStore } from '@/composables/useSearchStore'
 import { useUIStore } from '@/composables/useUIStore'
@@ -203,6 +203,12 @@ const dropdownStyle = computed(() => {
 
 const userRole = ref('user')
 const isAdmin = ref(false)
+
+// 同步 appStore.searchInput 到本地
+watch(() => appStore.searchInput, (val) => {
+  localSearchInput.value = val
+}, { immediate: true })
+
 onMounted(() => {
   const authUserStr = localStorage.getItem('authUser')
   if (authUserStr) {
@@ -269,12 +275,6 @@ function openColumnConfig() {
 function onAiToggle() {
   storage.saveAiConfig(store.aiConfig)
   store.performSearch()
-}
-
-function onSearchInput(e: Event) {
-  const value = (e.target as HTMLInputElement).value
-  store.searchInput = value
-  store.scheduleDebouncedSearch()
 }
 
 function onAiWeightChange() {
