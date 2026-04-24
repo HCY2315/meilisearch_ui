@@ -266,6 +266,38 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  async function saveTableConfigsToBackend() {
+    const token = localStorage.getItem('authToken')
+    if (!token) return
+    if (!currentIndex.value) return
+    try {
+      const tableConfigs = JSON.stringify({
+        order: columnOrder.value,
+        hidden: hiddenColumns.value,
+      })
+      const res = await fetch('/api/v1/admin/table_configs', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uid: currentIndex.value,
+          tableConfigs,
+        }),
+      })
+      if (!res.ok) {
+        pushToast(`保存列配置失败: ${res.status}`, 'error')
+        return
+      }
+      const idx = indexes.value.find(i => i.uid === currentIndex.value)
+      if (idx) idx.tableConfigs = tableConfigs
+      pushToast('列配置已同步到数据库', 'success')
+    } catch {
+      pushToast('保存列配置失败: 网络错误', 'error')
+    }
+  }
+
   function pushToast(message: string, kind: ToastTypeEnum) {
     toasts.value.push({ id: nextToastId++, message, kind })
     setTimeout(() => {
@@ -1212,5 +1244,6 @@ async function connect() {
     saveViewConfig, openViewConfig, setAiEnabled, setAiWeight, setCurrentTab,
     currentFieldConfigsForSync,
     getNestedFieldConfig, setNestedFieldConfig, saveNestedFieldConfigs, scheduleSaveNestedFieldConfigs, saveDrawerFieldOrder,
+    saveTableConfigsToBackend,
   }
 })
