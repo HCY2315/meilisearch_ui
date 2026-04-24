@@ -657,8 +657,8 @@ onMounted(() => {
 
 /* 芯片多选 */
 .index-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { padding: 6px 12px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; font-size: 13px; color: #94a3b8; cursor: pointer; border: 1px solid transparent; }
-.chip:hover { background: rgba(255, 255, 255, 0.1); }
-.chip.selected { background: rgba(99, 102, 241, 0.15); border-color: var(--primary); color: white; }
+.chip { padding: 6px 12px; background: rgba(0,0,0,0.05); border-radius: 8px; font-size: 13px; color: #6b7280; cursor: pointer; border: 1px solid transparent; }
+.chip:hover { background: rgba(0,0,0,0.1); }
+.chip.selected { background: rgba(99, 102, 241, 0.15); border-color: var(--primary); color: #1f293b; }
 .chip input { display: none; }
 </style>
