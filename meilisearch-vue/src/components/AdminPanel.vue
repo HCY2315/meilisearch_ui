@@ -616,8 +616,8 @@ onMounted(() => {
 }
 .data-card:hover { transform: translateY(-4px); border-color: rgba(99, 102, 241, 0.3); }
 .card-info { display: flex; align-items: center; gap: 16px; }
-.ins-avatar { width: 48px; height: 48px; border-radius: 12px; background: var(--primary); color: white; font-weight: 700; font-size: 20px; display: flex; align-items: center; justify-content: center; }
-.card-info h4 { font-size: 16px; color: white; margin-bottom: 4px; }
+.ins-avatar { width: 48px; height: 48px; border-radius: 12px; background: var(--primary); color: #1f293b; font-weight: 700; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+.card-info h4 { font-size: 16px; color: #1f293b; margin-bottom: 4px; }
 .card-info code { font-size: 12px; color: var(--primary); }
 .card-ops { display: flex; gap: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); pt: 16px; padding-top: 16px; }
 
@@ -633,23 +633,27 @@ onMounted(() => {
 }
 .tok-tag { font-size: 9px; font-weight: 800; color: var(--primary); letter-spacing: 0.1em; background: rgba(99, 102, 241, 0.1); padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
 .tok-val { font-size: 16px; color: #fbbf24; font-family: monospace; display: block; margin: 12px 0; }
-.tok-desc { color: white; font-size: 14px; margin-bottom: 8px; }
+.tok-desc { color: #6b7280; font-size: 14px; margin-bottom: 8px; }
 .tok-meta { display: flex; gap: 24px; font-size: 12px; color: #64748b; }
 
 /* 设置 */
 .settings-card { display: flex; flex-direction: column; gap: 32px; }
+
 .settings-row { display: flex; gap: 48px; align-items: flex-start; }
+
 .row-label { width: 240px; }
-.row-label h4 { font-size: 16px; color: white; margin-bottom: 4px; }
-.row-label p { font-size: 13px; color: #64748b; }
+.row-label h4 { font-size: 16px; color: #1f293b; margin-bottom: 4px; }
+.row-label p { font-size: 13px; color: #6b7280; }
 .row-val { flex: 1; }
+
 .app-identity { display: flex; align-items: center; gap: 12px; font-size: 20px; }
+
 .json-preview { background: #000; padding: 16px; border-radius: 8px; font-size: 12px; color: #10b981; max-height: 200px; overflow: auto; margin-bottom: 12px; }
 
 /* 通用列表项 */
 .alias-info { display: flex; flex-direction: column; gap: 4px; }
-.alias { color: white; font-weight: 600; }
-.desc { font-size: 12px; color: #64748b; }
+.alias { color: #1f293b; font-weight: 600; }
+.desc { font-size: 12px; color: #6b7280; }
 
 /* 芯片多选 */
 .index-chips { display: flex; flex-wrap: wrap; gap: 8px; }
