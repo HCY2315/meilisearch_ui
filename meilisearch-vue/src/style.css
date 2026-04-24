@@ -582,13 +582,13 @@ html[data-theme="light"] {
   --primary-color-rgb: 15, 118, 110;
   --border-active: rgba(15, 118, 110, 0.45);
 
-  --bg-main: #f4f7fb;
-  --bg-app: #f8fbff;
-  --bg-card: #fdfefe;
-  --bg-card-hover: #f3f8f7;
-  --surface: #fdfefe;
-  --surface-glass: rgba(247, 253, 252, 0.92);
-  --bg-secondary: #e4edf3;
+  --bg-main: #edf3f8;
+  --bg-app: #f2f8fc;
+  --bg-card: #f5fbfb;
+  --bg-card-hover: #eaf4f4;
+  --surface: #f6fbfb;
+  --surface-glass: rgba(237, 247, 248, 0.94);
+  --bg-secondary: #d9e7f0;
 
   --text-main: #1f2937;
   --text-sub: #4b5563;
@@ -596,8 +596,8 @@ html[data-theme="light"] {
   --text-primary: var(--text-main);
   --text-secondary: var(--text-sub);
 
-  --border: #d9e4ea;
-  --border-light: #dce7ee;
+  --border: #c8d7e1;
+  --border-light: #cfdee8;
   --border-color: var(--border);
   --glass-bg: rgba(255, 255, 255, 0.9);
   --glass-blur: blur(14px);
@@ -610,13 +610,13 @@ html[data-theme="light"] {
 
 html[data-theme="light"] body {
   background:
-    radial-gradient(circle at 8% -2%, rgba(20, 184, 166, 0.16) 0, transparent 36%),
-    radial-gradient(circle at 92% 102%, rgba(56, 189, 248, 0.12) 0, transparent 40%),
-    linear-gradient(180deg, #f7fcff 0%, #eef6f9 56%, #f5fbfd 100%);
+    radial-gradient(circle at 8% -2%, rgba(15, 118, 110, 0.18) 0, transparent 34%),
+    radial-gradient(circle at 92% 102%, rgba(14, 165, 233, 0.14) 0, transparent 40%),
+    linear-gradient(180deg, #edf5fa 0%, #e4eef4 56%, #edf5f9 100%);
 }
 
 html[data-theme="light"] .app-header {
-  background: linear-gradient(90deg, rgba(245, 253, 251, 0.92), rgba(248, 252, 255, 0.92));
+  background: linear-gradient(90deg, rgba(233, 246, 243, 0.94), rgba(235, 243, 249, 0.94));
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 14px rgba(15, 23, 42, 0.05);
@@ -625,7 +625,7 @@ html[data-theme="light"] .app-header {
 html[data-theme="light"] .nav-pill-group,
 html[data-theme="light"] .user-pill,
 html[data-theme="light"] .token-unlock-pill {
-  background: linear-gradient(135deg, rgba(246, 255, 253, 0.92), rgba(245, 249, 255, 0.92));
+  background: linear-gradient(135deg, rgba(235, 248, 245, 0.95), rgba(236, 243, 250, 0.95));
   border: 1px solid var(--border);
 }
 
@@ -645,7 +645,7 @@ html[data-theme="light"] .nav-pill.active {
 }
 
 html[data-theme="light"] .glass-btn {
-  background: linear-gradient(135deg, #f8fffd, #f4f8fd);
+  background: linear-gradient(135deg, #edf8f6, #eaf1f8);
   border: 1px solid var(--border);
   color: var(--text-main);
 }
@@ -659,13 +659,13 @@ html[data-theme="light"] .query-editor,
 html[data-theme="light"] .results-panel,
 html[data-theme="light"] .card,
 html[data-theme="light"] .custom-row {
-  background: linear-gradient(180deg, rgba(248, 255, 253, 0.95), rgba(244, 249, 252, 0.93));
+  background: linear-gradient(180deg, rgba(237, 248, 245, 0.96), rgba(231, 240, 246, 0.94));
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-md);
 }
 
 html[data-theme="light"] .results-table th {
-  background: linear-gradient(180deg, #edf5fa, #e7f1f6);
+  background: linear-gradient(180deg, #dfeaf2, #d8e5ee);
   color: var(--text-sub);
   font-weight: 600;
 }
@@ -676,16 +676,16 @@ html[data-theme="light"] .results-table td {
 
 html[data-theme="light"] .results-table tr:hover td,
 html[data-theme="light"] .data-table tr:hover td {
-  background: #e9f8f4;
+  background: #dff2ec;
 }
 
 html[data-theme="light"] .search-input,
 html[data-theme="light"] .json-textarea,
 html[data-theme="light"] select,
 html[data-theme="light"] .form-control {
-  background: linear-gradient(180deg, #fcfffe, #f7fbfd);
+  background: linear-gradient(180deg, #f3f9f8, #edf4f8);
   color: var(--text-main);
-  border: 1px solid #ccdbe4;
+  border: 1px solid #bcced9;
 }
 
 html[data-theme="light"] .search-input:focus,
