@@ -32,6 +32,8 @@ func InitRouter() *gin.Engine {
 			adminGroup.DELETE("/index_configs/:uid", HandleDeleteIndex)
 			// NOTE: 嵌套查看器字段配置的局部保存接口，不触就其他索引设置
 			adminGroup.PUT("/nested_field_configs", HandleSaveNestedFieldConfigs)
+			// 列配置（顺序/隐藏）局部保存
+			adminGroup.PUT("/table_configs", HandleSaveTableConfigs)
 			// 抽屉字段顺序保存
 			adminGroup.PUT("/drawer_field_order", HandleSaveDrawerFieldOrder)
 

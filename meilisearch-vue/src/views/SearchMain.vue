@@ -195,7 +195,7 @@ onMounted(async () => {
 
 /* 页眉 */
 .app-header {
-  padding: 24px 48px;
+  padding: 20px 40px 18px;
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -208,7 +208,7 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .header-left { display: flex; align-items: center; gap: 16px; }
@@ -307,7 +307,16 @@ onMounted(async () => {
 }
 
 /* 主容器 */
-.app-container { flex: 1; padding: 32px 48px; }
+.app-container { flex: 1; padding: 24px 40px 30px; }
+
+.content-wrapper {
+  width: 100%;
+  max-width: 1460px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 
 .loading-state {
   display: flex;

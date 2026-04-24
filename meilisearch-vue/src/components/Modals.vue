@@ -6,17 +6,33 @@
         <button class="modal-close" @click="store.columnConfigOpen = false">×</button>
       </div>
       <div class="modal-body">
-        <div v-for="col in orderedColumns" :key="col" class="column-config-item">
-          <label>
-            <input type="checkbox" v-model="hidden[col]" />
+        <div v-if="!isAdmin" class="modal-hint-warning">仅后台管理员可修改列配置与排序</div>
+        <div
+          v-for="col in orderedColumns"
+          :key="col"
+          class="column-config-item"
+          :class="{ 'is-dragging': draggingColumn === col, 'is-drop-target': dragOverColumn === col }"
+          :draggable="isAdmin"
+          @dragstart="onDragStartColumn(col)"
+          @dragover.prevent="onDragOverColumn(col)"
+          @drop.prevent="onDropColumn(col)"
+          @dragend="onDragEndColumn"
+        >
+          <label class="column-config-label">
+            <span v-if="isAdmin" class="drag-handle" title="拖拽排序">⋮⋮</span>
+            <input type="checkbox" v-model="hidden[col]" :disabled="!isAdmin" />
             <span class="column-name-original">{{ col }}</span>
-            <input class="form-control" style="width:120px;font-size:12px" v-model="labels[col]" :placeholder="col" />
+            <input class="form-control" style="width:120px;font-size:12px" v-model="labels[col]" :placeholder="col" :disabled="!isAdmin" />
+            <div class="column-order-actions">
+              <button class="btn btn-secondary btn-sm" :disabled="!isAdmin || isFirstColumn(col)" @click.prevent="moveColumnUp(col)">↑</button>
+              <button class="btn btn-secondary btn-sm" :disabled="!isAdmin || isLastColumn(col)" @click.prevent="moveColumnDown(col)">↓</button>
+            </div>
           </label>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" @click="store.columnConfigOpen = false">取消</button>
-        <button class="btn btn-primary" @click="onSave">保存</button>
+        <button v-if="isAdmin" class="btn btn-primary" @click="onSave">保存</button>
       </div>
     </div>
   </div>
@@ -223,18 +239,42 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, watch, ref } from 'vue'
 import { useAppStore } from '@/composables/useApp'
 import type { FieldConfigItem } from '@/types'
 
 const store = useAppStore()
+const isAdmin = computed(() => {
+  const authUserStr = localStorage.getItem('authUser')
+  if (!authUserStr) return false
+  try {
+    const authUser = JSON.parse(authUserStr)
+    return authUser.role === 'admin'
+  } catch {
+    return false
+  }
+})
 
 const hidden = reactive<Record<string, boolean>>({})
 const labels = reactive<Record<string, string>>({})
+const columnOrderDraft = ref<string[]>([])
+const draggingColumn = ref<string | null>(null)
+const dragOverColumn = ref<string | null>(null)
 
 watch(() => store.columnConfigOpen, (open) => {
   if (open) {
-    for (const c of store.lastBaseColumns) {
+    const baseColumns = [...store.lastBaseColumns]
+    const ordered: string[] = []
+    if (store.columnOrder.length) {
+      for (const c of store.columnOrder) {
+        if (baseColumns.includes(c)) ordered.push(c)
+      }
+    }
+    for (const c of baseColumns) {
+      if (!ordered.includes(c)) ordered.push(c)
+    }
+    columnOrderDraft.value = ordered
+    for (const c of ordered) {
       hidden[c] = !store.hiddenColumns.includes(c)
       labels[c] = store.fieldLabels[c] || c
     }
@@ -242,24 +282,74 @@ watch(() => store.columnConfigOpen, (open) => {
 })
 
 const orderedColumns = computed(() => {
-  let cols = [...store.lastBaseColumns]
-  if (store.columnOrder.length) {
-    const ordered: string[] = []
-    for (const c of store.columnOrder) {
-      if (cols.includes(c)) { ordered.push(c); cols = cols.filter(x => x !== c) }
-    }
-    cols = [...ordered, ...cols]
-  }
-  return cols
+  return columnOrderDraft.value
 })
 
-function onSave() {
+function isFirstColumn(col: string): boolean {
+  return orderedColumns.value.indexOf(col) === 0
+}
+
+function isLastColumn(col: string): boolean {
+  return orderedColumns.value.indexOf(col) === orderedColumns.value.length - 1
+}
+
+function moveColumnUp(col: string) {
+  const idx = orderedColumns.value.indexOf(col)
+  if (idx <= 0) return
+  const next = [...orderedColumns.value]
+  ;[next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]
+  columnOrderDraft.value = next
+}
+
+function moveColumnDown(col: string) {
+  const idx = orderedColumns.value.indexOf(col)
+  if (idx < 0 || idx >= orderedColumns.value.length - 1) return
+  const next = [...orderedColumns.value]
+  ;[next[idx + 1], next[idx]] = [next[idx], next[idx + 1]]
+  columnOrderDraft.value = next
+}
+
+function onDragStartColumn(col: string) {
+  if (!isAdmin.value) return
+  draggingColumn.value = col
+  dragOverColumn.value = col
+}
+
+function onDragOverColumn(col: string) {
+  if (!isAdmin.value || !draggingColumn.value) return
+  dragOverColumn.value = col
+}
+
+function onDropColumn(targetCol: string) {
+  if (!isAdmin.value || !draggingColumn.value) return
+  const fromIdx = orderedColumns.value.indexOf(draggingColumn.value)
+  const toIdx = orderedColumns.value.indexOf(targetCol)
+  if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) {
+    onDragEndColumn()
+    return
+  }
+  const next = [...orderedColumns.value]
+  const [moved] = next.splice(fromIdx, 1)
+  next.splice(toIdx, 0, moved)
+  columnOrderDraft.value = next
+  onDragEndColumn()
+}
+
+function onDragEndColumn() {
+  draggingColumn.value = null
+  dragOverColumn.value = null
+}
+
+async function onSave() {
+  if (!isAdmin.value) return
+  store.columnOrder = [...orderedColumns.value]
   store.hiddenColumns = store.lastBaseColumns.filter((c: string) => !hidden[c])
   for (const [k, v] of Object.entries(labels)) {
     if (v.trim() && v !== k) store.fieldLabels[k] = v.trim()
   }
   store.saveFieldLabels()
   store.saveColumnPrefs()
+  await store.saveTableConfigsToBackend()
   store.columnConfigOpen = false
 }
 
@@ -387,7 +477,39 @@ async function copyResultJson() {
   padding: 16px 20px;
   border-top: 1px solid var(--border);
 }
-.column-config-item label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+.column-config-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  transition: border-color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+.column-config-item.is-drop-target {
+  border-color: var(--primary-color);
+  background: rgba(var(--primary-color-rgb), 0.08);
+}
+.column-config-item.is-dragging {
+  opacity: 0.6;
+}
+.column-config-item label { display: flex; align-items: center; gap: 8px; margin-bottom: 0; font-size: 13px; }
+.column-config-label { justify-content: space-between; }
+.column-order-actions { display: flex; gap: 6px; margin-left: auto; }
+.drag-handle {
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: grab;
+  user-select: none;
+}
+.modal-hint-warning {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border: 1px solid rgba(var(--warning-color-rgb, 245, 158, 11), 0.25);
+  background: rgba(var(--warning-color-rgb, 245, 158, 11), 0.08);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  font-size: 12px;
+}
 .column-name-original { color: var(--text-secondary); min-width: 100px; }
 .field-config {
   border: 1px solid var(--border);
