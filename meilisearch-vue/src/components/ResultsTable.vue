@@ -434,7 +434,7 @@ function startResize(e: MouseEvent, col: string) {
   top: 20%;
   bottom: 20%;
   width: 2px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0,0,0,0.3);
   border-radius: 1px;
   opacity: 0;
   transition: opacity 0.2s;
@@ -442,8 +442,9 @@ function startResize(e: MouseEvent, col: string) {
 .column-resizer:hover::after {
   opacity: 1;
 }
+
 .cell-input { padding: 4px 6px; font-size: 12px; width: 100%; min-width: 60px; }
-.edited-cell { background: rgba(var(--warning-color), 0.15); border-radius: 3px; padding: 2px 4px; font-style: italic; }
+.edited-cell { background: rgba(var(--warning-color-rgb), 0.15); border-radius: 3px; padding: 2px 4px; font-style: italic; }
 .rank-score { color: var(--text-muted); font-size: 11px; }
 .custom-results { display: flex; flex-direction: column; gap: 12px; }
 .custom-row { background: var(--surface); border-radius: var(--radius); padding: 12px; border: 1px solid var(--border); }
@@ -478,18 +479,18 @@ function startResize(e: MouseEvent, col: string) {
   position: absolute;
   right: -6px;
   top: 0;
-  height: 12px;
+  bottom: 0;
   width: 12px;
   cursor: row-resize;
   z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .field-width-resizer::after {
   content: '';
-  position: absolute;
-  right: 3px;
-  top: 0;
-  width: 30px;
-  height: 3px;
+  width: 3px;
+  height: 30px;
   background: var(--border);
   border-radius: 2px;
   transition: background 0.2s;

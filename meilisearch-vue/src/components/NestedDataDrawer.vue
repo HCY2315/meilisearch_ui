@@ -699,8 +699,8 @@ function handleClose() {
   align-items: center;
   gap: 12px;
   padding: 12px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.025);
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+  background: rgba(0,0,0,0.025);
   flex-shrink: 0;
 }
 
@@ -728,9 +728,33 @@ function handleClose() {
 .bc-root:hover { background: rgba(255,255,255,0.06); }
 
 .bc-sep {
-  color: rgba(255, 255, 255, 0.25);
+  color: #6b7280;
   font-size: 14px;
   flex-shrink: 0;
+}
+
+.bc-item {
+  background: transparent;
+  border: none;
+  color: #374151;
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 4px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.bc-item:not(:disabled):hover {
+  background: rgba(0,0,0,0.06);
+  color: #1f293b;
+}
+.bc-current {
+  color: #4f46e5 !important;
+  font-weight: 600;
+  cursor: default;
 }
 
 .bc-item {
@@ -771,13 +795,22 @@ function handleClose() {
   gap: 5px;
   padding: 5px 12px;
   border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(0,0,0,0.1);
   background: transparent;
-  color: rgba(255,255,255,0.55);
+  color: #374151;
   font-size: 12.5px;
   cursor: pointer;
   transition: all 0.15s;
-  white-space: nowrap;
+}
+.btn-config-toggle:hover {
+  background: rgba(0,0,0,0.06);
+  color: #1f293b;
+  border-color: rgba(99,179,237,0.3);
+}
+.btn-config-toggle.active {
+  background: rgba(var(--primary-color-rgb), 99,179,237), 0.15);
+  color: #4f46e5;
+  border-color: rgba(99,179,237,0.3);
 }
 .btn-config-toggle:hover {
   background: rgba(255,255,255,0.06);
@@ -793,13 +826,17 @@ function handleClose() {
 .nd-close-btn {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.35);
+  color: #6b7280;
   font-size: 16px;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
   line-height: 1;
   transition: color 0.15s, background 0.15s;
+}
+.nd-close-btn:hover {
+  color: #1f293b;
+  background: rgba(0,0,0,0.08);
 }
 .nd-close-btn:hover {
   color: #fff;
@@ -890,12 +927,12 @@ function handleClose() {
 .config-panel-title {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255,255,255,0.8);
+  color: #374151;
 }
 
 .config-panel-desc {
   font-size: 11.5px;
-  color: rgba(255,255,255,0.3);
+  color: #6b7280;
 }
 
 .btn-save-config {
@@ -948,7 +985,7 @@ function handleClose() {
 /* 可见性切换按钮 */
 .vis-btn {
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(0,0,0,0.1);
   border-radius: 5px;
   cursor: pointer;
   width: 28px;
@@ -960,6 +997,12 @@ function handleClose() {
   flex-shrink: 0;
   transition: border-color 0.15s, background 0.15s;
 }
+.vis-btn:hover { background: rgba(0,0,0,0.06); }
+.vis-btn.vis-off {
+  border-color: rgba(255,100,100,0.2);
+  background: rgba(255,100,100,0.05);
+  color: #ef4444;
+}
 .vis-btn:hover { background: rgba(255,255,255,0.06); }
 .vis-btn.vis-off {
   border-color: rgba(255,100,100,0.2);
@@ -968,7 +1011,7 @@ function handleClose() {
 
 .config-field-name {
   font-size: 12.5px;
-  color: rgba(255,255,255,0.6);
+  color: #6b7280;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   min-width: 100px;
   max-width: 180px;
@@ -979,7 +1022,7 @@ function handleClose() {
 }
 
 .config-arrow {
-  color: rgba(255,255,255,0.2);
+  color: #9ca3af;
   font-size: 12px;
   flex-shrink: 0;
 }
@@ -989,24 +1032,24 @@ function handleClose() {
   flex: 1;
   min-width: 80px;
   padding: 4px 9px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.1);
   border-radius: 5px;
-  color: var(--text-primary, #e2e8f0);
+  color: var(--text-primary, #1f293b);
   font-size: 12.5px;
   outline: none;
   transition: border-color 0.15s;
 }
 .alias-input:focus {
-  border-color: var(--primary-color, #63b3ed);
-  background: rgba(255,255,255,0.07);
+  border-color: var(--primary-color, #6366f1);
+  background: rgba(0,0,0,0.07);
 }
 .alias-input:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 .alias-input::placeholder {
-  color: rgba(255,255,255,0.2);
+  color: #9ca3af;
   font-style: italic;
 }
 
@@ -1037,11 +1080,11 @@ function handleClose() {
 }
 
 .mini-table th {
-  background: rgba(255,255,255,0.04);
+  background: rgba(0,0,0,0.02);
   padding: 8px 12px;
   text-align: left;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.7);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  color: #1f293b;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1049,23 +1092,23 @@ function handleClose() {
 .mini-table th .alias-tag {
   margin-left: 5px;
   font-size: 10.5px;
-  color: rgba(255,255,255,0.3);
+  color: #64748b;
   font-weight: 400;
   font-family: 'JetBrains Mono', monospace;
 }
 
 .mini-table td {
   padding: 7px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(0,0,0,0.04);
   vertical-align: top;
 }
 
 .mini-table tr:hover td {
-  background: rgba(255,255,255,0.02);
+  background: rgba(0,0,0,0.02);
 }
 
-.row-num-th { color: rgba(255,255,255,0.25); font-weight: 400; width: 36px; }
-.row-num    { color: rgba(255,255,255,0.2);  font-size: 11px; }
+.row-num-th { color: #374151; font-weight: 400; width: 36px; }
+.row-num    { color: #4b5563; font-size: 11px; }
 
 .cell-text {
   display: block;
@@ -1073,7 +1116,7 @@ function handleClose() {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 260px;
-  color: var(--text-primary, #e2e8f0);
+  color: #1f293b;
 }
 
 /* ─── 键值对列表 ─────────────────────────────────────────────────────────────── */
@@ -1095,7 +1138,7 @@ function handleClose() {
 .kv-row:hover { background: rgba(255,255,255,0.025); }
 
 .kv-key {
-  color: rgba(255,255,255,0.55);
+  color: #374151;
   font-size: 13px;
   font-weight: 600;
   overflow: hidden;
@@ -1109,7 +1152,7 @@ function handleClose() {
 
 .alias-raw-tag {
   font-size: 10.5px;
-  color: rgba(255,255,255,0.25);
+  color: #6b7280;
   font-weight: 400;
   font-family: 'JetBrains Mono', monospace;
   overflow: hidden;
@@ -1143,8 +1186,8 @@ function handleClose() {
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 
-.prim-idx { color: rgba(255,255,255,0.25); font-size: 11px; min-width: 30px; flex-shrink: 0; }
-.prim-val { color: var(--text-primary, #e2e8f0); word-break: break-word; }
+.prim-idx { color: #4b5563; font-size: 11px; min-width: 30px; flex-shrink: 0; }
+.prim-val { color: #1f293b; word-break: break-word; }
 
 /* ─── 嵌套徽章 & 下钻按钮 ───────────────────────────────────────────────────── */
 .nested-badge-sm {
@@ -1164,9 +1207,9 @@ function handleClose() {
   gap: 3px;
   padding: 2px 8px;
   border-radius: 4px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(99,179,237,0.3);
+  background: rgba(99,179,237,0.1);
+  color: #0ea5e9;
   font-size: 11.5px;
   cursor: pointer;
   white-space: nowrap;
@@ -1174,8 +1217,8 @@ function handleClose() {
 }
 .btn-drill:hover {
   background: rgba(99,179,237,0.15);
-  color: #63b3ed;
-  border-color: rgba(99,179,237,0.3);
+  color: #0284c7;
+  border-color: rgba(99,179,237,0.5);
 }
 
 /* ─── 动画 ──────────────────────────────────────────────────────────────────── */
@@ -1204,7 +1247,17 @@ function handleClose() {
   font-size: 13px; cursor: pointer; border-radius: 4px; transition: all 0.15s;
 }
 .config-panel-tabs button.active {
-  background: var(--primary-color); color: #fff;
+  background: var(--primary-color); color: #1f293b;
+}
+
+/* ─── 字段排序面板 ───────────────────────────────────────────────────── */
+.order-panel { padding: 12px; }
+.order-panel-hd {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+}
+.btn-save-order {
+  padding: 6px 12px; background: var(--primary-color); color: #1f293b; border: none;
+  border-radius: 4px; font-size: 12px; cursor: pointer;
 }
 
 /* ─── 字段排序面板 ───────────────────────────────────────────────────────────── */
