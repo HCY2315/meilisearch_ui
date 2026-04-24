@@ -560,8 +560,9 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
 }
+
 .sidebar-logo { font-size: 32px; }
-.sidebar-header h2 { font-family: 'Outfit'; font-size: 20px; font-weight: 700; color: white; }
+.sidebar-header h2 { font-family: 'Outfit'; font-size: 20px; font-weight: 700; color: #1f293b; }
 
 .sidebar-nav { flex: 1; padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
 .nav-item {
@@ -577,22 +578,15 @@ onMounted(() => {
   transition: all 0.3s ease;
   font-weight: 500;
 }
-.nav-item:hover { background: rgba(255, 255, 255, 0.05); color: white; }
+.nav-item:hover { background: rgba(255, 255, 255, 0.05); color: #1f293b; }
 .nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+
 .nav-icon { font-size: 18px; }
 
-.sidebar-footer { padding: 0 32px; font-size: 11px; color: #475569; }
+.sidebar-footer { padding: 0 32px; font-size: 11px; color: #6b7280; }
 
 /* 主内容区 */
 .admin-main { flex: 1; margin-left: 260px; padding: 48px 64px; }
-
-.content-section { max-width: 1000px; }
-
-.section-header { margin-bottom: 40px; display: flex; flex-direction: column; gap: 8px; position: relative; }
-.section-header h1 { font-family: 'Outfit'; font-size: 32px; font-weight: 700; color: white; }
-.section-header h1 span { font-weight: 300; opacity: 0.3; margin-left: 8px; font-size: 0.6em; }
-.section-header p { color: #94a3b8; font-size: 15px; }
-.section-header .btn { position: absolute; right: 0; top: 0; }
 
 /* 编辑器容器 */
 .glass-editor {
@@ -603,7 +597,7 @@ onMounted(() => {
   margin-bottom: 32px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
-.glass-editor h3 { margin-bottom: 24px; font-size: 18px; color: white; }
+.glass-editor h3 { margin-bottom: 24px; font-size: 18px; color: #1f293b; }
 .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
 .input-group label { display: block; font-size: 13px; color: #64748b; margin-bottom: 8px; }
 .editor-actions { margin-top: 32px; display: flex; gap: 12px; justify-content: flex-end; }
