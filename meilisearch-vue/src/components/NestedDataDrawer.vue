@@ -687,7 +687,7 @@ function handleClose() {
   display: flex;
   flex-direction: column;
   background: var(--bg-primary, #0f1117);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(0,0,0,0.08);
   box-shadow: -12px 0 48px rgba(0, 0, 0, 0.55);
   z-index: 1001;
   overflow: hidden;
@@ -725,7 +725,7 @@ function handleClose() {
   transition: background 0.15s;
   white-space: nowrap;
 }
-.bc-root:hover { background: rgba(255,255,255,0.06); }
+.bc-root:hover { background: rgba(0,0,0,0.06); }
 
 .bc-sep {
   color: #6b7280;
@@ -760,7 +760,7 @@ function handleClose() {
 .bc-item {
   background: transparent;
   border: none;
-  color: rgba(255,255,255,0.45);
+  color: rgba(0,0,0,0.45);
   font-size: 12.5px;
   cursor: pointer;
   padding: 3px 8px;
@@ -772,7 +772,7 @@ function handleClose() {
   transition: background 0.15s, color 0.15s;
 }
 .bc-item:not(:disabled):hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.06);
   color: #fff;
 }
 .bc-current {
@@ -813,9 +813,9 @@ function handleClose() {
   border-color: rgba(99,179,237,0.3);
 }
 .btn-config-toggle:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.06);
   color: #fff;
-  border-color: rgba(255,255,255,0.2);
+  border-color: rgba(0,0,0,0.2);
 }
 .btn-config-toggle.active {
   background: rgba(var(--primary-color-rgb, 99,179,237), 0.15);
@@ -840,7 +840,7 @@ function handleClose() {
 }
 .nd-close-btn:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0,0,0,0.08);
 }
 
 /* ─── 子头部（类型 + 路径） ─────────────────────────────────────────────────── */
@@ -897,8 +897,8 @@ function handleClose() {
 
 /* ─── 字段配置面板 ──────────────────────────────────────────────────────────── */
 .config-panel {
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+  background: rgba(0,0,0,0.02);
   flex-shrink: 0;
   max-height: 280px;
   overflow-y: auto;
@@ -969,7 +969,7 @@ function handleClose() {
   transition: background 0.1s;
   cursor: grab;
 }
-.config-row:hover { background: rgba(255,255,255,0.03); }
+.config-row:hover { background: rgba(0,0,0,0.03); }
 .config-row:active { cursor: grabbing; }
 
 .config-row .drag-handle {
@@ -1003,7 +1003,7 @@ function handleClose() {
   background: rgba(255,100,100,0.05);
   color: #ef4444;
 }
-.vis-btn:hover { background: rgba(255,255,255,0.06); }
+.vis-btn:hover { background: rgba(0,0,0,0.06); }
 .vis-btn.vis-off {
   border-color: rgba(255,100,100,0.2);
   background: rgba(255,100,100,0.05);
@@ -1130,12 +1130,12 @@ function handleClose() {
   grid-template-columns: 200px 1fr;
   gap: 16px;
   padding: 9px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(0,0,0,0.04);
   align-items: flex-start;
   border-radius: 6px;
   transition: background 0.1s;
 }
-.kv-row:hover { background: rgba(255,255,255,0.025); }
+.kv-row:hover { background: rgba(0,0,0,0.025); }
 
 .kv-key {
   color: #374151;
@@ -1183,7 +1183,7 @@ function handleClose() {
   padding: 7px 12px;
   border-radius: 6px;
   font-size: 13px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(0,0,0,0.04);
 }
 
 .prim-idx { color: #4b5563; font-size: 11px; min-width: 30px; flex-shrink: 0; }

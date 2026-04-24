@@ -545,7 +545,7 @@ onMounted(() => {
   width: 260px;
   background: rgba(15, 23, 42, 0.8);
   backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(0,0,0,0.05);
   display: flex;
   flex-direction: column;
   padding: 32px 0;
@@ -578,7 +578,7 @@ onMounted(() => {
   transition: all 0.3s ease;
   font-weight: 500;
 }
-.nav-item:hover { background: rgba(255, 255, 255, 0.05); color: #1f293b; }
+.nav-item:hover { background: rgba(0,0,0,0.05); color: #1f293b; }
 .nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
 
 .nav-icon { font-size: 18px; }
@@ -591,7 +591,7 @@ onMounted(() => {
 /* 编辑器容器 */
 .glass-editor {
   background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0,0,0,0.05);
   border-radius: 20px;
   padding: 32px;
   margin-bottom: 32px;
@@ -606,7 +606,7 @@ onMounted(() => {
 .data-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
 .data-card {
   background: rgba(15, 23, 42, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0,0,0,0.05);
   border-radius: 16px;
   padding: 24px;
   display: flex;
@@ -619,7 +619,7 @@ onMounted(() => {
 .ins-avatar { width: 48px; height: 48px; border-radius: 12px; background: var(--primary); color: #1f293b; font-weight: 700; font-size: 20px; display: flex; align-items: center; justify-content: center; }
 .card-info h4 { font-size: 16px; color: #1f293b; margin-bottom: 4px; }
 .card-info code { font-size: 12px; color: var(--primary); }
-.card-ops { display: flex; gap: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); pt: 16px; padding-top: 16px; }
+.card-ops { display: flex; gap: 10px; border-top: 1px solid rgba(0,0,0,0.05); pt: 16px; padding-top: 16px; }
 
 /* Token 特殊样式 */
 .token-list { display: flex; flex-direction: column; gap: 16px; }
