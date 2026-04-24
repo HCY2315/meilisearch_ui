@@ -297,12 +297,12 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.search-section { display: flex; flex-direction: column; gap: 12px; }
-.search-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; position: relative; }
+.search-section { display: flex; flex-direction: column; gap: 14px; }
+.search-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; position: relative; }
 .search-box-wrap { position: relative; flex: 1; z-index: 10; }
 .search-input {
   width: 100%;
-  padding: 13px 70px 13px 48px;
+  padding: 15px 70px 15px 50px;
   border: 2px solid var(--border);
   border-radius: var(--radius-lg);
   font-size: 1rem;
@@ -328,7 +328,7 @@ onBeforeUnmount(() => {
   pointer-events: none;
   z-index: 2;
 }
-.query-editor { background: var(--surface-glass); backdrop-filter: blur(20px); border-radius: var(--radius-lg); padding: 14px 18px; border: 1px solid var(--border-light); }
+.query-editor { background: var(--surface-glass); backdrop-filter: blur(20px); border-radius: var(--radius-lg); padding: 18px 22px; border: 1px solid var(--border-light); }
 .query-editor h3 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
 .query-rows { display: flex; flex-direction: column; gap: 8px; }
 .query-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -341,7 +341,7 @@ onBeforeUnmount(() => {
 .btn-icon:hover { border-color: var(--error-color); color: var(--error-color); }
 .query-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .filter-preview { margin-top: 8px; font-size: 0.8rem; color: var(--text-muted); padding: 4px 8px; background: var(--bg-secondary); border-radius: 4px; display: inline-block; }
-.results-panel { background: var(--surface-glass); backdrop-filter: blur(20px); border-radius: var(--radius-lg); padding: 14px 18px; border: 1px solid var(--border-light); }
+.results-panel { background: var(--surface-glass); backdrop-filter: blur(20px); border-radius: var(--radius-lg); padding: 18px 22px; border: 1px solid var(--border-light); }
 .results-stats { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
 .results-count { color: var(--text-secondary); font-size: 0.9rem; }
 .results-count strong { color: var(--primary-color); font-size: 1.05rem; }
