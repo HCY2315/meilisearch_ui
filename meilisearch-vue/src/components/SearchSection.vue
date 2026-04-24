@@ -6,10 +6,10 @@
         <span class="search-icon">🔍</span>
 <input
           class="search-input"
-          v-model="localSearchInput"
+          v-model="store.searchInput"
           placeholder="输入关键词搜索..."
-          @input="onSearchInput"
-          @keyup.enter="appStore.performSearch()"
+          @input="store.scheduleDebouncedSearch()"
+          @keyup.enter="store.performSearch()"
         />
         <span
           ref="aiBadgeRef"
@@ -134,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useConnectionStore } from '@/composables/useConnectionStore'
 import { useSearchStore } from '@/composables/useSearchStore'
 import { useUIStore } from '@/composables/useUIStore'
@@ -147,42 +147,10 @@ import type { IndexInfo } from '@/types'
 const connectionStore = useConnectionStore()
 const searchStore = useSearchStore()
 const uiStore = useUIStore()
-
 const appStore = useAppStore()
 
-// 本地搜索输入
-const localSearchInput = ref('')
-
-function onSearchInput(e: Event) {
-  const value = (e.target as HTMLInputElement).value
-  localSearchInput.value = value
-  appStore.searchInput = value
-  appStore.scheduleDebouncedSearch()
-}
-
-const store: any = new Proxy({}, {
-  get(_target, prop: string) {
-    const p = prop as keyof typeof store
-    if (p in searchStore) return (searchStore as any)[p]
-    if (p in connectionStore) return (connectionStore as any)[p]
-    if (p in uiStore) return (uiStore as any)[p]
-    if (p in appStore) return (appStore as any)[p]
-    return undefined
-  },
-  set(_target, prop: string, value: any) {
-    const p = prop as keyof typeof store
-    if (p in searchStore) { (searchStore as any)[p] = value; return true }
-    if (p in connectionStore) { (connectionStore as any)[p] = value; return true }
-    if (p in uiStore) {
-      const propVal = (uiStore as any)[p]
-      if (propVal && typeof propVal === 'object' && 'value' in propVal) (propVal as any).value = value
-      else (uiStore as any)[p] = value
-      return true
-    }
-    if (p in appStore) { (appStore as any)[p] = value; return true }
-    return false
-  }
-})
+// 用于模板的统一访问（只读，set 通过具体 store 处理）
+const store = appStore
 
 const aiBadgeRef = ref<HTMLElement | null>(null)
 const aiDropdownRef = ref<HTMLElement | null>(null)
@@ -203,11 +171,6 @@ const dropdownStyle = computed(() => {
 
 const userRole = ref('user')
 const isAdmin = ref(false)
-
-// 同步 appStore.searchInput 到本地
-watch(() => appStore.searchInput, (val) => {
-  localSearchInput.value = val
-}, { immediate: true })
 
 onMounted(() => {
   const authUserStr = localStorage.getItem('authUser')
