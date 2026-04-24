@@ -1,11 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
 
 :root {
-  /* 品牌色 - 更加精致的 Indigo & Cyan */
-  --primary: #6366f1;
-  --primary-glow: rgba(99, 102, 241, 0.4);
-  --secondary: #06b6d4;
-  --accent: #f472b6;
+  /* 品牌色 - Slate + Teal */
+  --primary: #0f766e;
+  --primary-glow: rgba(15, 118, 110, 0.35);
+  --secondary: #0d9488;
+  --accent: #14b8a6;
   
   /* 基础背景与面板 - 深邃的 Slate 系统 */
   --bg-main: #030712;
@@ -22,7 +22,7 @@
   
   /* 边框与装饰 */
   --border: rgba(255, 255, 255, 0.12);
-  --border-active: rgba(99, 102, 241, 0.6);
+  --border-active: rgba(15, 118, 110, 0.55);
   --border-light: var(--border);
   --border-color: var(--border);
   --glass-bg: rgba(15, 23, 42, 0.95);
@@ -35,10 +35,10 @@
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
   --shadow-md: 0 8px 16px rgba(0, 0, 0, 0.2);
   --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.4);
-  --shadow-primary: 0 0 20px rgba(99, 102, 241, 0.2);
+  --shadow-primary: 0 0 20px rgba(15, 118, 110, 0.22);
   --primary-color: var(--primary);
   --secondary-color: var(--secondary);
-  --primary-color-rgb: 99, 102, 241;
+  --primary-color-rgb: 15, 118, 110;
   --warning-color: #f59e0b;
   --warning-color-rgb: 245, 158, 11;
   --success-color: #10b981;
@@ -65,8 +65,8 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(15, 118, 110, 0.1) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(13, 148, 136, 0.1) 0px, transparent 50%);
   background-attachment: fixed;
 }
 
@@ -89,13 +89,13 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), #4f46e5);
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
   color: white;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 15px rgba(var(--primary-color-rgb), 0.28);
 }
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 25px rgba(var(--primary-color-rgb), 0.38);
 }
 
 .btn-secondary {
@@ -128,7 +128,7 @@ body {
 .form-control:focus {
   border-color: var(--primary);
   background: rgba(0, 0, 0, 0.3);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 4px rgba(var(--primary-color-rgb), 0.16);
 }
 
 /* 卡片 - 玻璃拟态的核心实现 */
@@ -215,29 +215,29 @@ body {
 }
 
 html[data-theme="light"] {
-  --bg-main: #f0f2f5;
+  --bg-main: #f6f8fb;
   --bg-app: #ffffff;
   --bg-card: #ffffff;
-  --bg-card-hover: #fafafa;
+  --bg-card-hover: #f8fafc;
   --text-main: #1f2937;
   --text-sub: #4b5563;
-  --text-muted: #9ca3af;
+  --text-muted: #6b7280;
   --border: #e5e7eb;
-  --border-active: #6366f1;
+  --border-active: #0f766e;
   --glass-bg: rgba(255, 255, 255, 0.95);
   --glass-blur: blur(10px);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --shadow-primary: 0 2px 4px rgba(99, 102, 241, 0.2);
+  --shadow-primary: 0 2px 4px rgba(15, 118, 110, 0.2);
   --transition: all 0.2s ease;
   --surface: #ffffff;
   --surface-glass: rgba(255, 255, 255, 0.95);
-  --bg-secondary: #f9fafb;
+  --bg-secondary: #eef2f7;
 }
 
 html[data-theme="light"] body {
-  background: #f0f2f5;
+  background: #f6f8fb;
 }
 
 html[data-theme="light"] .card {
@@ -251,7 +251,7 @@ html[data-theme="light"] .card:hover {
 }
 
 html[data-theme="light"] .card-header h3 {
-  color: #6366f1;
+  color: var(--primary);
 }
 
 html[data-theme="light"] .btn-secondary {
@@ -272,8 +272,8 @@ html[data-theme="light"] .form-control {
 }
 
 html[data-theme="light"] .form-control:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.12);
 }
 
 html[data-theme="light"] .form-control::placeholder {
@@ -319,7 +319,7 @@ html[data-theme="light"] .nav-pill:hover {
 }
 
 html[data-theme="light"] .nav-pill.active {
-  background: #6366f1;
+  background: var(--primary);
   color: white;
 }
 
@@ -397,13 +397,13 @@ html[data-theme="light"] .dropdown-item:hover {
 
 html[data-theme="light"] input[type="checkbox"],
 html[data-theme="light"] input[type="radio"] {
-  accent-color: #6366f1;
+  accent-color: var(--primary);
 }
 
 html[data-theme="light"] .badge,
 html[data-theme="light"] .status-badge {
-  background: #e0e7ff;
-  color: #6366f1;
+  background: rgba(var(--primary-color-rgb), 0.12);
+  color: var(--primary);
 }
 
 html[data-theme="light"] .token-unlock-pill {
@@ -421,8 +421,8 @@ html[data-theme="light"] .token-unlock-pill input::placeholder {
 }
 
 html[data-theme="light"] .type-badge {
-  background: #e0e7ff;
-  color: #6366f1;
+  background: rgba(var(--primary-color-rgb), 0.12);
+  color: var(--primary);
 }
 
 html[data-theme="light"] .nd-subheader {
@@ -434,7 +434,7 @@ html[data-theme="light"] .bc-item {
 }
 
 html[data-theme="light"] .bc-item:hover {
-  color: #6366f1;
+  color: var(--primary);
 }
 
 html[data-theme="light"] .path-hint {
@@ -512,7 +512,7 @@ html[data-theme="light"] .login-card {
 }
 
 html[data-theme="light"] .login-header h1 {
-  background: linear-gradient(135deg, #1f2937, #6366f1);
+  background: linear-gradient(135deg, #1f2937, var(--primary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -528,8 +528,8 @@ html[data-theme="light"] .input-wrapper input {
 }
 
 html[data-theme="light"] .input-wrapper input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.12);
 }
 
 html[data-theme="light"] .login-footer {
@@ -573,45 +573,45 @@ html[data-theme="light"] .nav-item:hover {
   color: var(--text-main);
 }
 
-/* ============ Light Theme Refresh (Rose Pink) ============ */
+/* ============ Light Theme Refresh (Slate + Teal) ============ */
 html[data-theme="light"] {
-  --primary: #ec4899;
-  --secondary: #f472b6;
-  --primary-glow: rgba(236, 72, 153, 0.3);
-  --accent: #fb7185;
-  --primary-color-rgb: 236, 72, 153;
-  --border-active: rgba(236, 72, 153, 0.45);
+  --primary: #0f766e;
+  --secondary: #0d9488;
+  --primary-glow: rgba(15, 118, 110, 0.3);
+  --accent: #14b8a6;
+  --primary-color-rgb: 15, 118, 110;
+  --border-active: rgba(15, 118, 110, 0.45);
 
-  --bg-main: #fff7fb;
-  --bg-app: #fffafd;
+  --bg-main: #f6f8fb;
+  --bg-app: #fbfcfe;
   --bg-card: #ffffff;
-  --bg-card-hover: #fff5fb;
+  --bg-card-hover: #f8fafc;
   --surface: #ffffff;
-  --surface-glass: rgba(255, 255, 255, 0.86);
-  --bg-secondary: #fce7f3;
+  --surface-glass: rgba(255, 255, 255, 0.9);
+  --bg-secondary: #eef2f7;
 
-  --text-main: #3b1d2e;
-  --text-sub: #6b4a5f;
-  --text-muted: #967286;
+  --text-main: #1f2937;
+  --text-sub: #4b5563;
+  --text-muted: #6b7280;
   --text-primary: var(--text-main);
   --text-secondary: var(--text-sub);
 
-  --border: #f5cfe1;
-  --border-light: #f9deec;
+  --border: #e5e7eb;
+  --border-light: #edf1f5;
   --border-color: var(--border);
-  --glass-bg: rgba(255, 255, 255, 0.86);
+  --glass-bg: rgba(255, 255, 255, 0.9);
   --glass-blur: blur(14px);
 
-  --shadow-sm: 0 1px 2px rgba(91, 33, 61, 0.05);
-  --shadow-md: 0 10px 24px rgba(91, 33, 61, 0.08);
-  --shadow-lg: 0 18px 44px rgba(91, 33, 61, 0.12);
-  --shadow-primary: 0 8px 24px rgba(236, 72, 153, 0.24);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 10px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 18px 44px rgba(15, 23, 42, 0.12);
+  --shadow-primary: 0 8px 24px rgba(15, 118, 110, 0.2);
 }
 
 html[data-theme="light"] body {
   background:
-    radial-gradient(circle at 0% 0%, rgba(236, 72, 153, 0.1) 0, transparent 42%),
-    radial-gradient(circle at 100% 100%, rgba(244, 114, 182, 0.1) 0, transparent 40%),
+    radial-gradient(circle at 0% 0%, rgba(15, 118, 110, 0.08) 0, transparent 42%),
+    radial-gradient(circle at 100% 100%, rgba(13, 148, 136, 0.08) 0, transparent 40%),
     var(--bg-main);
 }
 
@@ -638,7 +638,7 @@ html[data-theme="light"] .nav-pill:hover {
 }
 
 html[data-theme="light"] .nav-pill.active {
-  background: linear-gradient(135deg, var(--primary), #db2777);
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
   color: #fff;
   box-shadow: var(--shadow-primary);
 }
@@ -650,8 +650,8 @@ html[data-theme="light"] .glass-btn {
 }
 
 html[data-theme="light"] .glass-btn:hover {
-  background: #fff2f8;
-  border-color: #efb8d2;
+  background: #f0fdfa;
+  border-color: #b7ddd8;
 }
 
 html[data-theme="light"] .query-editor,
@@ -675,7 +675,7 @@ html[data-theme="light"] .results-table td {
 
 html[data-theme="light"] .results-table tr:hover td,
 html[data-theme="light"] .data-table tr:hover td {
-  background: #fff1f8;
+  background: #f0fdfa;
 }
 
 html[data-theme="light"] .search-input,
@@ -684,7 +684,7 @@ html[data-theme="light"] select,
 html[data-theme="light"] .form-control {
   background: #ffffff;
   color: var(--text-main);
-  border: 1px solid #f0bfd7;
+  border: 1px solid #d7e1e8;
 }
 
 html[data-theme="light"] .search-input:focus,
@@ -695,13 +695,13 @@ html[data-theme="light"] .form-control:focus {
 }
 
 html[data-theme="light"] .admin-layout {
-  background: linear-gradient(180deg, #fffafd 0%, #fff3f9 100%);
+  background: linear-gradient(180deg, #fbfcfe 0%, #f4f7fb 100%);
 }
 
 html[data-theme="light"] .admin-sidebar {
   background: rgba(255, 255, 255, 0.94);
   border-right: 1px solid var(--border);
-  box-shadow: 8px 0 28px rgba(91, 33, 61, 0.08);
+  box-shadow: 8px 0 28px rgba(15, 23, 42, 0.08);
 }
 
 html[data-theme="light"] .nav-item {
@@ -709,7 +709,7 @@ html[data-theme="light"] .nav-item {
 }
 
 html[data-theme="light"] .nav-item:hover {
-  background: #fde8f4;
+  background: #eef2f7;
   color: var(--text-main);
 }
 
@@ -727,13 +727,13 @@ html[data-theme="light"] .token-card {
 }
 
 html[data-theme="light"] .chip {
-  background: #fdf2f8;
+  background: #f2f7f7;
   color: var(--text-sub);
-  border-color: #f7d4e6;
+  border-color: #d6e8e5;
 }
 
 html[data-theme="light"] .chip:hover {
-  background: #fce7f3;
+  background: #e7f3f1;
 }
 
 html[data-theme="light"] .chip.selected {

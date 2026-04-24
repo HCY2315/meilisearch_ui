@@ -139,9 +139,6 @@
                     <div class="cell-with-preview">
                       <template v-if="isNestedValue(row[col])">
                         <span class="nested-badge-sm">{{ getNestedBadgeText(row[col]) }}</span>
-                        <span class="nested-text">
-                          {{ primitiveToStr(row[col]) }}
-                        </span>
                         <button
                           class="btn-drill"
                           @click="push(`${currentPathLabel}[${ri}].${col}`, row[col])"
@@ -1058,10 +1055,11 @@ function handleClose() {
   padding: 7px 12px;
   border-bottom: 1px solid rgba(255,255,255,0.04);
   vertical-align: top;
+  transition: background 0.15s ease;
 }
 
-.mini-table tr:hover td {
-  background: rgba(255,255,255,0.02);
+.mini-table tbody tr:hover td {
+  background: rgba(var(--primary-color-rgb, 15, 118, 110), 0.1);
 }
 
 .row-num-th { color: rgba(255,255,255,0.25); font-weight: 400; width: 36px; }
@@ -1141,6 +1139,11 @@ function handleClose() {
   border-radius: 6px;
   font-size: 13px;
   border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s ease;
+}
+
+.prim-array-item:hover {
+  background: rgba(var(--primary-color-rgb, 15, 118, 110), 0.1);
 }
 
 .prim-idx { color: rgba(255,255,255,0.25); font-size: 11px; min-width: 30px; flex-shrink: 0; }
@@ -1260,7 +1263,7 @@ function handleClose() {
   --nd-border: #e5e7eb;
   --nd-text: #111827;
   --nd-text-secondary: #6b7280;
-  --nd-accent: #2563eb;
+  --nd-accent: #0f766e;
   background: var(--nd-bg);
   border-left: 1px solid var(--nd-border);
   box-shadow: -12px 0 36px rgba(15, 23, 42, 0.12);
@@ -1291,7 +1294,7 @@ function handleClose() {
 
 :global(html[data-theme="light"]) .bc-item:not(:disabled):hover,
 :global(html[data-theme="light"]) .bc-root:hover {
-  background: #eef2ff;
+  background: #e8f5f3;
 }
 
 :global(html[data-theme="light"]) .btn-config-toggle {
@@ -1307,9 +1310,9 @@ function handleClose() {
 }
 
 :global(html[data-theme="light"]) .btn-config-toggle.active {
-  background: #eff6ff;
+  background: #eaf7f5;
   color: var(--nd-accent);
-  border-color: #bfdbfe;
+  border-color: #b7ddd8;
 }
 
 :global(html[data-theme="light"]) .nd-close-btn {
@@ -1343,7 +1346,8 @@ function handleClose() {
 
 :global(html[data-theme="light"]) .config-row:hover,
 :global(html[data-theme="light"]) .kv-row:hover,
-:global(html[data-theme="light"]) .mini-table tr:hover td {
+:global(html[data-theme="light"]) .mini-table tbody tr:hover td,
+:global(html[data-theme="light"]) .prim-array-item:hover {
   background: var(--nd-hover-bg);
 }
 
