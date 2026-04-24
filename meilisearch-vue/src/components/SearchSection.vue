@@ -6,9 +6,9 @@
         <span class="search-icon">🔍</span>
         <input
           class="search-input"
-          v-model="store.searchInput"
+          :value="store.searchInput"
           placeholder="输入关键词搜索..."
-          @input="store.scheduleDebouncedSearch()"
+          @input="onSearchInput($event)"
           @keyup.enter="store.performSearch()"
         />
         <span
@@ -258,6 +258,12 @@ function openColumnConfig() {
 function onAiToggle() {
   storage.saveAiConfig(store.aiConfig)
   store.performSearch()
+}
+
+function onSearchInput(e: Event) {
+  const value = (e.target as HTMLInputElement).value
+  store.searchInput = value
+  store.scheduleDebouncedSearch()
 }
 
 function onAiWeightChange() {

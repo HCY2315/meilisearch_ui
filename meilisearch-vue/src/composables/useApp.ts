@@ -483,24 +483,19 @@ async function connect() {
   }
 
   function scheduleDebouncedSearch() {
-    console.log('[scheduleDebouncedSearch] searchInput:', searchInput.value)
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => {
-      console.log('[scheduleDebouncedSearch] calling performSearch, searchInput:', searchInput.value)
       performSearch()
     }, 300)
   }
 
   async function performSearch() {
-    console.log('[performSearch] currentIndex:', currentIndex.value, 'searchInput:', searchInput.value)
     if (!currentIndex.value) {
-      console.log('[performSearch] no currentIndex, skip')
       return
     }
     loading.value = true
     try {
       const params = buildSearchParams()
-      console.log('[performSearch] params:', params, 'searchInput.trim:', searchInput.value.trim())
       const res = await api.performSearch(getHost(), getApiKey(), currentIndex.value, searchInput.value.trim(), params)
       if (searchInput.value.trim()) addToHistory(searchInput.value.trim())
       console.log('[performSearch] result hits:', res.hits?.length)
