@@ -573,7 +573,7 @@ onMounted(() => {
   border-radius: 12px;
   border: none;
   background: transparent;
-  color: #94a3b8;
+  color: #6b7280;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
@@ -599,7 +599,7 @@ onMounted(() => {
 }
 .glass-editor h3 { margin-bottom: 24px; font-size: 18px; color: #1f293b; }
 .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-.input-group label { display: block; font-size: 13px; color: #64748b; margin-bottom: 8px; }
+.input-group label { display: block; font-size: 13px; color: #374151; margin-bottom: 8px; }
 .editor-actions { margin-top: 32px; display: flex; gap: 12px; justify-content: flex-end; }
 
 /* 数据卡片 */
@@ -634,7 +634,7 @@ onMounted(() => {
 .tok-tag { font-size: 9px; font-weight: 800; color: var(--primary); letter-spacing: 0.1em; background: rgba(99, 102, 241, 0.1); padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
 .tok-val { font-size: 16px; color: #fbbf24; font-family: monospace; display: block; margin: 12px 0; }
 .tok-desc { color: #6b7280; font-size: 14px; margin-bottom: 8px; }
-.tok-meta { display: flex; gap: 24px; font-size: 12px; color: #64748b; }
+.tok-meta { display: flex; gap: 24px; font-size: 12px; color: #374151; }
 
 /* 设置 */
 .settings-card { display: flex; flex-direction: column; gap: 32px; }
