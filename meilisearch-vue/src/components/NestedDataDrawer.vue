@@ -1093,7 +1093,7 @@ function handleClose() {
 .kv-row:hover { background: rgba(255,255,255,0.025); }
 
 .kv-key {
-  color: rgba(255,255,255,0.55);
+  color: var(--text-primary, #e2e8f0);
   font-size: 13px;
   font-weight: 600;
   overflow: hidden;
@@ -1107,7 +1107,7 @@ function handleClose() {
 
 .alias-raw-tag {
   font-size: 10.5px;
-  color: rgba(255,255,255,0.25);
+  color: var(--text-muted, #94a3b8);
   font-weight: 400;
   font-family: 'JetBrains Mono', monospace;
   overflow: hidden;
@@ -1267,6 +1267,7 @@ function handleClose() {
   background: var(--nd-bg);
   border-left: 1px solid var(--nd-border);
   box-shadow: -12px 0 36px rgba(15, 23, 42, 0.12);
+  color: #111827;
 }
 
 :global(html[data-theme="light"]) .nd-header,
@@ -1338,10 +1339,22 @@ function handleClose() {
 :global(html[data-theme="light"]) .config-field-name,
 :global(html[data-theme="light"]) .kv-key,
 :global(html[data-theme="light"]) .kv-val,
+:global(html[data-theme="light"]) .val-text,
 :global(html[data-theme="light"]) .prim-val,
 :global(html[data-theme="light"]) .cell-text,
 :global(html[data-theme="light"]) .mini-table td {
-  color: var(--nd-text);
+  color: var(--nd-text, #111827) !important;
+}
+
+:global(html[data-theme="light"]) .kv-key,
+:global(html[data-theme="light"]) .kv-val,
+:global(html[data-theme="light"]) .val-text {
+  color: #111827 !important;
+}
+
+:global(html[data-theme="light"]) .nd-drawer *::selection {
+  background: #cfe5e2;
+  color: #111827;
 }
 
 :global(html[data-theme="light"]) .config-row:hover,
