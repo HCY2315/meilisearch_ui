@@ -63,8 +63,8 @@ function onIndexChange() {
 .connection-panel {
   background: var(--surface);
   border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: 12px 14px;
+  margin-bottom: 0;
 }
 .status-bar {
   display: flex;
@@ -87,7 +87,7 @@ function onIndexChange() {
   background: #28c840;
 }
 .index-section {
-  margin-top: 16px;
+  margin-top: 10px;
   display: flex;
   gap: 12px;
 }
