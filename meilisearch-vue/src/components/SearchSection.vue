@@ -239,7 +239,8 @@ async function saveAllUISettingsToBackend() {
 }
 
 const filterPreviewText = computed(() => {
-  const expr = buildFilterExpression(store.queryRows)
+  const rows = store.queryRows
+  const expr = buildFilterExpression(rows)
   return expr || '无'
 })
 
