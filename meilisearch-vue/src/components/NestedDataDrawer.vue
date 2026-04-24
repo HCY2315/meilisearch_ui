@@ -892,7 +892,7 @@ function handleClose() {
 
 .hidden-hint {
   font-size: 11.5px;
-  color: rgba(255,200,100,0.7);
+  color: rgba(0,0,0,0.7);
 }
 
 /* ─── 字段配置面板 ──────────────────────────────────────────────────────────── */
@@ -999,14 +999,14 @@ function handleClose() {
 }
 .vis-btn:hover { background: rgba(0,0,0,0.06); }
 .vis-btn.vis-off {
-  border-color: rgba(255,100,100,0.2);
-  background: rgba(255,100,100,0.05);
+  border-color: rgba(0,0,0,0.2);
+  background: rgba(0,0,0,0.05);
   color: #ef4444;
 }
 .vis-btn:hover { background: rgba(0,0,0,0.06); }
 .vis-btn.vis-off {
-  border-color: rgba(255,100,100,0.2);
-  background: rgba(255,100,100,0.05);
+  border-color: rgba(0,0,0,0.2);
+  background: rgba(0,0,0,0.05);
 }
 
 .config-field-name {
@@ -1063,7 +1063,7 @@ function handleClose() {
 .all-hidden-tip {
   padding: 32px 20px;
   text-align: center;
-  color: rgba(255,200,100,0.6);
+  color: rgba(0,0,0,0.6);
   font-size: 13px;
 }
 
