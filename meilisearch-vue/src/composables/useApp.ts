@@ -474,6 +474,8 @@ async function connect() {
     facetDistribution.value = null
     sortableAttributes.value = []
     nestedFieldConfigs.value = {}
+    queryRows.value = [createQueryRow()]
+    searchInput.value = ''
     if (nestedConfigSaveTimer) {
       clearTimeout(nestedConfigSaveTimer)
       nestedConfigSaveTimer = null
