@@ -205,8 +205,8 @@ html[data-theme="light"] {
   --bg-card: #ffffff;
   --bg-card-hover: #fafafa;
   --text-main: #000000;
-  --text-sub: #1a1a2e;
-  --text-muted: #000000;
+  --text-sub: #374151;
+  --text-muted: #6b7280;
   --border: #e5e5e5;
   --border-active: #8b5cf6;
   --glass-bg: rgba(255, 255, 255, 0.98);
@@ -468,7 +468,7 @@ html[data-theme="light"] .token-unlock-pill input {
 }
 
 html[data-theme="light"] .token-unlock-pill input::placeholder {
-  color: #9ca3af;
+  color: #374151;
 }
 
 html[data-theme="light"] .type-badge {
@@ -489,19 +489,19 @@ html[data-theme="light"] .bc-item:hover {
 }
 
 html[data-theme="light"] .path-hint {
-  color: #9ca3af;
+  color: #374151;
 }
 
 html[data-theme="light"] .hidden-hint {
-  color: #9ca3af;
+  color: #374151;
 }
 
 html[data-theme="light"] .loading-state p {
-  color: #9ca3af;
+  color: #374151;
 }
 
 html[data-theme="light"] .app-footer {
-  color: #9ca3af;
+  color: #374151;
 }
 
 html[data-theme="light"] .footer-divider {
@@ -517,7 +517,7 @@ html[data-theme="light"] .bc-item {
 }
 
 html[data-theme="light"] .bc-item:hover {
-  color: #fff;
+  color: #1f293b;
 }
 
 html[data-theme="light"] .path-hint {

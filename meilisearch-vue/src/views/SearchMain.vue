@@ -113,7 +113,11 @@ import { getAppConfig } from '@/services/api'
 
 const store = useAppStore()
 const router = useRouter()
-const theme = ref<'dark' | 'light'>('dark')
+const savedTheme = storage.getTheme()
+const theme = ref<'dark' | 'light'>(savedTheme || 'dark')
+if (savedTheme) {
+  document.documentElement.setAttribute('data-theme', savedTheme)
+}
 const uiConfig = ref<any>({})
 const userRole = ref('user')
 const isLoggedIn = ref(false)
@@ -140,10 +144,6 @@ function logout() {
 }
 
 onMounted(async () => {
-  const saved = storage.getTheme()
-  theme.value = saved
-  document.documentElement.setAttribute('data-theme', saved)
-
   const authUserStr = localStorage.getItem('authUser')
   if (authUserStr) {
     try {
