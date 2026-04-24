@@ -849,7 +849,7 @@ function handleClose() {
   align-items: center;
   justify-content: space-between;
   padding: 8px 18px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   flex-shrink: 0;
   gap: 12px;
 }
@@ -867,7 +867,7 @@ function handleClose() {
 
 .path-hint {
   font-size: 11.5px;
-  color: rgba(255,255,255,0.25);
+  color: rgba(0,0,0,0.25);
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   max-width: 280px;
   overflow: hidden;
@@ -913,7 +913,7 @@ function handleClose() {
   position: sticky;
   top: 0;
   background: var(--bg-primary, #0f1117);
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   z-index: 1;
 }
 
@@ -1092,7 +1092,7 @@ function handleClose() {
 .mini-table th .alias-tag {
   margin-left: 5px;
   font-size: 10.5px;
-  color: #64748b;
+  color: #374151;
   font-weight: 400;
   font-family: 'JetBrains Mono', monospace;
 }
