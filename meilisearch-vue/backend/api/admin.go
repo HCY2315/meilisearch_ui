@@ -257,6 +257,28 @@ func HandleSaveNestedFieldConfigs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"uid": req.Uid, "nestedFieldConfigs": req.NestedFieldConfigs})
 }
 
+// HandleSaveTableConfigs 单独更新表格列配置（顺序/隐藏），不覆盖其他索引配置
+func HandleSaveTableConfigs(c *gin.Context) {
+	var req schema.TableConfigsUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	var config model.IndexConfig
+	if err := repository.DB.Where("uid = ?", req.Uid).First(&config).Error; err != nil {
+		config = model.IndexConfig{
+			Uid:          req.Uid,
+			TableConfigs: req.TableConfigs,
+		}
+		repository.DB.Create(&config)
+	} else {
+		repository.DB.Model(&config).Update("table_configs", req.TableConfigs)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"uid": req.Uid, "tableConfigs": req.TableConfigs})
+}
+
 type DrawerFieldOrderRequest struct {
 	Uid              string `json:"uid" binding:"required"`
 	DrawerFieldOrder string `json:"drawerFieldOrder" binding:"required"`

@@ -93,7 +93,7 @@
         <div class="results-actions">
           <span class="search-meta">{{ store.searching ? '检索中...' : (store.processingTimeMs ? `耗时 ${store.processingTimeMs}ms` : '') }}</span>
           <button class="btn btn-secondary btn-sm" @click="openAdvancedSettings">⚙️ 高级设置</button>
-          <button class="btn btn-secondary btn-sm" @click="openColumnConfig">列设置</button>
+          <button v-if="isAdmin" class="btn btn-secondary btn-sm" @click="openColumnConfig">列设置</button>
           <button class="btn btn-secondary btn-sm" @click="store.openViewConfig()">视图设置</button>
           <button class="btn btn-secondary btn-sm" @click="store.exportCsv()" :disabled="store.exportDownloading">
             {{ store.exportDownloading ? `📥 导出 ${store.exportProgress}/${store.exportTotal}` : '📥 导出 CSV' }}
@@ -260,6 +260,10 @@ function onAiBadgeClick() {
 }
 
 function openColumnConfig() {
+  if (!isAdmin.value) {
+    appStore.pushToast('仅管理员可配置列设置', 'warning')
+    return
+  }
   appStore.columnConfigOpen = !appStore.columnConfigOpen
   console.log('appStore.columnConfigOpen:', appStore.columnConfigOpen)
 }

@@ -32,6 +32,12 @@ type NestedFieldConfigsUpdateRequest struct {
 	NestedFieldConfigs string `json:"nestedFieldConfigs" binding:"required"` // 全量 JSON
 }
 
+// TableConfigsUpdateRequest 单独更新列表列配置（顺序/隐藏）
+type TableConfigsUpdateRequest struct {
+	Uid          string `json:"uid" binding:"required"`
+	TableConfigs string `json:"tableConfigs" binding:"required"`
+}
+
 // AccessTokenRequest 新建数据访问Token
 type AccessTokenRequest struct {
 	Token        string     `json:"token" binding:"required"`
