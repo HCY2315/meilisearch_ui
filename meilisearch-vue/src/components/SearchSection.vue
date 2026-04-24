@@ -4,12 +4,12 @@
     <div class="search-bar">
       <div class="search-box-wrap" ref="searchBoxWrapRef">
         <span class="search-icon">🔍</span>
-        <input
+<input
           class="search-input"
-          :value="store.searchInput"
+          v-model="localSearchInput"
           placeholder="输入关键词搜索..."
-          @input="onSearchInput($event)"
-          @keyup.enter="store.performSearch()"
+          @input="onSearchInput"
+          @keyup.enter="appStore.performSearch()"
         />
         <span
           ref="aiBadgeRef"
@@ -149,18 +149,24 @@ const searchStore = useSearchStore()
 const uiStore = useUIStore()
 
 const appStore = useAppStore()
+
+// 本地搜索输入
+const localSearchInput = ref('')
+
+function onSearchInput(e: Event) {
+  const value = (e.target as HTMLInputElement).value
+  localSearchInput.value = value
+  appStore.searchInput = value
+  appStore.scheduleDebouncedSearch()
+}
+
 const store: any = new Proxy({}, {
   get(_target, prop: string) {
     const p = prop as keyof typeof store
     if (p in searchStore) return (searchStore as any)[p]
     if (p in connectionStore) return (connectionStore as any)[p]
     if (p in uiStore) return (uiStore as any)[p]
-    if (p in appStore) {
-      const val = (appStore as any)[p]
-      console.log('[store.get]', p, '=', val)
-      return val
-    }
-    console.log('[store.get] undefined:', prop)
+    if (p in appStore) return (appStore as any)[p]
     return undefined
   },
   set(_target, prop: string, value: any) {
