@@ -190,6 +190,12 @@ export const useAppStore = defineStore('app', () => {
     return result
   })
 
+  const currentIndexDisplayName = computed(() => {
+    if (!currentIndex.value) return ''
+    const idx = indexes.value.find(i => i.uid === currentIndex.value)
+    return idx?.displayName || currentIndex.value
+  })
+
   const totalPages = computed(() => Math.ceil(resultsCount.value / pageSize.value))
 
   const getHost = () => hostInput.value.trim()
@@ -457,7 +463,7 @@ async function connect() {
         popularSearchField.value = filterableFields.value[0]
         await loadPopularSearches()
       }
-      pushToast(`已选择索引: ${uid}`, 'success')
+      pushToast(`已选择索引: ${currentIndexDisplayName.value}`, 'success')
       await performSearch()
     } catch (e) {
       const errMsg = String(e)
@@ -1209,7 +1215,7 @@ async function connect() {
   }
 
   return {
-    hostInput, apiKeyInput, indexes, currentIndex, searchInput, queryRows,
+    hostInput, apiKeyInput, indexes, currentIndex, currentIndexDisplayName, searchInput, queryRows,
     searchFields, searchFieldWeights, filterableFields, availableFields,
     highlightFields, displayFields, facets, searchHistory, fieldLabels,
     popularSearches, popularSearchField, currentPage, pageSize, maxResultsPerPage,
