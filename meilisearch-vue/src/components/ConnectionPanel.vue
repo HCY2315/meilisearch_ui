@@ -55,7 +55,7 @@ watch(() => store.currentIndex, (newVal) => {
 }, { immediate: true })
 
 function onIndexChange() {
-  store.selectIndex(selectedIndex.value)
+  store.currentIndex = selectedIndex.value
 }
 </script>
 

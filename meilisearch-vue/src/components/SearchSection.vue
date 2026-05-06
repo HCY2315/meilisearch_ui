@@ -102,30 +102,32 @@
             <option value="table">表格</option>
             <option v-for="cfg in store.viewConfigs" :key="cfg.name" :value="cfg.name">{{ cfg.name }}</option>
           </select>
-          <button
-            class="btn btn-sm"
-            :class="store.editLocked ? 'btn-secondary' : 'btn-warning'"
-            @click="store.toggleEditLock()"
-          >
-            {{ store.editLocked ? '🔒 已锁定' : '🔓 可编辑' }}
-          </button>
-          <template v-if="!store.editLocked">
-            <select
-              class="form-control"
-              style="min-width: 120px; padding: 6px 10px;"
-              v-model="store.primaryKeyField"
+          <template v-if="isAdmin">
+            <button
+              class="btn btn-sm"
+              :class="store.editLocked ? 'btn-secondary' : 'btn-warning'"
+              @click="store.toggleEditLock()"
             >
-              <option value="">选择主键</option>
-              <option v-for="col in store.lastBaseColumns" :key="col" :value="col">{{ col }}</option>
-            </select>
+              {{ store.editLocked ? '🔒 已锁定' : '🔓 可编辑' }}
+            </button>
+            <template v-if="!store.editLocked">
+              <select
+                class="form-control"
+                style="min-width: 120px; padding: 6px 10px;"
+                v-model="store.primaryKeyField"
+              >
+                <option value="">选择主键</option>
+                <option v-for="col in store.lastBaseColumns" :key="col" :value="col">{{ col }}</option>
+              </select>
+            </template>
+            <button
+              class="btn btn-primary btn-sm"
+              :disabled="store.editLocked || !hasPendingEdits"
+              @click="store.saveEdits()"
+            >
+              💾 保存修改
+            </button>
           </template>
-          <button
-            class="btn btn-primary btn-sm"
-            :disabled="store.editLocked || !hasPendingEdits"
-            @click="store.saveEdits()"
-          >
-            💾 保存修改
-          </button>
           <button v-if="isAdmin" class="btn btn-primary btn-sm" @click="saveAllUISettingsToBackend">推送同步配置</button>
         </div>
       </div>

@@ -470,6 +470,8 @@ async function connect() {
       // 资源受限时静默处理，不弹出错误 toast
       if (!errMsg.includes('403') && !errMsg.includes('locked') && !errMsg.includes('Unauthorized')) {
         pushToast(`加载索引失败: ${e}`, 'error')
+      } else {
+        pushToast(`加载索引失败: 访问受限或密钥无效`, 'error')
       }
     } finally {
       loading.value = false
