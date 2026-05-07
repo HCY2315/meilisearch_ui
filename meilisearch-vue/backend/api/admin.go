@@ -304,3 +304,58 @@ func HandleSaveDrawerFieldOrder(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"uid": req.Uid, "drawerFieldOrder": req.DrawerFieldOrder})
 }
+
+// HandleGetIndexSettings 获取索引的 Meilisearch 设置
+func HandleGetIndexSettings(c *gin.Context) {
+	uid := c.Param("uid")
+	if uid == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "UID is required"})
+		return
+	}
+
+	var instance model.MeiliInstance
+	if err := repository.DB.First(&instance).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Meilisearch instance not found"})
+		return
+	}
+
+	client := meilisearch.New(instance.Host, meilisearch.WithAPIKey(instance.APIKey))
+	index := client.Index(uid)
+	settings, err := index.GetSettings()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, settings)
+}
+
+// HandleUpdateIndexSettings 更新索引的 Meilisearch 设置
+func HandleUpdateIndexSettings(c *gin.Context) {
+	var req schema.IndexSettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	var instance model.MeiliInstance
+	if err := repository.DB.First(&instance).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Meilisearch instance not found"})
+		return
+	}
+
+	client := meilisearch.New(instance.Host, meilisearch.WithAPIKey(instance.APIKey))
+	index := client.Index(req.Uid)
+
+	settings := &meilisearch.Settings{
+		SearchableAttributes: req.SearchableAttributes,
+		FilterableAttributes: req.FilterableAttributes,
+	}
+	task, err := index.UpdateSettings(settings)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, task)
+}

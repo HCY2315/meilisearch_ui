@@ -42,6 +42,10 @@ func InitRouter() *gin.Engine {
 			adminGroup.PUT("/access_tokens", HandleUpdateAccessToken)
 			adminGroup.DELETE("/access_tokens/:id", HandleDeleteAccessToken)
 			adminGroup.PUT("/password", HandleUpdateAdminPassword)
+
+			// Meilisearch 设置
+			adminGroup.GET("/meilisearch/settings/:uid", HandleGetIndexSettings)
+			adminGroup.PUT("/meilisearch/settings/:uid", HandleUpdateIndexSettings)
 		}
 
 		proxyGroup := v1.Group("/proxy")

@@ -71,3 +71,10 @@ type MeiliInstanceUpdateRequest struct {
 type PasswordUpdateRequest struct {
 	NewPassword string `json:"newPassword" binding:"required"`
 }
+
+// IndexSettingsRequest 更新索引的可搜索和可过滤字段配置
+type IndexSettingsRequest struct {
+	Uid                  string   `json:"uid" binding:"required"`
+	SearchableAttributes []string `json:"searchableAttributes"`
+	FilterableAttributes []string `json:"filterableAttributes"`
+}

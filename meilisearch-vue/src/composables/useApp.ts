@@ -172,10 +172,15 @@ export const useAppStore = defineStore('app', () => {
   })
 
   const visibleAvailableFields = computed(() => {
-    return availableFields.value.filter(f => !hiddenColumns.value.includes(f))
+    // NOTE: 用于「查询条件构建器」，仅显示配置为可过滤的字段
+    const sourceFields = (filterableFields.value && filterableFields.value.length > 0)
+      ? filterableFields.value
+      : availableFields.value
+    return sourceFields.filter(f => !hiddenColumns.value.includes(f))
   })
 
   const visibleFilterableFields = computed(() => {
+    // 兼容逻辑：原本也是用于筛选面板，保持与 filterableFields 同步
     return filterableFields.value.filter(f => !hiddenColumns.value.includes(f))
   })
 
