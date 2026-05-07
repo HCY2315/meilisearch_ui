@@ -30,7 +30,7 @@
     <template v-else>
       <!-- 当前索引信息 -->
       <div class="info-box">
-        <span>当前索引: <strong>{{ store.currentIndex }}</strong></span>
+        <span>当前索引: <strong>{{ store.currentIndexDisplayName }}</strong></span>
         <span>主键字段: <strong>{{ store.primaryKeyField }}</strong></span>
       </div>
 

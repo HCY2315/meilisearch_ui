@@ -522,12 +522,30 @@ export async function updateApp(id: number, data: Record<string, unknown>): Prom
   return res.ok
 }
 
-export async function updateAdminPassword(password: string): Promise<boolean> {
+export async function updateAdminPassword(newPassword: string): Promise<boolean> {
   const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
   const res = await fetch('/api/v1/admin/password', {
     method: 'PUT',
     headers,
-    body: JSON.stringify({ password })
+    body: JSON.stringify({ newPassword })
+  })
+  return res.ok
+}
+
+// Meilisearch 设置
+export async function getMeiliIndexSettings(uid: string): Promise<any> {
+  const headers = getAuthHeaders()
+  const res = await fetch(`/api/v1/admin/meilisearch/settings/${uid}`, { headers })
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function updateMeiliIndexSettings(uid: string, settings: { searchableAttributes: string[]; filterableAttributes: string[] }): Promise<boolean> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch(`/api/v1/admin/meilisearch/settings/${uid}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ uid, ...settings })
   })
   return res.ok
 }

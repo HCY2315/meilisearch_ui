@@ -204,7 +204,100 @@
         </div>
       </section>
 
-      <!-- 3. 应用全局设置 -->
+      <!-- 3. Meilisearch 索引设置 -->
+      <section v-if="activeTab === 'search'" class="content-section">
+        <header class="section-header">
+          <h1>索引核心配置 <span>Meilisearch Settings</span></h1>
+          <p>精确控制字段的可搜索性、权重排序以及在构建器中的过滤权限。</p>
+        </header>
+
+        <div class="glass-editor">
+          <div class="input-group" style="margin-bottom: 32px;">
+            <label>选择目标索引</label>
+            <select v-model="selectedSearchIndex" class="form-control" @change="fetchSearchSettings">
+              <option disabled value="">-- 选择要配置的索引 --</option>
+              <option v-for="uid in availableIndexes" :key="uid" :value="uid">{{ uid }}</option>
+            </select>
+          </div>
+
+          <div v-if="selectedSearchIndex" class="search-settings-area animate-fade-in">
+            <!-- 子标签切换 -->
+            <div class="sub-tabs">
+              <button :class="['sub-tab', { active: subTab === 'searchable' }]" @click="subTab = 'searchable'">🔍 搜索权重 (Searchable)</button>
+              <button :class="['sub-tab', { active: subTab === 'filterable' }]" @click="subTab = 'filterable'">📋 过滤构建 (Filterable)</button>
+            </div>
+
+            <div v-if="subTab === 'searchable'" class="settings-pane animate-fade-in">
+              <div class="input-group">
+                <label>配置搜索权重优先级 (影响主搜索框)</label>
+                <p class="helper-text" style="color: #64748b; font-size: 13px; margin-bottom: 16px;">
+                  勾选字段加入搜索范围，并拖拽排序（排在前面的权重得分越高）。
+                </p>
+                
+                <div class="field-selector mb-4">
+                  <div v-for="field in allFieldsForIndex" :key="field" class="field-item">
+                    <label class="checkbox-container">
+                      <input type="checkbox" :value="field" v-model="currentSearchableAttributes">
+                      <span class="checkmark"></span>
+                      <span class="field-name">{{ field }}</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="priority-list">
+                  <div 
+                    v-for="(field, index) in currentSearchableAttributes" 
+                    :key="field"
+                    class="priority-item"
+                    draggable="true"
+                    @dragstart="handleDragStart(index)"
+                    @dragover.prevent
+                    @drop="handleDrop(index)"
+                  >
+                    <span class="drag-handle">⠿</span>
+                    <span class="priority-rank">{{ index + 1 }}</span>
+                    <span class="field-name">{{ field }}</span>
+                  </div>
+                  <div v-if="currentSearchableAttributes.length === 0" class="empty-priority">
+                    未选择任何搜索字段
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="subTab === 'filterable'" class="settings-pane animate-fade-in">
+              <div class="input-group">
+                <label>配置可过滤字段 (影响查询条件构建器)</label>
+                <p class="helper-text" style="color: #64748b; font-size: 13px; margin-bottom: 16px;">
+                  只有被勾选为「可过滤」的字段，才会出现在搜索页面的查询条件构建器中。
+                </p>
+                <div class="field-selector">
+                  <div v-for="field in allFieldsForIndex" :key="field" class="field-item">
+                    <label class="checkbox-container">
+                      <input type="checkbox" :value="field" v-model="currentFilterableAttributes">
+                      <span class="checkmark"></span>
+                      <span class="field-name">{{ field }}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="editor-actions" style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px;">
+              <button class="btn btn-primary" @click="saveSearchSettings" :disabled="isSavingSearch">
+                {{ isSavingSearch ? '正在应用配置...' : '保存当前索引配置' }}
+              </button>
+              <button class="btn btn-secondary" @click="resetSearchSettings">恢复全部字段</button>
+            </div>
+          </div>
+          <div v-else class="empty-state">
+            <div class="empty-icon">⚙️</div>
+            <p>请先从上方选择一个索引进行配置</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. 应用全局设置 -->
       <section v-if="activeTab === 'settings'" class="content-section">
         <header class="section-header">
           <h1>全局应用设置 <span>App Configuration</span></h1>
@@ -283,7 +376,10 @@ import {
   updateAccessToken,
   deleteAccessToken,
   updateApp,
-  updateAdminPassword
+  updateAdminPassword,
+  getMeiliIndexSettings,
+  updateMeiliIndexSettings,
+  loadIndexData
 } from '@/services/api'
 
 const activeTab = ref('instances')
@@ -291,6 +387,7 @@ const tabs = [
   { id: 'instances', label: '节点管理', icon: '☁️' },
   { id: 'security', label: '安全锁库', icon: '🛡️' },
   { id: 'tokens', label: '凭证分发', icon: '🎫' },
+  { id: 'search', label: '搜索配置', icon: '🔍' },
   { id: 'settings', label: '应用设置', icon: '⚙️' },
   { id: 'password', label: '账户安全', icon: '🔐' },
 ]
@@ -314,6 +411,15 @@ const editingTokenId = ref<number | null>(null)
 const newToken = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: null as number | null })
 
 const passwordForm = ref({ newPassword: '', confirmPassword: '' })
+
+// 搜索配置相关
+const selectedSearchIndex = ref('')
+const subTab = ref('searchable')
+const currentSearchableAttributes = ref<string[]>([])
+const currentFilterableAttributes = ref<string[]>([])
+const allFieldsForIndex = ref<string[]>([])
+const isSavingSearch = ref(false)
+const draggedIndex = ref<number | null>(null)
 
 
 function openAddToken() {
@@ -528,6 +634,83 @@ async function handleUpdatePassword() {
   }
 }
 
+async function fetchSearchSettings() {
+  if (!selectedSearchIndex.value) return
+  
+  try {
+    // 1. 获取当前 Meilisearch 设置
+    const settings = await getMeiliIndexSettings(selectedSearchIndex.value)
+    if (settings) {
+      currentSearchableAttributes.value = settings.searchableAttributes || []
+      currentFilterableAttributes.value = settings.filterableAttributes || []
+    }
+
+    // 2. 获取所有可用字段 (通过采样数据和现有设置)
+    const data = await loadIndexData('/api/v1/proxy', '', selectedSearchIndex.value)
+    allFieldsForIndex.value = data.availableFields
+    
+    // 如果 searchable 为空，意味着 Meilisearch 默认搜索所有字段
+    if (currentSearchableAttributes.value.length === 0 || (currentSearchableAttributes.value.length === 1 && currentSearchableAttributes.value[0] === '*')) {
+      currentSearchableAttributes.value = [...allFieldsForIndex.value]
+    }
+    // Filterable 同理
+    if (currentFilterableAttributes.value.length === 0) {
+      currentFilterableAttributes.value = [...allFieldsForIndex.value]
+    }
+  } catch (e) {
+    console.error('Fetch search settings error:', e)
+    alert('获取配置失败')
+  }
+}
+
+async function saveSearchSettings() {
+  if (!selectedSearchIndex.value) return
+  isSavingSearch.value = true
+  try {
+    const payload = {
+      searchableAttributes: currentSearchableAttributes.value,
+      filterableAttributes: currentFilterableAttributes.value
+    }
+    const ok = await updateMeiliIndexSettings(selectedSearchIndex.value, payload)
+    if (ok) {
+      alert('索引设置更新成功！Meilisearch 正在异步处理更新任务。')
+    } else {
+      alert('更新失败，请检查后端日志')
+    }
+  } catch (e) {
+    alert('请求失败: ' + (e as Error).message)
+  } finally {
+    isSavingSearch.value = false
+  }
+}
+
+function resetSearchSettings() {
+  currentSearchableAttributes.value = [...allFieldsForIndex.value]
+  currentFilterableAttributes.value = [...allFieldsForIndex.value]
+}
+
+function handleDragStart(index: number) {
+  draggedIndex.value = index
+}
+
+function handleDrop(index: number) {
+  if (draggedIndex.value === null) return
+  const list = [...currentSearchableAttributes.value]
+  const [movedItem] = list.splice(draggedIndex.value, 1)
+  list.splice(index, 0, movedItem)
+  currentSearchableAttributes.value = list
+  draggedIndex.value = null
+}
+
+function toggleField(field: string) {
+  const index = currentSearchableAttributes.value.indexOf(field)
+  if (index > -1) {
+    currentSearchableAttributes.value.splice(index, 1)
+  } else {
+    currentSearchableAttributes.value.push(field)
+  }
+}
+
 onMounted(() => {
   loadAdminData()
 })
@@ -661,4 +844,169 @@ onMounted(() => {
 .chip:hover { background: rgba(0,0,0,0.1); }
 .chip.selected { background: rgba(99, 102, 241, 0.15); border-color: var(--primary); color: #1f293b; }
 .chip input { display: none; }
+
+/* 搜索配置专用样式 */
+.field-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  border-radius: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.field-item {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #e2e8f0;
+  user-select: none;
+}
+
+.checkbox-container input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.field-name {
+  word-break: break-all;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 0;
+  color: #64748b;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.2;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* 子标签样式 */
+.sub-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 6px;
+  border-radius: 12px;
+  width: fit-content;
+}
+
+.sub-tab {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sub-tab.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.mb-4 { margin-bottom: 24px; }
+
+/* 优先级列表样式 */
+.priority-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.priority-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(30, 41, 59, 0.6);
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: grab;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.priority-item:hover {
+  background: rgba(51, 65, 85, 0.8);
+  border-color: var(--primary);
+  transform: translateX(4px);
+}
+
+.priority-item:active {
+  cursor: grabbing;
+}
+
+.drag-handle {
+  color: #475569;
+  font-size: 18px;
+  user-select: none;
+}
+
+.priority-rank {
+  font-family: 'Outfit';
+  font-weight: 700;
+  color: var(--primary);
+  min-width: 20px;
+}
+
+.priority-item .field-name {
+  flex: 1;
+  font-family: monospace;
+  font-size: 14px;
+  color: white;
+}
+
+.remove-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.remove-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.empty-priority {
+  text-align: center;
+  padding: 32px;
+  color: #475569;
+  font-size: 14px;
+  font-style: italic;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 </style>

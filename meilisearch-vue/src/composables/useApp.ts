@@ -171,10 +171,15 @@ export const useAppStore = defineStore('app', () => {
   })
 
   const visibleAvailableFields = computed(() => {
-    return availableFields.value.filter(f => !hiddenColumns.value.includes(f))
+    // NOTE: 用于「查询条件构建器」，仅显示配置为可过滤的字段
+    const sourceFields = (filterableFields.value && filterableFields.value.length > 0)
+      ? filterableFields.value
+      : availableFields.value
+    return sourceFields.filter(f => !hiddenColumns.value.includes(f))
   })
 
   const visibleFilterableFields = computed(() => {
+    // 兼容逻辑：原本也是用于筛选面板，保持与 filterableFields 同步
     return filterableFields.value.filter(f => !hiddenColumns.value.includes(f))
   })
 
@@ -187,6 +192,12 @@ export const useAppStore = defineStore('app', () => {
       }
     }
     return result
+  })
+
+  const currentIndexDisplayName = computed(() => {
+    if (!currentIndex.value) return ''
+    const idx = indexes.value.find(i => i.uid === currentIndex.value)
+    return idx?.displayName || currentIndex.value
   })
 
   const totalPages = computed(() => Math.ceil(resultsCount.value / pageSize.value))
@@ -456,13 +467,15 @@ async function connect() {
         popularSearchField.value = filterableFields.value[0]
         await loadPopularSearches()
       }
-      pushToast(`已选择索引: ${uid}`, 'success')
+      pushToast(`已选择索引: ${currentIndexDisplayName.value}`, 'success')
       await performSearch()
     } catch (e) {
       const errMsg = String(e)
       // 资源受限时静默处理，不弹出错误 toast
       if (!errMsg.includes('403') && !errMsg.includes('locked') && !errMsg.includes('Unauthorized')) {
         pushToast(`加载索引失败: ${e}`, 'error')
+      } else {
+        pushToast(`加载索引失败: 访问受限或密钥无效`, 'error')
       }
     } finally {
       loading.value = false
@@ -1209,7 +1222,7 @@ async function connect() {
   }
 
   return {
-    hostInput, apiKeyInput, indexes, currentIndex, searchInput, queryRows,
+    hostInput, apiKeyInput, indexes, currentIndex, currentIndexDisplayName, searchInput, queryRows,
     searchFields, searchFieldWeights, filterableFields, availableFields,
     highlightFields, displayFields, facets, searchHistory, fieldLabels,
     popularSearches, popularSearchField, currentPage, pageSize, maxResultsPerPage,
