@@ -451,9 +451,19 @@ function formatDuration(isoDuration: string | undefined): string {
   const match = isoDuration.match(regex)
   if (!match) return isoDuration
   
-  const h = parseInt(match[1] || '0', 10)
-  const m = parseInt(match[2] || '0', 10)
-  const s = parseFloat(match[3] || '0')
+  let h = parseInt(match[1] || '0', 10)
+  let m = parseInt(match[2] || '0', 10)
+  let s = parseFloat(match[3] || '0')
+  
+  if (s >= 60) {
+    m += Math.floor(s / 60)
+    s = s % 60
+  }
+  
+  if (m >= 60) {
+    h += Math.floor(m / 60)
+    m = m % 60
+  }
   
   if (h === 0 && m === 0 && s < 1) {
     return `${(s * 1000).toFixed(2)} ms`
@@ -461,7 +471,7 @@ function formatDuration(isoDuration: string | undefined): string {
   
   let result = ''
   if (h > 0) result += `${h}时`
-  if (m > 0 || h > 0) result += `${m}分`
+  if (m > 0) result += `${m}分`
   
   if (s > 0 || (h === 0 && m === 0)) {
      result += `${s.toFixed(2)}秒`
