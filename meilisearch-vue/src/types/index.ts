@@ -43,6 +43,7 @@ export interface IndexItem {
   tableConfigs?: string
   nestedFieldConfigs?: string
   canEdit?: boolean
+  primaryKey?: string
 }
 
 export interface IndexStats {
@@ -89,6 +90,7 @@ export interface IndexInfo {
   nestedFieldConfigs?: string
   canEdit?: boolean
   drawerFieldOrder?: string
+  primaryKey?: string
 }
 
 export interface PopularItem {

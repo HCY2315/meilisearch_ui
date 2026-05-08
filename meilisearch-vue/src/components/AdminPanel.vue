@@ -64,8 +64,70 @@
               </div>
             </div>
             <div class="card-ops">
+              <button class="btn btn-primary btn-sm" @click="viewTasks(ins)">任务详情</button>
               <button class="btn btn-secondary btn-sm" @click="editInstance(ins)">编辑</button>
               <button class="btn btn-danger btn-sm" @click="deleteInstance(ins.id)">移除</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 任务详情 Modal -->
+        <div v-if="showTasksModal" class="tasks-modal-overlay animate-fade-in" @click.self="showTasksModal = false">
+          <div class="tasks-modal">
+            <div class="modal-header">
+              <h3>⚡ 任务详情 - {{ currentTaskInstance?.name }}</h3>
+              <button class="close-btn" @click="showTasksModal = false">×</button>
+            </div>
+            <div class="modal-body">
+              <div v-if="isLoadingTasks" class="loading-state">
+                加载中...
+              </div>
+              <div v-else-if="instanceTasks.length > 0" class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>任务 UID</th>
+                      <th>目标索引</th>
+                      <th>类型</th>
+                      <th>状态</th>
+                      <th>耗时</th>
+                      <th>排队时间</th>
+                      <th>详情</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template v-for="task in instanceTasks" :key="task.uid">
+                      <tr>
+                        <td><code>{{ task.uid }}</code></td>
+                        <td>{{ task.indexUid || '-' }}</td>
+                        <td>{{ task.type }}</td>
+                        <td>
+                          <span :class="['status-badge', task.status === 'succeeded' ? 'status-ok' : (task.status === 'failed' ? 'status-err' : 'status-warn')]">
+                            {{ task.status }}
+                          </span>
+                        </td>
+                        <td>{{ formatDuration(task.duration) }}</td>
+                        <td>{{ new Date(task.enqueuedAt).toLocaleString() }}</td>
+                        <td>
+                          <button class="btn btn-secondary btn-sm" @click="task._showJson = !task._showJson">
+                            {{ task._showJson ? '收起' : '查看' }}
+                          </button>
+                        </td>
+                      </tr>
+                      <tr v-if="task._showJson" class="json-expanded-row">
+                        <td colspan="7" style="border-bottom: none; padding-top: 0;">
+                          <div class="json-preview-container">
+                            <pre class="json-preview">{{ JSON.stringify(task, (k, v) => k === '_showJson' ? undefined : v, 2) }}</pre>
+                          </div>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+              <div v-else class="empty-state">
+                暂无任务记录
+              </div>
             </div>
           </div>
         </div>
@@ -379,8 +441,34 @@ import {
   updateAdminPassword,
   getMeiliIndexSettings,
   updateMeiliIndexSettings,
-  loadIndexData
+  loadIndexData,
+  getMeiliTasks
 } from '@/services/api'
+
+function formatDuration(isoDuration: string | undefined): string {
+  if (!isoDuration) return '-'
+  const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:([\d.]+)S)?/
+  const match = isoDuration.match(regex)
+  if (!match) return isoDuration
+  
+  const h = parseInt(match[1] || '0', 10)
+  const m = parseInt(match[2] || '0', 10)
+  const s = parseFloat(match[3] || '0')
+  
+  if (h === 0 && m === 0 && s < 1) {
+    return `${(s * 1000).toFixed(2)} ms`
+  }
+  
+  let result = ''
+  if (h > 0) result += `${h}时`
+  if (m > 0 || h > 0) result += `${m}分`
+  
+  if (s > 0 || (h === 0 && m === 0)) {
+     result += `${s.toFixed(2)}秒`
+  }
+  
+  return result || '0秒'
+}
 
 const activeTab = ref('instances')
 const tabs = [
@@ -401,6 +489,26 @@ const availableIndexes = ref<string[]>([])
 const showAddInstance = ref(false)
 const editingInstanceId = ref<number | null>(null)
 const newInstance = ref({ name: '', host: '', apiKey: '' })
+
+const showTasksModal = ref(false)
+const currentTaskInstance = ref<any>(null)
+const instanceTasks = ref<any[]>([])
+const isLoadingTasks = ref(false)
+
+async function viewTasks(ins: any) {
+  currentTaskInstance.value = ins
+  showTasksModal.value = true
+  isLoadingTasks.value = true
+  instanceTasks.value = []
+  try {
+    const data = await getMeiliTasks(ins.host, ins.apiKey || '')
+    instanceTasks.value = data.results || []
+  } catch (e) {
+    alert('获取任务失败: ' + (e as Error).message)
+  } finally {
+    isLoadingTasks.value = false
+  }
+}
 
 const showAddIndexConf = ref(false)
 const editingIndexId = ref<number | null>(null)
@@ -1010,5 +1118,80 @@ onMounted(() => {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.tasks-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.tasks-modal {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  border-radius: 16px;
+  width: 1200px;
+  max-width: 95vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h3 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 18px;
+}
+.close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 24px;
+  cursor: pointer;
+}
+.close-btn:hover { color: var(--primary); }
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+.table-container {
+  overflow-x: auto;
+}
+.loading-state {
+  text-align: center;
+  color: #94a3b8;
+  padding: 40px;
+}
+.json-expanded-row {
+  background: transparent !important;
+}
+.json-preview-container {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+.json-preview {
+  margin: 0;
+  font-family: monospace;
+  font-size: 13px;
+  color: #10b981;
 }
 </style>

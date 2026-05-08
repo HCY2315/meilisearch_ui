@@ -70,7 +70,8 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
         tableConfigs: idx.tableConfigs,
         nestedFieldConfigs: idx.nestedFieldConfigs,
         canEdit: idx.canEdit,
-        drawerFieldOrder: idx.drawerFieldOrder
+        drawerFieldOrder: idx.drawerFieldOrder,
+        primaryKey: idx.primaryKey
       })
     } catch {
       results.push({ 
@@ -83,7 +84,8 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
         tableConfigs: idx.tableConfigs,
         nestedFieldConfigs: idx.nestedFieldConfigs,
         canEdit: idx.canEdit,
-        drawerFieldOrder: idx.drawerFieldOrder
+        drawerFieldOrder: idx.drawerFieldOrder,
+        primaryKey: idx.primaryKey
       })
     }
   }
@@ -548,4 +550,14 @@ export async function updateMeiliIndexSettings(uid: string, settings: { searchab
     body: JSON.stringify({ uid, ...settings })
   })
   return res.ok
+}
+
+export async function getMeiliTasks(host: string, apiKey: string): Promise<any> {
+  const headers = getAuthHeaders()
+  const res = await fetch('/api/v1/proxy/tasks?limit=50', { headers })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: '请求任务失败' }))
+    throw new Error(err.error || '获取任务失败')
+  }
+  return res.json()
 }

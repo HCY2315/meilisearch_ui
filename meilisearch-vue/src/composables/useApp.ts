@@ -373,6 +373,12 @@ async function connect() {
       aiEmbedder.value = data.embedder
       sortValue.value = ''
       
+      if (idxMeta && idxMeta.primaryKey) {
+        primaryKeyField.value = idxMeta.primaryKey
+      } else {
+        primaryKeyField.value = 'id'
+      }
+      
       // ---- 重要：应用后端同步过来的持久化配置 ----
       if (idxMeta) {
         // 1. 字段与权限设置
@@ -888,7 +894,7 @@ async function connect() {
     editLocked.value = !editLocked.value
     if (!editLocked.value) {
       if (!lastBaseColumns.value.length) pushToast('暂无结果列，请先搜索', 'warning')
-      else if (!primaryKeyField.value || !lastBaseColumns.value.includes(primaryKeyField.value)) {
+      else if (!primaryKeyField.value) {
         primaryKeyField.value = lastBaseColumns.value.includes('id') ? 'id' : lastBaseColumns.value[0]
       }
       if (!primaryKeyField.value) pushToast('请选择主键字段', 'warning')
