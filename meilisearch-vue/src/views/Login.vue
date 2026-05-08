@@ -252,4 +252,26 @@ async function handleLogin() {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ============ Mobile Responsiveness ============ */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 24px;
+    width: 95%;
+  }
+  
+  .login-header h1 {
+    font-size: 24px;
+  }
+  
+  .input-wrapper input {
+    padding: 12px 12px 12px 36px;
+    font-size: 14px;
+  }
+  
+  .login-btn {
+    padding: 14px;
+    font-size: 15px;
+  }
+}
 </style>

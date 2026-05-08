@@ -397,4 +397,42 @@ onBeforeUnmount(() => {
 .ai-dropdown input[type="range"] { width: 100%; height: 6px; border-radius: 3px; background: var(--border); appearance: none; cursor: pointer; margin: 8px 0; }
 .ai-dropdown input[type="range"]::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); box-shadow: 0 2px 8px rgba(99,102,241,0.4); cursor: pointer; }
 .ai-weight-hint { text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ============ Mobile Responsiveness ============ */
+@media (max-width: 768px) {
+  .search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .query-row {
+    flex-direction: column;
+    align-items: stretch;
+    background: rgba(0, 0, 0, 0.02);
+    padding: 10px;
+    border-radius: 8px;
+  }
+  
+  .logic-label {
+    display: none;
+  }
+  
+  .results-stats {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .results-actions {
+    width: 100%;
+    margin-top: 12px;
+  }
+  
+  .query-actions {
+    flex-direction: column;
+  }
+  
+  .query-actions button {
+    width: 100%;
+  }
+}
 </style>

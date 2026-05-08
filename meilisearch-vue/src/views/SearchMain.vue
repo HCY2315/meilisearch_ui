@@ -350,4 +350,63 @@ onMounted(async () => {
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============ Mobile Layout Responsiveness ============ */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 16px 20px;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .app-nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .nav-pill-group {
+    justify-content: space-between;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .nav-pill {
+    padding: 8px 12px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  
+  .nav-extra {
+    width: 100%;
+  }
+  
+  .token-unlock-pill {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .token-unlock-pill input {
+    width: auto;
+    flex: 1;
+  }
+  
+  .app-container {
+    padding: 16px 20px;
+  }
+  
+  .app-footer {
+    padding: 20px;
+  }
+}
 </style>

@@ -285,4 +285,36 @@ function switchMode(mode: 'file' | 'json') {
 .json-textarea::placeholder {
   color: var(--text-muted);
 }
+
+/* ============ Mobile Responsiveness ============ */
+@media (max-width: 768px) {
+  .info-box {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .row-flex {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .row-flex .form-group {
+    width: 100%;
+  }
+  
+  .row-flex button {
+    width: 100%;
+    margin-top: 8px;
+  }
+  
+  .import-tabs {
+    width: 100%;
+    display: flex;
+  }
+  
+  .tab-btn {
+    flex: 1;
+    text-align: center;
+  }
+}
 </style>

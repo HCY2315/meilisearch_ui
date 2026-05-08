@@ -1204,4 +1204,87 @@ onMounted(() => {
   font-size: 13px;
   color: #10b981;
 }
+
+/* ============ Mobile Responsiveness ============ */
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+  
+  .admin-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    padding: 16px 0;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  .sidebar-header {
+    margin-bottom: 16px;
+    padding: 0 16px;
+  }
+  
+  .sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .nav-item {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  
+  .sidebar-footer {
+    display: none;
+  }
+  
+  .admin-main {
+    margin-left: 0;
+    padding: 16px;
+  }
+  
+  .section-header h1 {
+    font-size: 24px;
+  }
+  
+  .section-header .btn {
+    position: static;
+    margin-top: 16px;
+    display: block;
+    width: 100%;
+    text-align: center;
+  }
+  
+  .settings-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .row-label {
+    width: 100%;
+  }
+  
+  .data-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tasks-modal {
+    width: 100%;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  
+  .glass-editor {
+    padding: 16px;
+  }
+  
+  .field-selector {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

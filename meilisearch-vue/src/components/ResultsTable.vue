@@ -46,7 +46,7 @@
       </div>
 
       <!-- 表格模式 -->
-      <div v-else class="table-wrap">
+      <div v-else class="table-wrap table-responsive">
         <table class="results-table">
           <colgroup>
             <col v-for="col in allCols" :key="col" :style="{ width: store.columnWidths[col] ? store.columnWidths[col] + 'px' : 'auto' }" />
@@ -541,5 +541,12 @@ function startResize(e: MouseEvent, col: string) {
   background: rgba(99,179,237,0.15);
   color: #63b3ed;
   border-color: rgba(99,179,237,0.3);
+}
+
+/* ============ Mobile Responsiveness ============ */
+@media (max-width: 768px) {
+  .custom-row-columns {
+    grid-template-columns: 1fr !important;
+  }
 }
 </style>
