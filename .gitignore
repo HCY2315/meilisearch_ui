@@ -2,3 +2,5 @@ target
 meilisearch-vue/node_modules
 meilisearch-vue/backend/backend
 .gitnexus
+node_modules
+dist
