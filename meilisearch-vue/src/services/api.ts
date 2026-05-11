@@ -561,3 +561,13 @@ export async function getMeiliTasks(host: string, apiKey: string): Promise<any> 
   }
   return res.json()
 }
+
+export async function cancelMeiliTask(uid: number | string): Promise<boolean> {
+  const headers = getAuthHeaders()
+  const res = await fetch(`/api/v1/proxy/tasks/cancel?uids=${uid}`, {
+    method: 'POST',
+    headers
+  })
+  return res.ok
+}
+
