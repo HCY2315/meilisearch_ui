@@ -1,4 +1,4 @@
-# 🚀 MeiliSearch UI 商业化改造方案
+# 🚀 MeiliSearch UI 商业化改造方案 (Go 后端版)
 
 ## 📋 核心优势分析
 
@@ -6,7 +6,7 @@
 ```
 ✅ GUID-based 多租户架构  → 天然支持 SaaS 模式
 ✅ 索引级别的私有化控制   → 满足数据隐私合规需求
-✅ 后端代理 + Meilisearch  → 可控成本的高性能搜索
+✅ Go 后端 + Meilisearch   → 高性能、低成本、易维护
 ✅ 前后端完整实现          → 可直接商业部署
 ✅ 配置级权限管理          → 细粒度的功能订阅
 ```
@@ -19,159 +19,565 @@
 
 **当前状态：** Bearer Token 认证 + Index 级别隔离
 
-**需要实现：**
+**Go 后端改造方案：**
 
-```typescript
-// src/middleware/guid-auth.ts（新文件）
-interface TenantContext {
-  guid: string                    // 租户唯一标识
-  tier: 'free' | 'pro' | 'enterprise'
-  quotas: {
-    maxQueriesPerMonth: number
-    maxIndexes: number
-    maxDocumentsPerIndex: number
-    maxStorageGB: number
-    apiRateLimit: number          // QPS
-  }
-  features: {
-    customization: boolean         // 字段配置权限
-    export: boolean               // CSV导出
-    aiSearch: boolean             // AI搜索
-    webhooks: boolean             // Webhook集成
-    apiKeys: boolean              // 多API密钥
-  }
+#### 步骤1：定义租户上下文
+
+```go
+// internal/models/tenant.go
+package models
+
+import "time"
+
+type TenantTier string
+
+const (
+    TierFree       TenantTier = "free"
+    TierPro        TenantTier = "pro"
+    TierBusiness   TenantTier = "business"
+    TierEnterprise TenantTier = "enterprise"
+)
+
+// Tenant 租户基本信息
+type Tenant struct {
+    GUID      string    `gorm:"primaryKey" json:"guid"`
+    Name      string    `json:"name"`
+    Email     string    `json:"email"`
+    Tier      TenantTier `json:"tier"`
+    CreatedAt time.Time `json:"created_at"`
+    UpdatedAt time.Time `json:"updated_at"`
+    Status    string    `json:"status"` // active, suspended, cancelled
 }
 
-// 后端验证逻辑（示例 - Rust/Go）
-pub async fn verify_tenant_access(
-    guid: &str,
-    index_uid: &str,
-) -> Result<TenantContext, AuthError> {
-    // 1. 验证 GUID 有效性
-    let tenant = db.get_tenant(guid)?;
-    
-    // 2. 验证索引所有权（index_uid 必须属于该 GUID）
-    let index = db.get_index(index_uid)?;
-    if index.owner_guid != guid {
-        return Err(AuthError::Unauthorized);
-    }
-    
-    // 3. 检查配额和功能
-    let context = build_tenant_context(&tenant);
-    Ok(context)
+// TenantQuotas 租户配额限制
+type TenantQuotas struct {
+    TenantGUID         string `gorm:"primaryKey"`
+    MaxQueriesPerMonth int
+    MaxIndexes         int
+    MaxDocumentsPerIndex int64
+    MaxStorageGB       int
+    APIRateLimit       int    // QPS
+    CreatedAt          time.Time
+    UpdatedAt          time.Time
+}
+
+// TenantFeatures 租户功能开关
+type TenantFeatures struct {
+    TenantGUID       string `gorm:"primaryKey"`
+    Customization    bool   // 字段配置权限
+    Export           bool   // CSV导出
+    AISearch         bool   // AI搜索
+    Webhooks         bool   // Webhook集成
+    APIKeys          bool   // 多API密钥
+    CustomDomain     bool   // 自定义域名
+    CreatedAt        time.Time
+    UpdatedAt        time.Time
+}
+
+// TenantContext 请求上下文中的租户信息
+type TenantContext struct {
+    GUID     string
+    Tier     TenantTier
+    Quotas   *TenantQuotas
+    Features *TenantFeatures
 }
 ```
 
-**前端修改：**
+#### 步骤2：创建租户管理服务
 
-```typescript
-// src/composables/useApp.ts
-export const useAppStore = defineStore('app', () => {
-  const currentTenantGuid = ref(localStorage.getItem('tenantGuid') || '')
-  const tenantTier = ref<'free' | 'pro' | 'enterprise'>('free')
-  const tenantQuotas = ref({ /* ... */ })
-  const tenantFeatures = ref({ /* ... */ })
-  
-  // 在 connect() 之前调用
-  async function loadTenantContext() {
-    try {
-      const res = await fetch('/api/v1/tenant/context', {
-        headers: { 'X-Tenant-GUID': currentTenantGuid.value }
-      })
-      const data = await res.json()
-      tenantTier.value = data.tier
-      tenantQuotas.value = data.quotas
-      tenantFeatures.value = data.features
-    } catch (e) {
-      pushToast('无法加载租户信息', 'error')
+```go
+// internal/service/tenant_service.go
+package service
+
+import (
+    "context"
+    "errors"
+    "fmt"
+    "time"
+    "github.com/google/uuid"
+    "gorm.io/gorm"
+    "your-app/internal/models"
+)
+
+type TenantService struct {
+    db *gorm.DB
+}
+
+// NewTenantService 创建租户服务
+func NewTenantService(db *gorm.DB) *TenantService {
+    return &TenantService{db: db}
+}
+
+// CreateTenant 创建新租户
+func (s *TenantService) CreateTenant(ctx context.Context, req CreateTenantRequest) (*models.Tenant, error) {
+    tenant := &models.Tenant{
+        GUID:      uuid.New().String(),
+        Name:      req.Name,
+        Email:     req.Email,
+        Tier:      models.TierFree,
+        Status:    "active",
+        CreatedAt: time.Now(),
+        UpdatedAt: time.Now(),
     }
-  }
-  
-  // 功能开关检查
-  const canExportCsv = computed(() => tenantFeatures.value.export)
-  const canUseAiSearch = computed(() => tenantFeatures.value.aiSearch)
-  
-  return { /* ... */, loadTenantContext, tenantTier, canExportCsv, canUseAiSearch }
-})
+
+    if err := s.db.WithContext(ctx).Create(tenant).Error; err != nil {
+        return nil, fmt.Errorf("failed to create tenant: %w", err)
+    }
+
+    // 创建默认配额
+    quotas := &models.TenantQuotas{
+        TenantGUID:           tenant.GUID,
+        MaxQueriesPerMonth:   10000,     // Free 限额
+        MaxIndexes:           2,
+        MaxDocumentsPerIndex: 100000,
+        MaxStorageGB:         1,
+        APIRateLimit:         100,       // 100 QPS
+        CreatedAt:            time.Now(),
+        UpdatedAt:            time.Now(),
+    }
+    if err := s.db.WithContext(ctx).Create(quotas).Error; err != nil {
+        return nil, fmt.Errorf("failed to create quotas: %w", err)
+    }
+
+    // 创建默认功能配置
+    features := &models.TenantFeatures{
+        TenantGUID:    tenant.GUID,
+        Customization: true,
+        Export:        false,         // Free 不支持导出
+        AISearch:      false,
+        Webhooks:      false,
+        APIKeys:       false,
+        CustomDomain:  false,
+        CreatedAt:     time.Now(),
+        UpdatedAt:     time.Now(),
+    }
+    if err := s.db.WithContext(ctx).Create(features).Error; err != nil {
+        return nil, fmt.Errorf("failed to create features: %w", err)
+    }
+
+    return tenant, nil
+}
+
+// GetTenantContext 获取完整的租户上下文
+func (s *TenantService) GetTenantContext(ctx context.Context, guid string) (*models.TenantContext, error) {
+    tenant := &models.Tenant{}
+    if err := s.db.WithContext(ctx).First(tenant, "guid = ?", guid).Error; err != nil {
+        return nil, fmt.Errorf("tenant not found: %w", err)
+    }
+
+    if tenant.Status != "active" {
+        return nil, errors.New("tenant is not active")
+    }
+
+    quotas := &models.TenantQuotas{}
+    if err := s.db.WithContext(ctx).First(quotas, "tenant_guid = ?", guid).Error; err != nil {
+        return nil, fmt.Errorf("quotas not found: %w", err)
+    }
+
+    features := &models.TenantFeatures{}
+    if err := s.db.WithContext(ctx).First(features, "tenant_guid = ?", guid).Error; err != nil {
+        return nil, fmt.Errorf("features not found: %w", err)
+    }
+
+    return &models.TenantContext{
+        GUID:     guid,
+        Tier:     tenant.Tier,
+        Quotas:   quotas,
+        Features: features,
+    }, nil
+}
+
+// UpgradeTenant 升级租户套餐
+func (s *TenantService) UpgradeTenant(ctx context.Context, guid string, newTier models.TenantTier) error {
+    tenant := &models.Tenant{}
+    if err := s.db.WithContext(ctx).First(tenant, "guid = ?", guid).Error; err != nil {
+        return fmt.Errorf("tenant not found: %w", err)
+    }
+
+    tenant.Tier = newTier
+    tenant.UpdatedAt = time.Now()
+
+    // 更新配额
+    quotas := &models.TenantQuotas{}
+    if err := s.db.WithContext(ctx).First(quotas, "tenant_guid = ?", guid).Error; err != nil {
+        return fmt.Errorf("quotas not found: %w", err)
+    }
+
+    switch newTier {
+    case models.TierFree:
+        quotas.MaxQueriesPerMonth = 10000
+        quotas.MaxIndexes = 2
+        quotas.APIRateLimit = 100
+    case models.TierPro:
+        quotas.MaxQueriesPerMonth = 1000000
+        quotas.MaxIndexes = 20
+        quotas.APIRateLimit = 1000
+    case models.TierBusiness:
+        quotas.MaxQueriesPerMonth = 10000000
+        quotas.MaxIndexes = 100
+        quotas.APIRateLimit = 10000
+    case models.TierEnterprise:
+        quotas.MaxQueriesPerMonth = 999999999
+        quotas.MaxIndexes = 999999
+        quotas.APIRateLimit = 999999
+    }
+    quotas.UpdatedAt = time.Now()
+
+    // 更新功能开关
+    features := &models.TenantFeatures{}
+    if err := s.db.WithContext(ctx).First(features, "tenant_guid = ?", guid).Error; err != nil {
+        return fmt.Errorf("features not found: %w", err)
+    }
+
+    switch newTier {
+    case models.TierFree:
+        features.Export = false
+        features.AISearch = false
+        features.Webhooks = false
+        features.APIKeys = false
+    case models.TierPro:
+        features.Export = true
+        features.AISearch = true
+        features.Webhooks = false
+        features.APIKeys = true
+    case models.TierBusiness, models.TierEnterprise:
+        features.Export = true
+        features.AISearch = true
+        features.Webhooks = true
+        features.APIKeys = true
+        features.CustomDomain = true
+    }
+    features.UpdatedAt = time.Now()
+
+    return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+        if err := tx.Save(tenant).Error; err != nil {
+            return err
+        }
+        if err := tx.Save(quotas).Error; err != nil {
+            return err
+        }
+        if err := tx.Save(features).Error; err != nil {
+            return err
+        }
+        return nil
+    })
+}
+
+type CreateTenantRequest struct {
+    Name  string `json:"name"`
+    Email string `json:"email"`
+}
+```
+
+#### 步骤3：创建中间件验证 GUID
+
+```go
+// internal/middleware/tenant_middleware.go
+package middleware
+
+import (
+    "context"
+    "net/http"
+    "github.com/gin-gonic/gin"
+    "your-app/internal/models"
+    "your-app/internal/service"
+)
+
+type TenantMiddleware struct {
+    tenantService *service.TenantService
+}
+
+// NewTenantMiddleware 创建租户中间件
+func NewTenantMiddleware(ts *service.TenantService) *TenantMiddleware {
+    return &TenantMiddleware{tenantService: ts}
+}
+
+// AuthTenant 验证请求中的租户 GUID
+func (m *TenantMiddleware) AuthTenant() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        // 从请求头获取 GUID
+        guid := c.GetHeader("X-Tenant-GUID")
+        if guid == "" {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "missing X-Tenant-GUID"})
+            c.Abort()
+            return
+        }
+
+        // 获取租户上下文
+        ctx := context.Background()
+        tenantCtx, err := m.tenantService.GetTenantContext(ctx, guid)
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid tenant"})
+            c.Abort()
+            return
+        }
+
+        // 将租户信息存储在上下文中
+        c.Set("tenant", tenantCtx)
+        c.Set("tenant_guid", guid)
+
+        c.Next()
+    }
+}
+
+// CheckFeature 检查租户是否具有某个功能
+func (m *TenantMiddleware) CheckFeature(featureName string) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        tenantCtx, exists := c.Get("tenant")
+        if !exists {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant context not found"})
+            c.Abort()
+            return
+        }
+
+        tenant := tenantCtx.(*models.TenantContext)
+
+        var hasFeature bool
+        switch featureName {
+        case "export":
+            hasFeature = tenant.Features.Export
+        case "ai_search":
+            hasFeature = tenant.Features.AISearch
+        case "webhooks":
+            hasFeature = tenant.Features.Webhooks
+        case "api_keys":
+            hasFeature = tenant.Features.APIKeys
+        case "custom_domain":
+            hasFeature = tenant.Features.CustomDomain
+        default:
+            hasFeature = false
+        }
+
+        if !hasFeature {
+            c.JSON(http.StatusForbidden, gin.H{
+                "error": "feature not available in your plan",
+                "feature": featureName,
+            })
+            c.Abort()
+            return
+        }
+
+        c.Next()
+    }
+}
 ```
 
 ---
 
 ### 1.2 用量统计和配额管理
 
-**数据库表设计：**
+#### 数据库表设计
 
-```sql
--- 租户信息表
-CREATE TABLE tenants (
-  guid VARCHAR(36) PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) NOT NULL,
-  tier ENUM('free', 'pro', 'enterprise') DEFAULT 'free',
-  created_at TIMESTAMP,
-  updated_at TIMESTAMP,
-  status ENUM('active', 'suspended', 'cancelled') DEFAULT 'active'
-);
+```go
+// internal/models/usage.go
+package models
 
--- 计费指标表
-CREATE TABLE usage_metrics (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  guid VARCHAR(36) NOT NULL,
-  metric_date DATE NOT NULL,
-  queries_count INT DEFAULT 0,
-  documents_imported INT DEFAULT 0,
-  storage_bytes BIGINT DEFAULT 0,
-  exports_count INT DEFAULT 0,
-  UNIQUE(guid, metric_date),
-  FOREIGN KEY(guid) REFERENCES tenants(guid)
-);
+import "time"
 
--- 索引权限表（替代现有简单的 index.owner_guid）
-CREATE TABLE index_access (
-  index_uid VARCHAR(255) NOT NULL,
-  guid VARCHAR(36) NOT NULL,
-  permission ENUM('read', 'write', 'admin') DEFAULT 'read',
-  created_at TIMESTAMP,
-  PRIMARY KEY(index_uid, guid),
-  FOREIGN KEY(guid) REFERENCES tenants(guid)
-);
-```
-
-**后端实现（Rust 示例）：**
-
-```rust
-// src/quota_manager.rs
-pub struct QuotaManager {
-    db: Database,
+// UsageMetric 使用量统计
+type UsageMetric struct {
+    ID              uint      `gorm:"primaryKey"`
+    TenantGUID      string    `gorm:"index"`
+    MetricDate      time.Time `gorm:"index"`
+    QueriesCount    int       `json:"queries_count"`
+    DocumentsImported int     `json:"documents_imported"`
+    StorageBytes    int64     `json:"storage_bytes"`
+    ExportsCount    int       `json:"exports_count"`
+    APICallsCount   int       `json:"api_calls_count"`
+    CreatedAt       time.Time
+    UpdatedAt       time.Time
 }
 
-impl QuotaManager {
-    pub async fn check_query_quota(
-        &self,
-        guid: &str,
-        tier: &str,
-    ) -> Result<(), QuotaExceeded> {
-        let today = chrono::today();
-        let usage = self.db.get_usage(guid, today).await?;
-        let limit = self.get_query_limit(tier);
-        
-        if usage.queries_count >= limit {
-            return Err(QuotaExceeded::MonthlyQuota);
-        }
-        Ok(())
-    }
+// IndexAccess 索引访问权限
+type IndexAccess struct {
+    IndexUID  string `gorm:"primaryKey"`
+    TenantGUID string `gorm:"primaryKey"`
+    Permission string // read, write, admin
+    CreatedAt  time.Time
+    UpdatedAt  time.Time
+}
+
+// APIKey API 密钥（多密钥支持）
+type APIKey struct {
+    ID         string    `gorm:"primaryKey"`
+    TenantGUID string    `gorm:"index"`
+    Name       string
+    KeyHash    string    // SHA256 hash
+    Permissions []string // JSON array
+    ExpiresAt  *time.Time
+    CreatedAt  time.Time
+    UpdatedAt  time.Time
+}
+```
+
+#### 配额检查服务
+
+```go
+// internal/service/quota_service.go
+package service
+
+import (
+    "context"
+    "fmt"
+    "time"
+    "gorm.io/gorm"
+    "your-app/internal/models"
+)
+
+type QuotaService struct {
+    db *gorm.DB
+}
+
+// NewQuotaService 创建配额服务
+func NewQuotaService(db *gorm.DB) *QuotaService {
+    return &QuotaService{db: db}
+}
+
+// CheckQueryQuota 检查查询配额
+func (s *QuotaService) CheckQueryQuota(ctx context.Context, guid string, tier models.TenantTier) error {
+    today := time.Now().Format("2006-01-02")
     
-    pub async fn record_query(guid: &str, timestamp: DateTime) -> Result<()> {
-        self.db.increment_usage_counter(guid, "queries_count", timestamp).await
+    metric := &models.UsageMetric{}
+    err := s.db.WithContext(ctx).Where("tenant_guid = ? AND DATE(metric_date) = ?", guid, today).
+        First(metric).Error
+
+    if err != nil && err != gorm.ErrRecordNotFound {
+        return fmt.Errorf("failed to check quota: %w", err)
     }
-    
-    fn get_query_limit(&self, tier: &str) -> i32 {
-        match tier {
-            "free" => 10_000,      // 10k/月
-            "pro" => 1_000_000,    // 100万/月
-            "enterprise" => i32::MAX,
+
+    var limit int
+    switch tier {
+    case models.TierFree:
+        limit = 10000
+    case models.TierPro:
+        limit = 1000000
+    case models.TierBusiness:
+        limit = 10000000
+    case models.TierEnterprise:
+        limit = 999999999
+    default:
+        limit = 0
+    }
+
+    if metric.QueriesCount >= limit {
+        return fmt.Errorf("query quota exceeded: %d/%d", metric.QueriesCount, limit)
+    }
+
+    return nil
+}
+
+// RecordQuery 记录查询
+func (s *QuotaService) RecordQuery(ctx context.Context, guid string) error {
+    today := time.Now()
+    todayDate := today.Format("2006-01-02")
+
+    metric := &models.UsageMetric{}
+    result := s.db.WithContext(ctx).
+        Where("tenant_guid = ? AND DATE(metric_date) = ?", guid, todayDate).
+        First(metric)
+
+    if result.Error == gorm.ErrRecordNotFound {
+        // 创建新记录
+        metric = &models.UsageMetric{
+            TenantGUID:   guid,
+            MetricDate:   today,
+            QueriesCount: 1,
+            CreatedAt:    time.Now(),
+            UpdatedAt:    time.Now(),
         }
+        return s.db.WithContext(ctx).Create(metric).Error
+    } else if result.Error != nil {
+        return fmt.Errorf("failed to record query: %w", result.Error)
     }
+
+    // 增加计数
+    metric.QueriesCount++
+    metric.UpdatedAt = time.Now()
+    return s.db.WithContext(ctx).Save(metric).Error
+}
+
+// GetTodayUsage 获取今天的使用情况
+func (s *QuotaService) GetTodayUsage(ctx context.Context, guid string) (*models.UsageMetric, error) {
+    today := time.Now().Format("2006-01-02")
+    
+    metric := &models.UsageMetric{}
+    err := s.db.WithContext(ctx).
+        Where("tenant_guid = ? AND DATE(metric_date) = ?", guid, today).
+        First(metric).Error
+
+    if err == gorm.ErrRecordNotFound {
+        return &models.UsageMetric{
+            TenantGUID: guid,
+            MetricDate: time.Now(),
+        }, nil
+    }
+
+    return metric, err
+}
+
+// GetMonthlyUsage 获取本月的使用情况
+func (s *QuotaService) GetMonthlyUsage(ctx context.Context, guid string) (*models.UsageMetric, error) {
+    now := time.Now()
+    startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+
+    metric := &models.UsageMetric{}
+    err := s.db.WithContext(ctx).
+        Where("tenant_guid = ? AND metric_date >= ?", guid, startOfMonth).
+        First(metric).Error
+
+    if err == gorm.ErrRecordNotFound {
+        return &models.UsageMetric{
+            TenantGUID: guid,
+            MetricDate: now,
+        }, nil
+    }
+
+    return metric, err
+}
+```
+
+#### 在搜索中使用配额检查
+
+```go
+// internal/handler/search_handler.go
+package handler
+
+import (
+    "net/http"
+    "github.com/gin-gonic/gin"
+    "your-app/internal/models"
+    "your-app/internal/service"
+)
+
+type SearchHandler struct {
+    quotaService *service.QuotaService
+    tenantService *service.TenantService
+}
+
+// Search 执行搜索查询
+func (h *SearchHandler) Search(c *gin.Context) {
+    // 从上下文获取租户信息
+    tenantCtx, _ := c.Get("tenant")
+    tenant := tenantCtx.(*models.TenantContext)
+
+    // ✅ 第1步：检查配额
+    err := h.quotaService.CheckQueryQuota(c.Request.Context(), tenant.GUID, tenant.Tier)
+    if err != nil {
+        c.JSON(http.StatusPaymentRequired, gin.H{
+            "error": "quota exceeded",
+            "detail": err.Error(),
+        })
+        return
+    }
+
+    // ✅ 第2步：记录使用量
+    h.quotaService.RecordQuery(c.Request.Context(), tenant.GUID)
+
+    // 第3步：执行搜索（原有逻辑）
+    query := c.Query("q")
+    // ... 调用 Meilisearch 进行搜索
+    
+    c.JSON(http.StatusOK, gin.H{"results": "..."})
 }
 ```
 
@@ -179,112 +585,122 @@ impl QuotaManager {
 
 ### 1.3 动态定价和订阅管理
 
-**前端新增页面：** `src/views/BillingDashboard.vue`
+#### API 端点设计
 
-```vue
-<template>
-  <div class="billing-dashboard">
-    <!-- 当前计划卡片 -->
-    <div class="plan-card">
-      <h3>当前计划: {{ tenantTier }}</h3>
-      <p class="price">{{ planPrice }}元/月</p>
-      <button @click="showUpgradeModal = true">升级计划</button>
-    </div>
-    
-    <!-- 用量总览 -->
-    <div class="usage-cards">
-      <div class="usage-item">
-        <label>本月查询数</label>
-        <p class="value">{{ usageMetrics.queries }} / {{ quotas.maxQueriesPerMonth }}</p>
-        <div class="progress-bar">
-          <div class="progress" :style="{ width: usagePercent + '%' }"></div>
-        </div>
-      </div>
-      
-      <div class="usage-item">
-        <label>索引数</label>
-        <p class="value">{{ indexCount }} / {{ quotas.maxIndexes }}</p>
-      </div>
-      
-      <div class="usage-item">
-        <label>存储空间</label>
-        <p class="value">{{ storageGB }}GB / {{ quotas.maxStorageGB }}GB</p>
-      </div>
-    </div>
-    
-    <!-- 价格对比表 -->
-    <PricingTable 
-      :current-tier="tenantTier"
-      @upgrade="handleUpgrade"
-    />
-    
-    <!-- 账单历史 -->
-    <div class="billing-history">
-      <h3>账单历史</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>日期</th>
-            <th>金额</th>
-            <th>状态</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="bill in bills" :key="bill.id">
-            <td>{{ bill.date }}</td>
-            <td>¥{{ bill.amount }}</td>
-            <td>{{ bill.status }}</td>
-            <td><a href="#" @click="downloadInvoice(bill.id)">发票</a></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</template>
+```go
+// internal/handler/billing_handler.go
+package handler
 
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useAppStore } from '@/composables/useApp'
+import (
+    "net/http"
+    "github.com/gin-gonic/gin"
+    "your-app/internal/models"
+    "your-app/internal/service"
+)
 
-const app = useAppStore()
-const showUpgradeModal = ref(false)
-const usageMetrics = ref({ queries: 0, documents: 0, storage: 0 })
-const bills = ref([])
-
-const planPrice = computed(() => {
-  return app.tenantTier === 'free' ? '0' : 
-         app.tenantTier === 'pro' ? '99' : '599'
-})
-
-const usagePercent = computed(() => {
-  return (usageMetrics.value.queries / app.tenantQuotas.maxQueriesPerMonth) * 100
-})
-
-async function loadUsageMetrics() {
-  const res = await fetch('/api/v1/tenant/usage', {
-    headers: { 'X-Tenant-GUID': app.currentTenantGuid }
-  })
-  usageMetrics.value = await res.json()
+type BillingHandler struct {
+    tenantService *service.TenantService
+    quotaService  *service.QuotaService
 }
 
-async function handleUpgrade(newTier: string) {
-  // 调用支付网关或直接更新
-  const res = await fetch('/api/v1/tenant/upgrade', {
-    method: 'POST',
-    headers: { 'X-Tenant-GUID': app.currentTenantGuid },
-    body: JSON.stringify({ newTier })
-  })
-  if (res.ok) {
-    app.loadTenantContext()
-    showUpgradeModal.value = false
-  }
+// GetBillingInfo 获取计费信息
+func (h *BillingHandler) GetBillingInfo(c *gin.Context) {
+    guid := c.GetString("tenant_guid")
+    tenantCtx, _ := c.Get("tenant")
+    tenant := tenantCtx.(*models.TenantContext)
+
+    // 获取本月用量
+    monthlyUsage, err := h.quotaService.GetMonthlyUsage(c.Request.Context(), guid)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get usage"})
+        return
+    }
+
+    // 计算账单
+    price := getPriceByTier(tenant.Tier)
+    overageCharge := calculateOverage(tenant.Quotas, monthlyUsage)
+
+    c.JSON(http.StatusOK, gin.H{
+        "tier": tenant.Tier,
+        "base_price": price,
+        "usage": gin.H{
+            "queries": monthlyUsage.QueriesCount,
+            "storage": monthlyUsage.StorageBytes,
+            "exports": monthlyUsage.ExportsCount,
+        },
+        "quotas": gin.H{
+            "max_queries": tenant.Quotas.MaxQueriesPerMonth,
+            "max_storage": tenant.Quotas.MaxStorageGB,
+        },
+        "overage_charge": overageCharge,
+        "total_charge": price + overageCharge,
+    })
 }
 
-onMounted(() => {
-  loadUsageMetrics()
-})
-</script>
+// UpgradePlan 升级套餐
+func (h *BillingHandler) UpgradePlan(c *gin.Context) {
+    guid := c.GetString("tenant_guid")
+
+    var req struct {
+        NewTier string `json:"new_tier"`
+    }
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+        return
+    }
+
+    // 验证套餐有效性
+    newTier := models.TenantTier(req.NewTier)
+    if newTier != models.TierFree && newTier != models.TierPro && 
+       newTier != models.TierBusiness && newTier != models.TierEnterprise {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid tier"})
+        return
+    }
+
+    // 更新租户
+    if err := h.tenantService.UpgradeTenant(c.Request.Context(), guid, newTier); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "upgrade failed"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "upgrade successful", "tier": newTier})
+}
+
+// 定价函数
+func getPriceByTier(tier models.TenantTier) int {
+    switch tier {
+    case models.TierFree:
+        return 0
+    case models.TierPro:
+        return 9900    // ¥99/月
+    case models.TierBusiness:
+        return 29900   // ¥299/月
+    case models.TierEnterprise:
+        return 99900   // ¥999/月
+    default:
+        return 0
+    }
+}
+
+// 计算超额费用
+func calculateOverage(quotas *models.TenantQuotas, usage *models.UsageMetric) int {
+    var charge int
+
+    // 查询超额：¥0.01 per 1000 queries
+    if usage.QueriesCount > quotas.MaxQueriesPerMonth {
+        excess := usage.QueriesCount - quotas.MaxQueriesPerMonth
+        charge += excess / 1000  // 单位：分
+    }
+
+    // 存储超额：¥0.1 per GB
+    usageGB := usage.StorageBytes / (1024 * 1024 * 1024)
+    if int(usageGB) > quotas.MaxStorageGB {
+        excess := int(usageGB) - quotas.MaxStorageGB
+        charge += excess * 10   // 10分 per GB
+    }
+
+    return charge
+}
 ```
 
 ---
@@ -293,271 +709,344 @@ onMounted(() => {
 
 ### 2.1 API Keys 管理（多密钥支持）
 
-```typescript
-// src/views/AdminPanel.vue 中新增 ApiKeysTab
+```go
+// internal/service/api_key_service.go
+package service
 
-interface ApiKey {
-  id: string
-  name: string
-  key: string                    // 只显示前4位和后4位
-  permissions: string[]
-  createdAt: string
-  lastUsedAt?: string
-  expiresAt?: string
-  quotaLimit?: {
-    qpm: number                  // Queries Per Month
-    rps: number                  // Requests Per Second
-  }
+import (
+    "context"
+    "crypto/sha256"
+    "encoding/hex"
+    "fmt"
+    "time"
+    "github.com/google/uuid"
+    "gorm.io/gorm"
+    "your-app/internal/models"
+)
+
+type APIKeyService struct {
+    db *gorm.DB
 }
 
-// 生成 API Key（后端）
-pub async fn create_api_key(
-    guid: &str,
-    req: CreateApiKeyRequest,
-) -> Result<ApiKey> {
-    let key = generate_random_key(32);  // 类似 sk_live_xxxxx
-    let hashed = hash_sha256(&key);
-    
-    db.save_api_key(ApiKeyRecord {
-        guid: guid.to_string(),
-        name: req.name,
-        key_hash: hashed,
-        permissions: req.permissions,
-        created_at: now(),
-        quota_qpm: req.quota_limit.qpm,
-    }).await?;
-    
-    Ok(ApiKey {
-        id: generate_id(),
-        key: format!("sk_live_{}", &key[..28]),  // 隐藏大部分
-        // ...
-    })
-}
-```
-
-### 2.2 Webhook 集成
-
-```typescript
-// src/views/WebhooksTab.vue
-
-interface Webhook {
-  id: string
-  url: string
-  events: string[]              // ['index.created', 'search.performed', 'error.occurred']
-  secret: string                // 用于签名验证
-  isActive: boolean
-  retryPolicy: {
-    maxAttempts: number
-    backoffMultiplier: number
-  }
+// NewAPIKeyService 创建 API Key 服务
+func NewAPIKeyService(db *gorm.DB) *APIKeyService {
+    return &APIKeyService{db: db}
 }
 
-// 后端发送 Webhook 事件
-pub async fn trigger_webhook(
-    event: &str,
-    tenant_guid: &str,
-    payload: serde_json::Value,
-) -> Result<()> {
-    let webhooks = db.get_webhooks(tenant_guid, event).await?;
-    
-    for webhook in webhooks {
-        let signature = generate_signature(&webhook.secret, &payload);
-        
-        let client = reqwest::Client::new();
-        client.post(&webhook.url)
-            .header("X-Webhook-Signature", signature)
-            .json(&payload)
-            .send()
-            .await?;
+// CreateAPIKey 创建新的 API Key
+func (s *APIKeyService) CreateAPIKey(ctx context.Context, guid string, name string) (string, error) {
+    // 生成随机密钥
+    randomPart := uuid.New().String()
+    apiKey := fmt.Sprintf("sk_live_%s_%s", guid[:8], randomPart[:16])
+
+    // 计算 SHA256 hash（只存储 hash）
+    hash := sha256.Sum256([]byte(apiKey))
+    keyHash := hex.EncodeToString(hash[:])
+
+    record := &models.APIKey{
+        ID:         uuid.New().String(),
+        TenantGUID: guid,
+        Name:       name,
+        KeyHash:    keyHash,
+        Permissions: []string{"search", "read"},
+        CreatedAt:  time.Now(),
+        UpdatedAt:  time.Now(),
     }
-    Ok(())
+
+    if err := s.db.WithContext(ctx).Create(record).Error; err != nil {
+        return "", fmt.Errorf("failed to create API key: %w", err)
+    }
+
+    // 返回完整的密钥（只能看一次）
+    return apiKey, nil
+}
+
+// ValidateAPIKey 验证 API Key
+func (s *APIKeyService) ValidateAPIKey(ctx context.Context, apiKey string) (string, error) {
+    hash := sha256.Sum256([]byte(apiKey))
+    keyHash := hex.EncodeToString(hash[:])
+
+    record := &models.APIKey{}
+    err := s.db.WithContext(ctx).Where("key_hash = ?", keyHash).First(record).Error
+
+    if err != nil {
+        return "", fmt.Errorf("invalid API key")
+    }
+
+    // 检查是否过期
+    if record.ExpiresAt != nil && time.Now().After(*record.ExpiresAt) {
+        return "", fmt.Errorf("API key has expired")
+    }
+
+    return record.TenantGUID, nil
+}
+
+// ListAPIKeys 列出租户的所有 API Key
+func (s *APIKeyService) ListAPIKeys(ctx context.Context, guid string) ([]*models.APIKey, error) {
+    var keys []*models.APIKey
+    err := s.db.WithContext(ctx).Where("tenant_guid = ?", guid).Find(&keys).Error
+    return keys, err
+}
+
+// RevokeAPIKey 撤销 API Key
+func (s *APIKeyService) RevokeAPIKey(ctx context.Context, guid string, keyID string) error {
+    return s.db.WithContext(ctx).Where("id = ? AND tenant_guid = ?", keyID, guid).
+        Delete(&models.APIKey{}).Error
 }
 ```
 
-### 2.3 自定义域名绑定
+#### API Key 中间件
 
-```rust
-// src/custom_domain.rs
-pub struct CustomDomainManager {
-    db: Database,
-    dns_provider: CloudflareAPI,  // 或其他 DNS 服务
+```go
+// internal/middleware/api_key_middleware.go
+package middleware
+
+import (
+    "net/http"
+    "strings"
+    "github.com/gin-gonic/gin"
+    "your-app/internal/service"
+)
+
+type APIKeyMiddleware struct {
+    apiKeyService *service.APIKeyService
 }
 
-impl CustomDomainManager {
-    pub async fn add_custom_domain(
-        &self,
-        guid: &str,
-        domain: &str,
-    ) -> Result<CustomDomain> {
-        // 1. 验证域名所有权（CNAME 或 TXT 记录）
-        self.verify_domain_ownership(domain).await?;
-        
-        // 2. 生成 SSL 证书（Let's Encrypt）
-        let cert = self.generate_ssl_certificate(domain).await?;
-        
-        // 3. 配置反向代理
-        self.db.save_custom_domain(CustomDomainRecord {
-            guid: guid.to_string(),
-            domain: domain.to_string(),
-            ssl_cert: cert,
-            created_at: now(),
-        }).await?;
-        
-        Ok(CustomDomain { domain: domain.to_string() })
+// NewAPIKeyMiddleware 创建 API Key 中间件
+func NewAPIKeyMiddleware(apiKeyService *service.APIKeyService) *APIKeyMiddleware {
+    return &APIKeyMiddleware{apiKeyService: apiKeyService}
+}
+
+// AuthAPIKey 验证 API Key
+func (m *APIKeyMiddleware) AuthAPIKey() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        // 从 Authorization 头获取 API Key
+        authHeader := c.GetHeader("Authorization")
+        if authHeader == "" {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "missing authorization"})
+            c.Abort()
+            return
+        }
+
+        // 格式: Authorization: Bearer sk_live_xxx
+        parts := strings.Split(authHeader, " ")
+        if len(parts) != 2 || parts[0] != "Bearer" {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization format"})
+            c.Abort()
+            return
+        }
+
+        apiKey := parts[1]
+
+        // 验证 API Key
+        guid, err := m.apiKeyService.ValidateAPIKey(c.Request.Context(), apiKey)
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+            c.Abort()
+            return
+        }
+
+        // 设置租户信息
+        c.Set("tenant_guid", guid)
+        c.Next()
     }
 }
 ```
 
 ---
 
-## 🎯 Phase 3: 行业垂直解决方案（3-6个月）
+### 2.2 Webhook 系统
 
-### 方案A：电商搜索（SearchBox Pro）
+```go
+// internal/models/webhook.go
+package models
 
-**目标用户：** 中小型电商企业、SaaS 电商平台
+import "time"
 
-**关键特性：**
+type Webhook struct {
+    ID         string    `gorm:"primaryKey"`
+    TenantGUID string    `gorm:"index"`
+    URL        string
+    Events     string    // JSON array: ["index.created", "search.performed"]
+    Secret     string    // 用于签名
+    IsActive   bool
+    MaxRetries int
+    CreatedAt  time.Time
+    UpdatedAt  time.Time
+}
 
-```typescript
-// src/plugins/ecommerce/ProductSearch.vue
-interface ProductSearchConfig {
-  // 商品字段映射
-  fieldMappings: {
-    productId: string           // SKU
-    name: string               // 商品名
-    category: string           // 分类
-    price: string              // 价格
-    stock: string              // 库存
-    images: string[]           // 图片URL
-    rating: string             // 评分
-  }
-  
-  // 搜索行为配置
-  facets: {
-    category: true             // 分类多选
-    priceRange: {              // 价格区间
-      enabled: true
-      ranges: [[0, 100], [100, 500], [500, 5000]]
+type WebhookEvent struct {
+    ID         string    `gorm:"primaryKey"`
+    TenantGUID string    `gorm:"index"`
+    WebhookID  string
+    Event      string
+    Payload    string    // JSON
+    Status     string    // pending, success, failed
+    Attempts   int
+    CreatedAt  time.Time
+    UpdatedAt  time.Time
+}
+
+type WebhookDelivery struct {
+    ID         string    `gorm:"primaryKey"`
+    EventID    string
+    StatusCode int
+    Response   string
+    Error      string
+    CreatedAt  time.Time
+}
+```
+
+```go
+// internal/service/webhook_service.go
+package service
+
+import (
+    "bytes"
+    "context"
+    "crypto/hmac"
+    "crypto/sha256"
+    "encoding/hex"
+    "encoding/json"
+    "fmt"
+    "io/ioutil"
+    "net/http"
+    "time"
+    "github.com/google/uuid"
+    "gorm.io/gorm"
+    "your-app/internal/models"
+)
+
+type WebhookService struct {
+    db     *gorm.DB
+    client *http.Client
+}
+
+// NewWebhookService 创建 Webhook 服务
+func NewWebhookService(db *gorm.DB) *WebhookService {
+    return &WebhookService{
+        db: db,
+        client: &http.Client{
+            Timeout: 10 * time.Second,
+        },
     }
-    rating: true               // 评分筛选
-    inStock: true              // 库存状态
-  }
-  
-  // 排序规则
-  sortingStrategies: [
-    'relevance',               // 相关性
-    'price_asc', 'price_desc',
-    'newest', 'bestseller',
-    'rating_desc'
-  ]
-  
-  // 推荐配置
-  recommendations: {
-    enableSimilarProducts: true
-    enableBuyTogetherSuggestions: true
-  }
 }
 
-// 集成示例：Shopify, WooCommerce, 自建系统
-export async function syncProductsFromShopify(
-  shopId: string,
-  accessToken: string
-): Promise<void> {
-  const shopify = new ShopifyAPI(shopId, accessToken)
-  const products = await shopify.getAllProducts()
-  
-  // 转换为 Meilisearch 文档
-  const docs = products.map(p => ({
-    id: p.id,
-    name: p.title,
-    description: p.body_html,
-    category: p.product_type,
-    price: p.variants[0].price,
-    stock: p.variants[0].inventory_quantity,
-    images: p.images.map(img => img.src),
-    rating: p.rating?.average ?? 0,
-    url: `https://${shopId}.myshopify.com/products/${p.handle}`
-  }))
-  
-  await meilisearch.importDocuments(docs)
-}
-```
-
-**定价示例：**
-```
-SearchBox Pro 套餐
-├─ Starter: ¥199/月
-│  ├─ 最多 50,000 个 SKU
-│  ├─ 100 万次查询/月
-│  └─ 基础分析
-├─ Professional: ¥499/月
-│  ├─ 最多 500,000 个 SKU
-│  ├─ 1000 万次查询/月
-│  ├─ 高级推荐
-│  └─ API 集成
-└─ Enterprise: 自定义
-   ├─ 无限 SKU
-   ├─ 多品牌管理
-   └─ 专属客服
-```
-
-### 方案B：文档全文检索（DocSearch）
-
-**目标用户：** SaaS 企业、知识库、内部文档管理
-
-```typescript
-// src/plugins/doc-search/DocumentIndexing.ts
-interface DocumentConfig {
-  sources: {
-    confluence: { apiToken: string; spaces: string[] }
-    notion: { apiKey: string; databaseIds: string[] }
-    sharepoint: { tenantId: string; sites: string[] }
-    s3: { bucket: string; prefix: string }
-  }
-  
-  indexingStrategy: {
-    fullText: boolean
-    ocr: boolean                // 扫描 PDF 中的文字
-    semanticEmbedding: boolean  // 向量化用于语义搜索
-  }
-  
-  metadataExtraction: {
-    author: true
-    createdDate: true
-    modifiedDate: true
-    department: true
-    classification: 'public' | 'internal' | 'confidential'
-  }
-  
-  permissions: {
-    inheritFromSource: boolean  // 继承原文档权限
-    customRules: AccessRule[]
-  }
-}
-
-// 自动同步
-export async function syncConfluenceSpace(
-  spaceKey: string,
-  config: DocumentConfig
-) {
-  const confluence = new ConfluenceAPI(config.sources.confluence.apiToken)
-  const pages = await confluence.getPages(spaceKey)
-  
-  const docs = pages.map(page => ({
-    id: `conf_${page.id}`,
-    title: page.title,
-    content: page.body,
-    author: page.author.name,
-    createdAt: page.created,
-    url: page.links.webui,
-    metadata: {
-      source: 'confluence',
-      spaceKey,
-      type: page.type
+// TriggerWebhook 触发 Webhook 事件
+func (s *WebhookService) TriggerWebhook(ctx context.Context, guid string, eventType string, payload interface{}) error {
+    // 获取该租户订阅此事件的所有 Webhook
+    webhooks, err := s.getWebhooksForEvent(ctx, guid, eventType)
+    if err != nil {
+        return err
     }
-  }))
-  
-  await meilisearch.importDocuments(docs)
+
+    payloadJSON, err := json.Marshal(payload)
+    if err != nil {
+        return err
+    }
+
+    // 为每个 Webhook 创建事件记录
+    for _, webhook := range webhooks {
+        event := &models.WebhookEvent{
+            ID:         uuid.New().String(),
+            TenantGUID: guid,
+            WebhookID:  webhook.ID,
+            Event:      eventType,
+            Payload:    string(payloadJSON),
+            Status:     "pending",
+            Attempts:   0,
+            CreatedAt:  time.Now(),
+            UpdatedAt:  time.Now(),
+        }
+
+        if err := s.db.WithContext(ctx).Create(event).Error; err != nil {
+            return fmt.Errorf("failed to create webhook event: %w", err)
+        }
+
+        // 异步发送（使用 goroutine）
+        go s.deliverWebhook(context.Background(), webhook, event)
+    }
+
+    return nil
+}
+
+// deliverWebhook 发送 Webhook 到目标 URL
+func (s *WebhookService) deliverWebhook(ctx context.Context, webhook *models.Webhook, event *models.WebhookEvent) {
+    var lastErr error
+
+    for attempt := 1; attempt <= webhook.MaxRetries; attempt++ {
+        // 生成签名
+        signature := s.generateSignature(webhook.Secret, event.Payload)
+
+        // 创建请求
+        req, err := http.NewRequestWithContext(ctx, "POST", webhook.URL, bytes.NewBufferString(event.Payload))
+        if err != nil {
+            lastErr = err
+            continue
+        }
+
+        req.Header.Set("Content-Type", "application/json")
+        req.Header.Set("X-Webhook-Signature", signature)
+        req.Header.Set("X-Event-Type", event.Event)
+        req.Header.Set("X-Event-ID", event.ID)
+
+        // 发送请求
+        resp, err := s.client.Do(req)
+        if err != nil {
+            lastErr = err
+            time.Sleep(time.Duration(attempt*2) * time.Second) // 指数退避
+            continue
+        }
+
+        body, _ := ioutil.ReadAll(resp.Body)
+        resp.Body.Close()
+
+        // 记录交付结果
+        delivery := &models.WebhookDelivery{
+            ID:         uuid.New().String(),
+            EventID:    event.ID,
+            StatusCode: resp.StatusCode,
+            Response:   string(body),
+            CreatedAt:  time.Now(),
+        }
+        s.db.Create(delivery)
+
+        // 2xx 状态码视为成功
+        if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+            event.Status = "success"
+            event.Attempts = attempt
+            event.UpdatedAt = time.Now()
+            s.db.Save(event)
+            return
+        }
+
+        lastErr = fmt.Errorf("webhook returned %d", resp.StatusCode)
+        time.Sleep(time.Duration(attempt*2) * time.Second)
+    }
+
+    // 全部重试失败
+    event.Status = "failed"
+    event.Attempts = webhook.MaxRetries
+    event.UpdatedAt = time.Now()
+    s.db.Save(event)
+}
+
+// generateSignature 生成 HMAC-SHA256 签名
+func (s *WebhookService) generateSignature(secret string, payload string) string {
+    hash := hmac.New(sha256.New, []byte(secret))
+    hash.Write([]byte(payload))
+    return hex.EncodeToString(hash.Sum(nil))
+}
+
+// getWebhooksForEvent 获取订阅特定事件的所有 Webhook
+func (s *WebhookService) getWebhooksForEvent(ctx context.Context, guid string, eventType string) ([]*models.Webhook, error) {
+    var webhooks []*models.Webhook
+    
+    err := s.db.WithContext(ctx).
+        Where("tenant_guid = ? AND is_active = true", guid).
+        Find(&webhooks).Error
+
+    return webhooks, err
 }
 ```
 
@@ -565,168 +1054,385 @@ export async function syncConfluenceSpace(
 
 ## 💰 定价策略
 
-### 分层定价模型
+```go
+// internal/models/pricing.go
+package models
 
-```
-Free 计划（永久免费）
-├─ 用户数: 1
-├─ 索引数: 2
-├─ 文档数: 100k/索引
-├─ 查询数: 10k/月
-├─ 功能: 基础搜索、字段配置
-└─ 支持: 社区论坛
+type PricingTier struct {
+    Name                 string
+    MonthlyPrice         int    // 单位：分
+    MaxIndexes           int
+    MaxDocumentsPerIndex int64
+    MaxQueriesPerMonth   int
+    MaxStorageGB         int
+    Features             map[string]bool
+}
 
-Pro 计划（¥99/月）
-├─ 用户数: 5
-├─ 索引数: 20
-├─ 文档数: 5M/索引
-├─ 查询数: 100万/月
-├─ 功能: + API Keys + CSV 导出 + AI搜索
-└─ 支持: 邮件支持 (24h)
-
-Business 计划（¥299/月）
-├─ 用户数: 不限
-├─ 索引数: 不限
-├─ 文档数: 不限
-├─ 查询数: 1000万/月
-├─ 功能: + Webhooks + 自定义域名 + 优先队列
-└─ 支持: 电话 + 邮件（4h）
-
-Enterprise（自定义）
-├─ 独立部署
-├─ SLA 保证 (99.9% uptime)
-├─ 专属技术支持
-└─ 定制化功能开发
-```
-
-### 超额计费
-
-```
-Free → Pro 升级后：
-- 额外查询: ¥0.01 per 1000 queries
-- 额外存储: ¥0.1 per GB/月
-- 额外用户: ¥5 per user/月
-
-按需付费示例：
-- 1000万 QPM + 10GB 存储 = 基础费 + ¥50 + ¥1 = ¥150
-```
-
----
-
-## 🔧 技术改造清单
-
-### 必须做的（Critical）
-- [ ] 完整的 GUID 隔离（数据库级别）
-- [ ] 配额检查中间件
-- [ ] 用量统计和计费系统
-- [ ] 多 API Key 支持
-- [ ] 租户信息管理 API
-- [ ] 支付网关集成（Stripe/支付宝）
-
-### 应该做的（Important）
-- [ ] Webhook 系统
-- [ ] 白标/自定义域名
-- [ ] 高级监控仪表板
-- [ ] 审计日志
-- [ ] 两因素认证 (2FA)
-- [ ] 数据导出 API
-
-### 可以做的（Nice to have）
-- [ ] 垂直行业模板
-- [ ] GraphQL API
-- [ ] 离线搜索 SDK
-- [ ] 浏览器扩展
-- [ ] 移动应用
-
----
-
-## 📊 上线检查清单
-
-```javascript
-{
-  security: [
-    '✅ GUID 隔离验证',
-    '✅ API Key 密钥管理',
-    '✅ HTTPS 强制',
-    '✅ CORS 策略',
-    '✅ 速率限制',
-    '✅ DDoS 防护',
-    '✅ 数据加密 (at rest + in transit)'
-  ],
-  
-  reliability: [
-    '✅ 数据库备份 (日 + 周 + 月)',
-    '✅ 灾难恢复计划 (RTO < 1h)',
-    '✅ 监控告警系统',
-    '✅ 健康检查 (5min interval)',
-    '✅ 自动扩展配置'
-  ],
-  
-  usability: [
-    '✅ 完整 API 文档 (Swagger/OpenAPI)',
-    '✅ SDK (Python, JS, Go, Rust)',
-    '✅ 快速入门指南',
-    '✅ 代码示例库',
-    '✅ 视频教程'
-  ],
-  
-  compliance: [
-    '✅ 用户协议和隐私政策',
-    '✅ GDPR 合规 (数据删除)',
-    '✅ CCPA 合规',
-    '✅ 数据处理协议 (DPA)',
-    '✅ SOC 2 Type II (后期)'
-  ]
+var PricingTiers = map[TenantTier]*PricingTier{
+    TierFree: {
+        Name:                 "Free",
+        MonthlyPrice:         0,
+        MaxIndexes:           2,
+        MaxDocumentsPerIndex: 100000,
+        MaxQueriesPerMonth:   10000,
+        MaxStorageGB:         1,
+        Features: map[string]bool{
+            "export":       false,
+            "ai_search":    false,
+            "webhooks":     false,
+            "api_keys":     false,
+            "custom_domain": false,
+        },
+    },
+    TierPro: {
+        Name:                 "Pro",
+        MonthlyPrice:         9900,  // ¥99
+        MaxIndexes:           20,
+        MaxDocumentsPerIndex: 5000000,
+        MaxQueriesPerMonth:   1000000,
+        MaxStorageGB:         100,
+        Features: map[string]bool{
+            "export":       true,
+            "ai_search":    true,
+            "webhooks":     false,
+            "api_keys":     true,
+            "custom_domain": false,
+        },
+    },
+    TierBusiness: {
+        Name:                 "Business",
+        MonthlyPrice:         29900, // ¥299
+        MaxIndexes:           100,
+        MaxDocumentsPerIndex: 999999999,
+        MaxQueriesPerMonth:   10000000,
+        MaxStorageGB:         1000,
+        Features: map[string]bool{
+            "export":       true,
+            "ai_search":    true,
+            "webhooks":     true,
+            "api_keys":     true,
+            "custom_domain": true,
+        },
+    },
+    TierEnterprise: {
+        Name:                 "Enterprise",
+        MonthlyPrice:         99900, // ¥999+ 自定义
+        MaxIndexes:           999999,
+        MaxDocumentsPerIndex: 999999999,
+        MaxQueriesPerMonth:   999999999,
+        MaxStorageGB:         999999,
+        Features: map[string]bool{
+            "export":       true,
+            "ai_search":    true,
+            "webhooks":     true,
+            "api_keys":     true,
+            "custom_domain": true,
+        },
+    },
 }
 ```
 
 ---
 
-## 🎯 第一阶段（1-3个月）快速启动方案
+## 🔧 主要路由注册
 
-如果你想快速进入市场，建议这样做：
+```go
+// internal/router/router.go
+package router
 
-### Week 1-2：基础设施
-- 部署到云端（AWS/阿里云/腾讯云）
-- 设置自动备份
-- 配置 CDN
+import (
+    "github.com/gin-gonic/gin"
+    "your-app/internal/handler"
+    "your-app/internal/middleware"
+    "your-app/internal/service"
+)
 
-### Week 3-4：多租户改造
-- 添加 GUID 隔离检查
-- 实现配额管理
-- 创建用量仪表板
+func SetupRoutes(r *gin.Engine, services *service.ServiceContainer) {
+    tenantMiddleware := middleware.NewTenantMiddleware(services.TenantService)
+    apiKeyMiddleware := middleware.NewAPIKeyMiddleware(services.APIKeyService)
 
-### Week 5-8：商业功能
-- 支付网关（Stripe 或 local payment）
-- API Keys 管理
-- 用户鉴权系统
+    // ===== 公开路由 =====
+    public := r.Group("/api/v1/public")
+    {
+        // 用户注册、登录
+        authHandler := &handler.AuthHandler{TenantService: services.TenantService}
+        public.POST("/register", authHandler.Register)
+        public.POST("/login", authHandler.Login)
+    }
 
-### Week 9-12：行业定制
-- 选择一个垂直市场（电商/文档搜索）
-- 创建模板和示例
-- 发布到 Product Hunt
+    // ===== 受保护的路由（需要 X-Tenant-GUID） =====
+    protected := r.Group("/api/v1/tenant")
+    protected.Use(tenantMiddleware.AuthTenant())
+    {
+        // 搜索
+        searchHandler := &handler.SearchHandler{
+            QuotaService:  services.QuotaService,
+            TenantService: services.TenantService,
+        }
+        protected.POST("/search", searchHandler.Search)
+
+        // 计费
+        billingHandler := &handler.BillingHandler{
+            TenantService: services.TenantService,
+            QuotaService:  services.QuotaService,
+        }
+        protected.GET("/billing", billingHandler.GetBillingInfo)
+        protected.POST("/upgrade", billingHandler.UpgradePlan)
+
+        // API Keys
+        apiKeyHandler := &handler.APIKeyHandler{
+            APIKeyService: services.APIKeyService,
+        }
+        protected.POST("/api-keys", apiKeyHandler.CreateAPIKey)
+        protected.GET("/api-keys", apiKeyHandler.ListAPIKeys)
+        protected.DELETE("/api-keys/:id", apiKeyHandler.RevokeAPIKey)
+
+        // Webhooks
+        webhookHandler := &handler.WebhookHandler{
+            WebhookService: services.WebhookService,
+        }
+        protected.POST("/webhooks", webhookHandler.CreateWebhook)
+        protected.GET("/webhooks", webhookHandler.ListWebhooks)
+    }
+
+    // ===== API Key 认证路由 =====
+    apiAuth := r.Group("/api/v1")
+    apiAuth.Use(apiKeyMiddleware.AuthAPIKey())
+    {
+        searchHandler := &handler.SearchHandler{
+            QuotaService:  services.QuotaService,
+            TenantService: services.TenantService,
+        }
+        apiAuth.POST("/search", searchHandler.Search)
+    }
+}
+```
 
 ---
 
-## 💬 问题和建议
+## 📊 数据库迁移脚本
 
-1. **当前用户认证方式是什么？** (JWT token? Session?)
-   - 需要清楚了解，以便无缝迁移到多租户
+```sql
+-- 租户表
+CREATE TABLE tenants (
+    guid VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    tier ENUM('free', 'pro', 'business', 'enterprise') DEFAULT 'free',
+    status ENUM('active', 'suspended', 'cancelled') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_email (email),
+    INDEX idx_tier (tier),
+    INDEX idx_status (status)
+);
 
-2. **后端使用的数据库是？** (PostgreSQL? MySQL? MongoDB?)
-   - 影响配额和用量统计的实现
+-- 租户配额
+CREATE TABLE tenant_quotas (
+    tenant_guid VARCHAR(36) PRIMARY KEY,
+    max_queries_per_month INT DEFAULT 10000,
+    max_indexes INT DEFAULT 2,
+    max_documents_per_index BIGINT DEFAULT 100000,
+    max_storage_gb INT DEFAULT 1,
+    api_rate_limit INT DEFAULT 100,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_guid) REFERENCES tenants(guid) ON DELETE CASCADE
+);
 
-3. **已有用户群体吗？**
-   - 可以从他们收集付费意愿和需求优先级
+-- 租户功能
+CREATE TABLE tenant_features (
+    tenant_guid VARCHAR(36) PRIMARY KEY,
+    customization BOOLEAN DEFAULT true,
+    export BOOLEAN DEFAULT false,
+    ai_search BOOLEAN DEFAULT false,
+    webhooks BOOLEAN DEFAULT false,
+    api_keys BOOLEAN DEFAULT false,
+    custom_domain BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_guid) REFERENCES tenants(guid) ON DELETE CASCADE
+);
 
-4. **部署方式？** (Self-hosted? Cloud? 混合?)
-   - 影响商业模式定位
+-- 使用量统计
+CREATE TABLE usage_metrics (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_guid VARCHAR(36) NOT NULL,
+    metric_date DATE NOT NULL,
+    queries_count INT DEFAULT 0,
+    documents_imported INT DEFAULT 0,
+    storage_bytes BIGINT DEFAULT 0,
+    exports_count INT DEFAULT 0,
+    api_calls_count INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_tenant_date (tenant_guid, metric_date),
+    FOREIGN KEY (tenant_guid) REFERENCES tenants(guid) ON DELETE CASCADE,
+    INDEX idx_date (metric_date)
+);
+
+-- API Keys
+CREATE TABLE api_keys (
+    id VARCHAR(36) PRIMARY KEY,
+    tenant_guid VARCHAR(36) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    key_hash VARCHAR(64) NOT NULL UNIQUE,
+    permissions JSON,
+    expires_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_guid) REFERENCES tenants(guid) ON DELETE CASCADE,
+    INDEX idx_key_hash (key_hash),
+    INDEX idx_tenant (tenant_guid)
+);
+
+-- Webhooks
+CREATE TABLE webhooks (
+    id VARCHAR(36) PRIMARY KEY,
+    tenant_guid VARCHAR(36) NOT NULL,
+    url VARCHAR(2048) NOT NULL,
+    events JSON NOT NULL,
+    secret VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    max_retries INT DEFAULT 3,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_guid) REFERENCES tenants(guid) ON DELETE CASCADE,
+    INDEX idx_tenant (tenant_guid),
+    INDEX idx_active (is_active)
+);
+
+-- Webhook 事件
+CREATE TABLE webhook_events (
+    id VARCHAR(36) PRIMARY KEY,
+    tenant_guid VARCHAR(36) NOT NULL,
+    webhook_id VARCHAR(36) NOT NULL,
+    event VARCHAR(100) NOT NULL,
+    payload LONGTEXT NOT NULL,
+    status ENUM('pending', 'success', 'failed') DEFAULT 'pending',
+    attempts INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_guid) REFERENCES tenants(guid) ON DELETE CASCADE,
+    FOREIGN KEY (webhook_id) REFERENCES webhooks(id) ON DELETE CASCADE,
+    INDEX idx_status (status),
+    INDEX idx_created (created_at)
+);
+
+-- 索引访问权限
+CREATE TABLE index_access (
+    index_uid VARCHAR(255) NOT NULL,
+    tenant_guid VARCHAR(36) NOT NULL,
+    permission ENUM('read', 'write', 'admin') DEFAULT 'read',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (index_uid, tenant_guid),
+    FOREIGN KEY (tenant_guid) REFERENCES tenants(guid) ON DELETE CASCADE,
+    INDEX idx_tenant (tenant_guid)
+);
+```
 
 ---
 
-**下一步行动：** 
-- 优先实现 Phase 1 (多租户 + 配额)
-- 选择你要聚焦的垂直市场
-- 联系 3-5 个早期客户进行试用和反馈收集
+## 🚀 实施时间表
 
-需要我帮你进一步细化某个具体部分吗？比如支付网关集成、Webhook 实现细节或特定的垂直方案？
+### Week 1-2: 基础设施
+- [ ] 创建租户模型和数据库表
+- [ ] 实现 TenantService
+- [ ] 创建租户中间件
+
+### Week 3-4: 配额管理
+- [ ] 实现 QuotaService
+- [ ] 添加配额检查中间件
+- [ ] 创建计费 API 端点
+
+### Week 5-6: API Keys
+- [ ] 实现 APIKeyService
+- [ ] 创建 API Key 管理界面
+- [ ] 实现 API Key 认证
+
+### Week 7-8: Webhook 系统
+- [ ] 实现 WebhookService
+- [ ] 创建 Webhook 管理 UI
+- [ ] 添加事件触发逻辑
+
+### Week 9-12: 支付 + 上线
+- [ ] 集成支付网关（Stripe/支付宝）
+- [ ] 测试完整流程
+- [ ] 部署到生产环境
+- [ ] 发布到 Product Hunt
+
+---
+
+## 💬 前端修改提示
+
+更新 `src/composables/useApp.ts`：
+
+```typescript
+// 添加租户信息
+const currentTenantGuid = ref(localStorage.getItem('tenantGuid') || '')
+const tenantTier = ref<'free' | 'pro' | 'business' | 'enterprise'>('free')
+const tenantFeatures = ref({
+  export: false,
+  aiSearch: false,
+  webhooks: false,
+  apiKeys: false,
+})
+
+// 在每个请求中添加 X-Tenant-GUID 头
+const createClient = (host: string, apiKey: string): AxiosInstance => {
+  const adminToken = localStorage.getItem('authToken')
+  const instance = axios.create({
+    baseURL: host.trim().replace(/\/$/, ''),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Tenant-GUID': currentTenantGuid.value,  // ⭐ 新增
+      ...(apiKey.trim() ? { 'App-Token': apiKey.trim() } : {}),
+      ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {}),
+    },
+  })
+  return instance
+}
+
+// 功能开关
+const canExport = computed(() => tenantFeatures.value.export)
+const canUseAI = computed(() => tenantFeatures.value.aiSearch)
+```
+
+---
+
+## ✅ 上线检查清单
+
+```
+安全性
+├─ [ ] GUID 隔离验证
+├─ [ ] API Key 密钥管理
+├─ [ ] HTTPS 强制
+├─ [ ] CORS 策略配置
+├─ [ ] 速率限制实现
+└─ [ ] SQL 注入防护
+
+可靠性
+├─ [ ] 数据库备份配置
+├─ [ ] 监控告警设置
+├─ [ ] 错误日志记录
+├─ [ ] 性能监控
+└─ [ ] 灾难恢复计划
+
+文档
+├─ [ ] API 文档（Swagger）
+├─ [ ] SDK 文档
+├─ [ ] 快速入门指南
+├─ [ ] 定价页面
+└─ [ ] 常见问题
+
+法律
+├─ [ ] 用户协议
+├─ [ ] 隐私政策
+├─ [ ] 服务条款
+└─ [ ] GDPR 合规
+```
+
+---
+
+**需要我继续补充前端界面代码或支付网关集成的详细实现吗？**
