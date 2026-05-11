@@ -92,7 +92,7 @@
                       <th>状态</th>
                       <th>耗时</th>
                       <th>排队时间</th>
-                      <th>详情</th>
+                      <th>详情 / 操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -109,9 +109,16 @@
                         <td>{{ formatDuration(task.duration) }}</td>
                         <td>{{ new Date(task.enqueuedAt).toLocaleString() }}</td>
                         <td>
-                          <button class="btn btn-secondary btn-sm" @click="task._showJson = !task._showJson">
-                            {{ task._showJson ? '收起' : '查看' }}
-                          </button>
+                          <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary btn-sm" @click="task._showJson = !task._showJson">
+                              {{ task._showJson ? '收起' : '查看' }}
+                            </button>
+                            <button 
+                              v-if="['enqueued', 'processing'].includes(task.status)"
+                              class="btn btn-danger btn-sm" 
+                              @click="handleCancelTask(task)"
+                            >终止</button>
+                          </div>
                         </td>
                       </tr>
                       <tr v-if="task._showJson" class="json-expanded-row">
@@ -442,7 +449,8 @@ import {
   getMeiliIndexSettings,
   updateMeiliIndexSettings,
   loadIndexData,
-  getMeiliTasks
+  getMeiliTasks,
+  cancelMeiliTask
 } from '@/services/api'
 
 function formatDuration(isoDuration: string | undefined): string {
@@ -517,6 +525,27 @@ async function viewTasks(ins: any) {
     alert('获取任务失败: ' + (e as Error).message)
   } finally {
     isLoadingTasks.value = false
+  }
+}
+
+async function handleCancelTask(task: any) {
+  if (!confirm(`确定要终止任务 ${task.uid} 吗？`)) return
+  
+  try {
+    const ok = await cancelMeiliTask(task.uid)
+    if (ok) {
+      alert('任务终止请求已发送')
+      // 延迟刷新列表
+      setTimeout(() => {
+        if (currentTaskInstance.value) {
+          viewTasks(currentTaskInstance.value)
+        }
+      }, 500)
+    } else {
+      alert('终止任务失败')
+    }
+  } catch (e) {
+    alert('请求异常: ' + (e as Error).message)
   }
 }
 
