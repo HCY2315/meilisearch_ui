@@ -68,6 +68,7 @@ func HandleProxy(c *gin.Context) {
 					var tok model.AccessToken
 					if err := repository.DB.Where("token = ?", userToken).First(&tok).Error; err == nil {
 						if tok.ExpiresAt != nil && tok.ExpiresAt.Before(time.Now()) {
+							// NOTE: Token 已过期，执行软删除（model 已配置 DeletedAt）
 							repository.DB.Delete(&tok)
 						} else {
 							var allowedArr []string

@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // User 系统管理员表
@@ -31,12 +33,13 @@ type IndexConfig struct {
 
 // AccessToken 前台解锁用的专属凭证
 type AccessToken struct {
-	ID           uint      `gorm:"primarykey" json:"id"`
-	Token        string    `gorm:"uniqueIndex;not null" json:"token"`
-	AllowIndexes string    `gorm:"type:text" json:"allowIndexes"` // JSON数组，例如 ["docs", "finance"]
-	Description  string    `gorm:"size:255" json:"description"`
-	ExpiresAt    *time.Time `json:"expiresAt"` // 过期时间，nil 表示永不过期
-	CreatedAt    time.Time `json:"createdAt"`
+	ID           uint           `gorm:"primarykey" json:"id"`
+	Token        string         `gorm:"uniqueIndex;not null" json:"token"`
+	AllowIndexes string         `gorm:"type:text" json:"allowIndexes"` // JSON数组，例如 ["docs", "finance"]
+	Description  string         `gorm:"size:255" json:"description"`
+	ExpiresAt    *time.Time     `json:"expiresAt"` // 过期时间，nil 表示永不过期
+	CreatedAt    time.Time      `json:"createdAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // MeiliInstance Meilisearch 搜索引擎节点实例表
