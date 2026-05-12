@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="" />
+    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/backend/api/auth.go" beforeDir="false" afterPath="$PROJECT_DIR$/backend/api/auth.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/meili_admin.db" beforeDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
