@@ -124,7 +124,7 @@
                       <tr v-if="task._showJson" class="json-expanded-row">
                         <td colspan="7" style="border-bottom: none; padding-top: 0;">
                           <div class="json-preview-container">
-                            <pre class="json-preview">{{ JSON.stringify(task, (k, v) => k === '_showJson' ? undefined : v, 2) }}</pre>
+                            <pre class="task-json-preview">{{ JSON.stringify(task, (k, v) => k === '_showJson' ? undefined : v, 2) }}</pre>
                           </div>
                         </td>
                       </tr>
@@ -1477,11 +1477,11 @@ onMounted(() => {
   margin-bottom: 12px;
   overflow-x: auto;
 }
-.json-preview {
+.task-json-preview {
   margin: 0;
   font-family: monospace;
   font-size: 13px;
-  color: #10b981;
+  color: #000000;
 }
 
 .approve-modal {

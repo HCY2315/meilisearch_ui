@@ -9,7 +9,7 @@
         <div class="header-left">
           <div class="brand-logo">🔍</div>
           <div class="brand-text">
-            <h1>{{ uiConfig.title || 'Meilisearch Pro' }}</h1>
+            <h1>{{ uiConfig.title || '搜索引擎 Pro' }}</h1>
             <p>高性能多维数据检索引擎</p>
           </div>
         </div>
