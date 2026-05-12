@@ -63,7 +63,7 @@ func sendEmailVia163(to, code string) error {
 	header := make(map[string]string)
 	header["From"] = user
 	header["To"] = to
-	header["Subject"] = "验证码 - Meilisearch UI Token 申请"
+	header["Subject"] = "验证码 - "+ util.SysTitle + " Token 申请"
 	header["Content-Type"] = "text/html; charset=UTF-8"
 
 	message := ""
