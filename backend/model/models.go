@@ -64,3 +64,25 @@ type Application struct {
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
+
+// TokenApplication 前台 Token 申请记录
+type TokenApplication struct {
+	ID           uint           `gorm:"primarykey" json:"id"`
+	Email        string         `gorm:"size:128;not null" json:"email"`
+	Name         string         `gorm:"size:64;not null" json:"name"`
+	Birthday     string         `gorm:"size:20" json:"birthday"`
+	Gender       string         `gorm:"size:10" json:"gender"`
+	Purpose      string         `gorm:"type:text" json:"purpose"`
+	AllowIndexes string         `gorm:"type:text" json:"allowIndexes"` // 申请开通的索引，JSON 数组
+	Status       int            `gorm:"default:0" json:"status"`       // 0: 待审批, 1: 已通过, 2: 已驳回
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// EmailVerification 邮箱验证码缓存表
+type EmailVerification struct {
+	Email     string    `gorm:"primaryKey;size:128" json:"email"`
+	Code      string    `gorm:"size:10;not null" json:"code"`
+	ExpiresAt time.Time `gorm:"index" json:"expiresAt"`
+}
