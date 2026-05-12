@@ -248,8 +248,8 @@
           <label>电子邮箱 (163 邮箱)</label>
           <div style="display:flex;gap:8px">
             <input type="email" class="form-control" v-model="store.applicationForm.email" placeholder="example@163.com" />
-            <button class="btn btn-secondary btn-sm" :disabled="store.codeSending" @click="store.sendVerificationCode(store.applicationForm.email)">
-              {{ store.codeSending ? '发送中...' : (store.codeSent ? '重新发送' : '获取验证码') }}
+            <button class="btn btn-secondary btn-sm" :disabled="store.codeSending || store.codeCountdown > 0" @click="store.sendVerificationCode(store.applicationForm.email)">
+              {{ store.codeSending ? '发送中...' : (store.codeCountdown > 0 ? `${store.codeCountdown}s` : (store.codeSent ? '重新发送' : '获取验证码')) }}
             </button>
           </div>
         </div>
@@ -262,7 +262,7 @@
           <input type="text" class="form-control" v-model="store.applicationForm.name" placeholder="您的真实姓名" />
         </div>
         <div class="form-group">
-          <label>出生年月日</label>
+          <label>出生日期</label>
           <input type="date" class="form-control" v-model="store.applicationForm.birthday" />
         </div>
         <div class="form-group">
