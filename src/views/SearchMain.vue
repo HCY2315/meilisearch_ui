@@ -21,9 +21,9 @@
           
           <div v-if="isLoggedIn" class="user-pill">
             <span class="role-badge">{{ userRole === 'admin' ? '管理员' : '访客' }}</span>
-            <button class="logout-btn" @click="logout" title="退出登录">退出</button>
+            <button class="logout-btn" @click="logout" title="退出登录">退出</button>© 2026 Meilisearch Pro UI · Powered by Antigravity
           </div>
-          <button v-else class="btn btn-primary btn-sm" @click="router.push('/login')">登录后台</button>
+          <button v-else class="btn btn-primary btn-sm" @click="router.push('/admin')">登录后台</button>
         </div>
       </div>
 
@@ -84,7 +84,7 @@
 
     <footer class="app-footer">
       <div class="footer-divider"></div>
-      <p>© 2026 · Created by 冰城拓 </p>
+      <p>© 2026 多维搜索引擎 - 数据集散中心 · Powered by 冰城拓</p>
     </footer>
 
     <!-- 全局挂载组件 -->

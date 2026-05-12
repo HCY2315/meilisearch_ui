@@ -40,10 +40,10 @@
       </div>
 
       <div class="login-footer">
-        © 2026 Meilisearch Pro UI · Powered by Antigravity
+        © 2026 多维搜索引擎 - 数据集散中心 · Powered by 冰城拓
       </div>
     </div>
-  </div>
+  </div>冰城拓
 </template>
 
 <script setup lang="ts">

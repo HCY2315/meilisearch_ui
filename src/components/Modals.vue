@@ -263,7 +263,20 @@
         </div>
         <div class="form-group">
           <label>出生日期</label>
-          <input type="date" class="form-control" v-model="store.applicationForm.birthday" />
+          <div style="display:grid;grid-template-columns: 1fr 1fr 1fr;gap:8px;">
+            <select class="form-control" v-model="birthdayYear">
+              <option value="">年</option>
+              <option v-for="year in birthdayYears" :key="year" :value="String(year)">{{ year }}年</option>
+            </select>
+            <select class="form-control" v-model="birthdayMonth">
+              <option value="">月</option>
+              <option v-for="month in 12" :key="month" :value="String(month).padStart(2, '0')">{{ month }}月</option>
+            </select>
+            <select class="form-control" v-model="birthdayDay" :disabled="!birthdayYear || !birthdayMonth">
+              <option value="">日</option>
+              <option v-for="day in birthdayDays" :key="day" :value="String(day).padStart(2, '0')">{{ day }}日</option>
+            </select>
+          </div>
         </div>
         <div class="form-group">
           <label>性别</label>
@@ -319,6 +332,68 @@ const labels = reactive<Record<string, string>>({})
 const columnOrderDraft = ref<string[]>([])
 const draggingColumn = ref<string | null>(null)
 const dragOverColumn = ref<string | null>(null)
+const now = new Date()
+const currentYear = now.getFullYear()
+const birthdayYears = Array.from({ length: currentYear - 1899 }, (_, i) => currentYear - i)
+
+const birthdayYear = computed({
+  get() {
+    const [year = ''] = (store.applicationForm.birthday || '').split('-')
+    return year
+  },
+  set(year: string) {
+    const [, month = '', day = ''] = (store.applicationForm.birthday || '').split('-')
+    updateBirthday(year, month, day)
+  }
+})
+
+const birthdayMonth = computed({
+  get() {
+    const [, month = ''] = (store.applicationForm.birthday || '').split('-')
+    return month
+  },
+  set(month: string) {
+    const [year = '', , day = ''] = (store.applicationForm.birthday || '').split('-')
+    updateBirthday(year, month, day)
+  }
+})
+
+const birthdayDay = computed({
+  get() {
+    const [, , day = ''] = (store.applicationForm.birthday || '').split('-')
+    return day
+  },
+  set(day: string) {
+    const [year = '', month = ''] = (store.applicationForm.birthday || '').split('-')
+    updateBirthday(year, month, day)
+  }
+})
+
+const birthdayDays = computed(() => {
+  if (!birthdayYear.value || !birthdayMonth.value) return []
+  const year = Number(birthdayYear.value)
+  const month = Number(birthdayMonth.value)
+  const daysInMonth = new Date(year, month, 0).getDate()
+  return Array.from({ length: daysInMonth }, (_, i) => i + 1)
+})
+
+function updateBirthday(year: string, month: string, day: string) {
+  const normalizedYear = year || ''
+  const normalizedMonth = month || ''
+  let normalizedDay = day || ''
+
+  if (normalizedYear && normalizedMonth && normalizedDay) {
+    const maxDay = new Date(Number(normalizedYear), Number(normalizedMonth), 0).getDate()
+    if (Number(normalizedDay) > maxDay) normalizedDay = String(maxDay).padStart(2, '0')
+  }
+
+  if (normalizedYear && normalizedMonth && normalizedDay) {
+    store.applicationForm.birthday = `${normalizedYear}-${normalizedMonth}-${normalizedDay}`
+    return
+  }
+
+  store.applicationForm.birthday = [normalizedYear, normalizedMonth, normalizedDay].filter(Boolean).join('-')
+}
 
 watch(() => store.columnConfigOpen, (open) => {
   if (open) {

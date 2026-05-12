@@ -4,12 +4,12 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="bug修复">
+    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="优化系统">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/api/application.go" beforeDir="false" afterPath="$PROJECT_DIR$/backend/api/application.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/schema/dto.go" beforeDir="false" afterPath="$PROJECT_DIR$/backend/schema/dto.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/AdminPanel.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/AdminPanel.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/api.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/Modals.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Modals.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Login.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/Login.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/SearchMain.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/SearchMain.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -17,7 +17,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="70" />
+    <option name="cachedIndexableFilesCount" value="71" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
@@ -55,17 +55,21 @@
     &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;a__main__1&quot;,
+    &quot;javascript.nodejs.core.library.configured.version&quot;: &quot;22.22.2&quot;,
+    &quot;javascript.nodejs.core.library.typings.version&quot;: &quot;22.19.19&quot;,
     &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/chaoyue/code/meilisearch_ui&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/chaoyue/.nvm&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;nodejs_interpreter_path&quot;: &quot;/home/chaoyue/.nvm/versions/node/v22.22.2/bin/node&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;/home/chaoyue/.nvm&quot;,
     &quot;org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon&quot;: &quot;&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;settings.javascript.runtime&quot;,
     &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/home/chaoyue/code/meilisearch_ui/node_modules/typescript/lib&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -92,6 +96,8 @@
       <workItem from="1778505857390" duration="31000" />
       <workItem from="1778555980114" duration="2984000" />
       <workItem from="1778578010448" duration="697000" />
+      <workItem from="1778579188661" duration="338000" />
+      <workItem from="1778579560908" duration="108000" />
     </task>
     <task id="LOCAL-00001" summary="自动备份: 2026-05-08 12:40:07">
       <option name="closed" value="true" />
@@ -118,7 +124,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="a_main_1" />
+                        <option value="a_main" />
                       </list>
                     </value>
                   </entry>
@@ -132,6 +138,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="自动备份: 2026-05-08 12:40:07" />
-    <option name="LAST_COMMIT_MESSAGE" value="自动备份: 2026-05-08 12:40:07" />
+    <MESSAGE value="优化系统" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化系统" />
   </component>
 </project>
