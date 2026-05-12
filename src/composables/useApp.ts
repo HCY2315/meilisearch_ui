@@ -172,7 +172,7 @@ export const useAppStore = defineStore('app', () => {
   const codeCountdown = ref(0)
   let codeCountdownTimer: ReturnType<typeof setInterval> | null = null
 
-  function startCodeCountdown(seconds = 60) {
+  function startCodeCountdown(seconds = 180) {
     if (codeCountdownTimer) {
       clearInterval(codeCountdownTimer)
       codeCountdownTimer = null
