@@ -359,3 +359,55 @@ func HandleUpdateIndexSettings(c *gin.Context) {
 
 	c.JSON(http.StatusOK, task)
 }
+
+// HandleGetPublicIndexes 返回所有索引列表及其锁定状态，供前台展示
+func HandleGetPublicIndexes(c *gin.Context) {
+	var instance model.MeiliInstance
+	if err := repository.DB.First(&instance).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "未配置搜索引擎实例"})
+		return
+	}
+
+	client := meilisearch.New(instance.Host, meilisearch.WithAPIKey(instance.APIKey))
+	resp, err := client.GetIndexes(nil)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"results": []string{}})
+		return
+	}
+
+	var configs []model.IndexConfig
+	repository.DB.Find(&configs)
+	configMap := make(map[string]model.IndexConfig)
+	for _, cfg := range configs {
+		configMap[cfg.Uid] = cfg
+	}
+
+	type PublicIndex struct {
+		Uid         string `json:"uid"`
+		DisplayName string `json:"displayName"`
+		IsLocked    bool   `json:"isLocked"`
+		PrimaryKey  string `json:"primaryKey"`
+	}
+	var results []PublicIndex
+
+	for _, idx := range resp.Results {
+		cfg, exists := configMap[idx.UID]
+		isLocked := false
+		displayName := idx.UID
+		if exists {
+			isLocked = cfg.IsLocked
+			if cfg.Alias != "" {
+				displayName = cfg.Alias
+			}
+		}
+
+		results = append(results, PublicIndex{
+			Uid:         idx.UID,
+			DisplayName: displayName,
+			IsLocked:    isLocked,
+			PrimaryKey:  idx.PrimaryKey,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"results": results})
+}
