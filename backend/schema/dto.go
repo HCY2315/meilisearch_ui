@@ -94,3 +94,10 @@ type TokenApplicationSubmitRequest struct {
 	Purpose      string   `json:"purpose"`
 	AllowIndexes []string `json:"allowIndexes"`
 }
+
+type ApproveApplicationRequest struct {
+	Token        string   `json:"token"`
+	AllowIndexes []string `json:"allowIndexes"`
+	Description  string   `json:"description"`
+	ValidDays    *int     `json:"validDays"`
+}
