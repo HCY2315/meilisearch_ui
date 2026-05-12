@@ -1323,5 +1323,6 @@ async function connect() {
     currentFieldConfigsForSync,
     getNestedFieldConfig, setNestedFieldConfig, saveNestedFieldConfigs, scheduleSaveNestedFieldConfigs, saveDrawerFieldOrder,
     saveTableConfigsToBackend,
+    tokenApplicationOpen, applicationForm, applicationLoading, codeSending, codeSent, sendVerificationCode, submitApplication,
   }
 })
