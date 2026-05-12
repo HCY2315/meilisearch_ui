@@ -634,7 +634,7 @@ async function connect() {
     if (!currentIndex.value) {
       return
     }
-    const useGlobalLoading = !options?.silent
+    const useGlobalLoading = options?.silent === false
     if (useGlobalLoading) loading.value = true
     searchLoading.value = true
     try {
