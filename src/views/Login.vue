@@ -40,16 +40,17 @@
       </div>
 
       <div class="login-footer">
-        © 2026 多维搜索引擎 - 数据集散中心 · Powered by 冰城拓
+        {{ APP_COPYRIGHT }}
       </div>
     </div>
-  </div>冰城拓
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { login } from '@/services/api'
+import { APP_COPYRIGHT } from '@/constants/branding'
 
 const router = useRouter()
 const username = ref('')
