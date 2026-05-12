@@ -33,6 +33,8 @@ func InitDB() {
 		&model.Application{},
 		&model.IndexConfig{},
 		&model.AccessToken{},
+		&model.TokenApplication{},
+		&model.EmailVerification{},
 	)
 	if err != nil {
 		log.Fatalf("failed to migrate database: %v", err)

@@ -78,3 +78,19 @@ type IndexSettingsRequest struct {
 	SearchableAttributes []string `json:"searchableAttributes"`
 	FilterableAttributes []string `json:"filterableAttributes"`
 }
+
+// SendCodeRequest 发送验证码请求
+type SendCodeRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// TokenApplicationSubmitRequest 提交申请请求
+type TokenApplicationSubmitRequest struct {
+	Email        string   `json:"email" binding:"required,email"`
+	Code         string   `json:"code" binding:"required"`
+	Name         string   `json:"name" binding:"required"`
+	Birthday     string   `json:"birthday"`
+	Gender       string   `json:"gender"`
+	Purpose      string   `json:"purpose"`
+	AllowIndexes []string `json:"allowIndexes"`
+}
