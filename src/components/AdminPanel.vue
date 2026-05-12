@@ -273,6 +273,60 @@
         </div>
       </section>
 
+      <!-- 申请列表管理 -->
+      <section v-if="activeTab === 'applications'" class="content-section">
+        <header class="section-header">
+          <h1>Token 申请管理 <span>Applications</span></h1>
+          <p>审核来自前台用户的 Token 申请请求。</p>
+        </header>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>申请人</th>
+              <th>联系方式</th>
+              <th>详细信息</th>
+              <th>申请索引</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="app in tokenApplications" :key="app.id">
+              <td>
+                <div class="user-info">
+                  <strong>{{ app.name }}</strong>
+                  <span class="meta">{{ app.gender }} | {{ app.birthday }}</span>
+                </div>
+              </td>
+              <td><code>{{ app.email }}</code></td>
+              <td>
+                <div class="purpose-info" :title="app.purpose">
+                  {{ app.purpose || '无说明' }}
+                </div>
+              </td>
+              <td>
+                <div class="index-tags">
+                  <span v-for="idx in JSON.parse(app.allowIndexes || '[]')" :key="idx" class="tag">{{ idx }}</span>
+                </div>
+              </td>
+              <td>
+                <span :class="['status-badge', app.status === 1 ? 'status-ok' : (app.status === 2 ? 'status-err' : 'status-warn')]">
+                  {{ app.status === 1 ? '已通过' : (app.status === 2 ? '已驳回' : '待审批') }}
+                </span>
+              </td>
+              <td>
+                <div v-if="app.status === 0" style="display:flex; gap:8px">
+                  <button class="btn btn-primary btn-sm" @click="handleApprove(app)">通过</button>
+                  <button class="btn btn-danger btn-sm" @click="handleReject(app)">驳回</button>
+                </div>
+                <span v-else class="text-muted">已处理</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
       <!-- 3. Meilisearch 索引设置 -->
       <section v-if="activeTab === 'search'" class="content-section">
         <header class="section-header">
@@ -450,7 +504,10 @@ import {
   updateMeiliIndexSettings,
   loadIndexData,
   getMeiliTasks,
-  cancelMeiliTask
+  cancelMeiliTask,
+  getApplications,
+  approveApplication,
+  rejectApplication
 } from '@/services/api'
 
 function formatDuration(isoDuration: string | undefined): string {
@@ -493,6 +550,7 @@ const tabs = [
   { id: 'instances', label: '节点管理', icon: '☁️' },
   { id: 'security', label: '安全锁库', icon: '🛡️' },
   { id: 'tokens', label: '凭证分发', icon: '🎫' },
+  { id: 'applications', label: '申请管理', icon: '📝' },
   { id: 'search', label: '搜索配置', icon: '🔍' },
   { id: 'settings', label: '应用设置', icon: '⚙️' },
   { id: 'password', label: '账户安全', icon: '🔐' },
@@ -503,6 +561,25 @@ const accessTokens = ref<any[]>([])
 const apps = ref<any[]>([])
 const instances = ref<any[]>([])
 const availableIndexes = ref<string[]>([])
+const tokenApplications = ref<any[]>([])
+
+async function handleApprove(app: any) {
+  if (!confirm(`确定通过 ${app.name} 的申请吗？`)) return
+  const ok = await approveApplication(app.id)
+  if (ok) {
+    alert('已通过申请并生成 Token')
+    loadAdminData()
+  }
+}
+
+async function handleReject(app: any) {
+  if (!confirm(`确定驳回 ${app.name} 的申请吗？`)) return
+  const ok = await rejectApplication(app.id)
+  if (ok) {
+    alert('已驳回申请')
+    loadAdminData()
+  }
+}
 
 const showAddInstance = ref(false)
 const editingInstanceId = ref<number | null>(null)
@@ -591,18 +668,20 @@ function isExpired(date: string | null) {
 
 async function loadAdminData() {
   try {
-    const [idxData, tokData, appsData, proxyData, insData] = await Promise.all([
+    const [idxData, tokData, appsData, proxyData, insData, applicationData] = await Promise.all([
       getAdminIndexConfigs(),
       getAdminAccessTokens(),
       getAdminApps(),
       getProxyIndexes(),
-      getAdminInstances()
+      getAdminInstances(),
+      getApplications()
     ])
 
     indexConfigs.value = idxData as any[]
     accessTokens.value = tokData as any[]
     apps.value = appsData as any[]
     instances.value = insData as any[]
+    tokenApplications.value = applicationData as any[]
     if (proxyData.results) {
       availableIndexes.value = proxyData.results.map(r => r.uid)
     }
