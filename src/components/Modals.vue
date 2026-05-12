@@ -236,6 +236,65 @@
       </div>
     </div>
   </div>
+
+  <div v-if="store.tokenApplicationOpen" class="modal-overlay" @click.self="store.tokenApplicationOpen = false">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>申请访问凭证 (Token)</h3>
+        <button class="modal-close" @click="store.tokenApplicationOpen = false">×</button>
+      </div>
+      <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+        <div class="form-group">
+          <label>电子邮箱 (163 邮箱)</label>
+          <div style="display:flex;gap:8px">
+            <input type="email" class="form-control" v-model="store.applicationForm.email" placeholder="example@163.com" />
+            <button class="btn btn-secondary btn-sm" :disabled="store.codeSending" @click="store.sendVerificationCode(store.applicationForm.email)">
+              {{ store.codeSending ? '发送中...' : (store.codeSent ? '重新发送' : '获取验证码') }}
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>验证码 (180分钟内有效)</label>
+          <input type="text" class="form-control" v-model="store.applicationForm.code" placeholder="输入 6 位验证码" maxlength="6" />
+        </div>
+        <div class="form-group">
+          <label>姓名</label>
+          <input type="text" class="form-control" v-model="store.applicationForm.name" placeholder="您的真实姓名" />
+        </div>
+        <div class="form-group">
+          <label>出生年月日</label>
+          <input type="date" class="form-control" v-model="store.applicationForm.birthday" />
+        </div>
+        <div class="form-group">
+          <label>性别</label>
+          <select class="form-control" v-model="store.applicationForm.gender">
+            <option value="男">男</option>
+            <option value="女">女</option>
+            <option value="保密">保密</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>申请用途</label>
+          <textarea class="form-control" v-model="store.applicationForm.purpose" rows="3" placeholder="请简述申请 Token 的用途"></textarea>
+        </div>
+        <div class="form-group">
+          <label>申请开通的索引 (多选)</label>
+          <div class="index-checkboxes" style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top:8px">
+            <label v-for="idx in store.indexes" :key="idx.uid" class="inline-check">
+              <input type="checkbox" :value="idx.uid" v-model="store.applicationForm.allowIndexes" />
+              {{ idx.displayName || idx.uid }}
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" @click="store.tokenApplicationOpen = false">取消</button>
+        <button class="btn btn-primary" :disabled="store.applicationLoading" @click="store.submitApplication">
+          {{ store.applicationLoading ? '提交中...' : '提交申请' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">

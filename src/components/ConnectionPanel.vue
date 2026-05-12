@@ -30,6 +30,9 @@
         </select>
       </div>
     </div>
+    <div v-if="store.indexes.length > 0" class="apply-section">
+      <a href="#" class="apply-link" @click.prevent="store.tokenApplicationOpen = true">还没有权限？申请访问凭证 (Token)</a>
+    </div>
   </div>
 </template>
 
@@ -90,5 +93,20 @@ function onIndexChange() {
   margin-top: 14px;
   display: flex;
   gap: 12px;
+}
+.apply-section {
+  margin-top: 12px;
+  text-align: right;
+}
+.apply-link {
+  font-size: 12px;
+  color: var(--primary-color);
+  text-decoration: none;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+.apply-link:hover {
+  opacity: 1;
+  text-decoration: underline;
 }
 </style>
