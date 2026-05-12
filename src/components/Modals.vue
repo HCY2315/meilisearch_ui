@@ -296,6 +296,9 @@
             <label v-for="idx in store.indexes" :key="idx.uid" class="inline-check">
               <input type="checkbox" :value="idx.uid" v-model="store.applicationForm.allowIndexes" />
               {{ idx.displayName || idx.uid }}
+              <span style="opacity:.75;font-size:12px;margin-left:6px;">
+                [{{ idx.isLocked ? '私有资源' : '公开资源' }}]
+              </span>
             </label>
           </div>
         </div>
