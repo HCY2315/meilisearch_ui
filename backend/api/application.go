@@ -293,9 +293,19 @@ func HandleRejectApplication(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "申请已处理，请勿重复操作"})
 		return
 	}
+
+	var req schema.RejectApplicationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "驳回参数不合法"})
+		return
+	}
+
 	app.Status = 2 // 驳回
 	repository.DB.Save(&app)
 	mailBody := "很抱歉，您的 Token 申请未通过审核。<br>如需继续申请，请完善申请用途后再次提交。"
+	if req.RejectMessage != "" {
+		mailBody = req.RejectMessage
+	}
 	if err := sendEmailVia163HTML(app.Email, util.SysTitle+" 申请审批驳回通知", mailBody); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "已驳回该申请，但邮件发送失败",

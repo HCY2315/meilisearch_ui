@@ -101,3 +101,7 @@ type ApproveApplicationRequest struct {
 	Description  string   `json:"description"`
 	ValidDays    *int     `json:"validDays"`
 }
+
+type RejectApplicationRequest struct {
+	RejectMessage string `json:"rejectMessage"`
+}

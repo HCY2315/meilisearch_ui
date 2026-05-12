@@ -318,7 +318,7 @@
               <td>
                 <div v-if="app.status === 0" style="display:flex; gap:8px">
                   <button class="btn btn-primary btn-sm" @click="openApproveModal(app)">通过</button>
-                  <button class="btn btn-danger btn-sm" @click="handleReject(app)">驳回</button>
+                  <button class="btn btn-danger btn-sm" @click="openRejectModal(app)">驳回</button>
                 </div>
                 <span v-else class="text-muted">已处理</span>
               </td>
@@ -526,6 +526,38 @@
         </div>
       </div>
     </div>
+
+    <div v-if="rejectModalOpen" class="tasks-modal-overlay animate-fade-in" @click.self="closeRejectModal">
+      <div class="tasks-modal approve-modal">
+        <div class="modal-header">
+          <h3>驳回申请并通知用户</h3>
+          <button class="close-btn" @click="closeRejectModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label>申请人</label>
+            <input class="form-control" :value="pendingRejectApp?.name || '-'" disabled>
+          </div>
+          <div class="input-group" style="margin-top: 12px;">
+            <label>邮箱</label>
+            <input class="form-control" :value="pendingRejectApp?.email || '-'" disabled>
+          </div>
+          <div class="input-group" style="margin-top: 16px;">
+            <label>驳回消息（留空使用默认消息）</label>
+            <textarea
+              v-model="rejectForm.rejectMessage"
+              class="form-control"
+              rows="4"
+              placeholder="很抱歉，您的 Token 申请未通过审核。"
+            />
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-danger" @click="submitReject">确认驳回并发送邮件</button>
+            <button class="btn btn-secondary" @click="closeRejectModal">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -613,6 +645,9 @@ const tokenApplications = ref<any[]>([])
 const approveModalOpen = ref(false)
 const pendingApproveApp = ref<any | null>(null)
 const approveForm = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: 30 })
+const rejectModalOpen = ref(false)
+const pendingRejectApp = ref<any | null>(null)
+const rejectForm = ref({ rejectMessage: '' })
 
 function openApproveModal(app: any) {
   pendingApproveApp.value = app
@@ -662,11 +697,24 @@ async function submitApprove() {
   loadAdminData()
 }
 
-async function handleReject(app: any) {
-  if (!confirm(`确定驳回 ${app.name} 的申请吗？`)) return
-  const result = await rejectApplication(app.id)
+function openRejectModal(app: any) {
+  pendingRejectApp.value = app
+  rejectForm.value = { rejectMessage: '' }
+  rejectModalOpen.value = true
+}
+
+function closeRejectModal() {
+  rejectModalOpen.value = false
+  pendingRejectApp.value = null
+}
+
+async function submitReject() {
+  const app = pendingRejectApp.value
+  if (!app) return
+  const result = await rejectApplication(app.id, { rejectMessage: rejectForm.value.rejectMessage.trim() })
   if (!result.ok) return alert(result.message)
   alert(result.message)
+  closeRejectModal()
   loadAdminData()
 }
 
