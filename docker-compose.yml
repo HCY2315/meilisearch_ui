@@ -5,7 +5,8 @@ services:
       dockerfile: Dockerfile
     image: meilisearch-ui:latest
     environment:
-      - SMTP_USER=your_master_key
+      - SMTP_USER=13832286642@163.com
+      - SMTP_PASS=your_master_key
     ports:
       - "7701:8080"
     volumes:
@@ -23,6 +24,3 @@ services:
 #       - MEILI_MASTER_KEY=your_master_key
 #     volumes:
 #       - ./meili_data:/meili_data
-
-	user := os.Getenv("SMTP_USER")
-	pass := os.Getenv("SMTP_PASS") // 163 授权码
