@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // User 系统管理员表
@@ -19,6 +21,7 @@ type IndexConfig struct {
 	Uid                string `gorm:"uniqueIndex;not null" json:"uid"`
 	Alias              string `gorm:"size:255" json:"alias"`
 	Description        string `gorm:"size:512" json:"description"`
+	IsVisible          bool   `gorm:"default:true" json:"isVisible"`
 	IsLocked           bool   `gorm:"default:false" json:"isLocked"`
 	FieldConfigs       string `gorm:"type:text" json:"fieldConfigs"`       // JSON: Field settings
 	ViewConfigs        string `gorm:"type:text" json:"viewConfigs"`        // JSON: Custom views
@@ -31,12 +34,13 @@ type IndexConfig struct {
 
 // AccessToken 前台解锁用的专属凭证
 type AccessToken struct {
-	ID           uint      `gorm:"primarykey" json:"id"`
-	Token        string    `gorm:"uniqueIndex;not null" json:"token"`
-	AllowIndexes string    `gorm:"type:text" json:"allowIndexes"` // JSON数组，例如 ["docs", "finance"]
-	Description  string    `gorm:"size:255" json:"description"`
-	ExpiresAt    *time.Time `json:"expiresAt"` // 过期时间，nil 表示永不过期
-	CreatedAt    time.Time `json:"createdAt"`
+	ID           uint           `gorm:"primarykey" json:"id"`
+	Token        string         `gorm:"uniqueIndex;not null" json:"token"`
+	AllowIndexes string         `gorm:"type:text" json:"allowIndexes"` // JSON数组，例如 ["docs", "finance"]
+	Description  string         `gorm:"size:255" json:"description"`
+	ExpiresAt    *time.Time     `json:"expiresAt"` // 过期时间，nil 表示永不过期
+	CreatedAt    time.Time      `json:"createdAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // MeiliInstance Meilisearch 搜索引擎节点实例表
@@ -60,4 +64,26 @@ type Application struct {
 	AllowIndexes string    `gorm:"type:text" json:"allowIndexes"`  // JSON 数组，记录允许访问的 index 列表
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
+}
+
+// TokenApplication 前台 Token 申请记录
+type TokenApplication struct {
+	ID           uint           `gorm:"primarykey" json:"id"`
+	Email        string         `gorm:"size:128;not null" json:"email"`
+	Name         string         `gorm:"size:64;not null" json:"name"`
+	Birthday     string         `gorm:"size:20" json:"birthday"`
+	Gender       string         `gorm:"size:10" json:"gender"`
+	Purpose      string         `gorm:"type:text" json:"purpose"`
+	AllowIndexes string         `gorm:"type:text" json:"allowIndexes"` // 申请开通的索引，JSON 数组
+	Status       int            `gorm:"default:0" json:"status"`       // 0: 待审批, 1: 已通过, 2: 已驳回
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// EmailVerification 邮箱验证码缓存表
+type EmailVerification struct {
+	Email     string    `gorm:"primaryKey;size:128" json:"email"`
+	Code      string    `gorm:"size:10;not null" json:"code"`
+	ExpiresAt time.Time `gorm:"index" json:"expiresAt"`
 }

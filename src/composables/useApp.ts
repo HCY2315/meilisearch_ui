@@ -155,6 +155,41 @@ export const useAppStore = defineStore('app', () => {
   const nestedFieldConfigs = ref<NestedFieldConfigsMap>({})
   let nestedConfigSaveTimer: ReturnType<typeof setTimeout> | null = null
 
+  const tokenApplicationOpen = ref(false)
+  const applicationForm = ref({
+    email: '',
+    code: '',
+    name: '',
+    birthday: '',
+    gender: '男',
+    purpose: '',
+    allowIndexes: [] as string[]
+  })
+  const applicationLoading = ref(false)
+  const codeSending = ref(false)
+  const codeSent = ref(false)
+  const codeCountdown = ref(0)
+  let codeCountdownTimer: ReturnType<typeof setInterval> | null = null
+
+  function startCodeCountdown(seconds = 180) {
+    if (codeCountdownTimer) {
+      clearInterval(codeCountdownTimer)
+      codeCountdownTimer = null
+    }
+    codeCountdown.value = seconds
+    codeCountdownTimer = setInterval(() => {
+      if (codeCountdown.value <= 1) {
+        codeCountdown.value = 0
+        if (codeCountdownTimer) {
+          clearInterval(codeCountdownTimer)
+          codeCountdownTimer = null
+        }
+        return
+      }
+      codeCountdown.value -= 1
+    }, 1000)
+  }
+
   const visibleColumns = computed(() => {
     let cols = [...lastBaseColumns.value]
     if (columnOrder.value.length) {
@@ -313,6 +348,60 @@ export const useAppStore = defineStore('app', () => {
     setTimeout(() => {
       toasts.value.shift()
     }, 3000)
+  }
+
+  async function sendVerificationCode(email: string) {
+    if (!email || !email.includes('@')) {
+      pushToast('请输入有效的邮箱地址', 'error')
+      return
+    }
+    if (codeCountdown.value > 0) {
+      return
+    }
+    codeSending.value = true
+    try {
+      await api.sendVerificationCode(email)
+      codeSent.value = true
+      startCodeCountdown()
+      pushToast('验证码已发送，请检查您的邮箱', 'success')
+    } catch (e) {
+      pushToast(`发送验证码失败: ${e}`, 'error')
+    } finally {
+      codeSending.value = false
+    }
+  }
+
+  async function submitApplication() {
+    if (!applicationForm.value.email || !applicationForm.value.code || !applicationForm.value.name) {
+      pushToast('请填写完整信息及验证码', 'warning')
+      return
+    }
+    applicationLoading.value = true
+    try {
+      await api.submitApplication(applicationForm.value)
+      pushToast('申请提交成功，请等待管理员审核', 'success')
+      tokenApplicationOpen.value = false
+      // 重置表单
+      applicationForm.value = {
+        email: '',
+        code: '',
+        name: '',
+        birthday: '',
+        gender: '男',
+        purpose: '',
+        allowIndexes: []
+      }
+      codeSent.value = false
+      codeCountdown.value = 0
+      if (codeCountdownTimer) {
+        clearInterval(codeCountdownTimer)
+        codeCountdownTimer = null
+      }
+    } catch (e) {
+      pushToast(`提交申请失败: ${e}`, 'error')
+    } finally {
+      applicationLoading.value = false
+    }
   }
 
 async function connect() {
@@ -1264,5 +1353,6 @@ async function connect() {
     currentFieldConfigsForSync,
     getNestedFieldConfig, setNestedFieldConfig, saveNestedFieldConfigs, scheduleSaveNestedFieldConfigs, saveDrawerFieldOrder,
     saveTableConfigsToBackend,
+    tokenApplicationOpen, applicationForm, applicationLoading, codeSending, codeSent, codeCountdown, sendVerificationCode, submitApplication,
   }
 })

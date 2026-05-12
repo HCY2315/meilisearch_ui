@@ -62,6 +62,7 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
       results.push({ 
         uid: idx.uid, 
         count: statsResp.data.numberOfDocuments,
+        isVisible: idx.isVisible,
         isLocked: idx.isLocked,
         isUnlocked: idx.isUnlocked,
         displayName: idx.displayName,
@@ -76,6 +77,7 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
     } catch {
       results.push({ 
         uid: idx.uid,
+        isVisible: idx.isVisible,
         isLocked: idx.isLocked,
         isUnlocked: idx.isUnlocked,
         displayName: idx.displayName,
@@ -571,3 +573,58 @@ export async function cancelMeiliTask(uid: number | string): Promise<boolean> {
   return res.ok
 }
 
+// Token 申请相关
+export async function sendVerificationCode(email: string): Promise<void> {
+  const res = await fetch('/api/v1/application/send-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: '发送失败' }))
+    throw new Error(err.error || '发送失败')
+  }
+}
+
+export async function submitApplication(data: Record<string, unknown>): Promise<void> {
+  const res = await fetch('/api/v1/application/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: '提交失败' }))
+    throw new Error(err.error || '提交失败')
+  }
+}
+
+export async function getApplications(): Promise<any[]> {
+  const headers = getAuthHeaders()
+  const res = await fetch('/api/v1/admin/applications', { headers })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function approveApplication(id: number, data: Record<string, unknown>): Promise<{ ok: boolean; message: string }> {
+  const headers = getAuthHeaders()
+  const res = await fetch(`/api/v1/admin/applications/${id}/approve`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok) return { ok: false, message: payload.error || '审批失败' }
+  return { ok: true, message: payload.message || '审批成功' }
+}
+
+export async function rejectApplication(id: number, data?: Record<string, unknown>): Promise<{ ok: boolean; message: string }> {
+  const headers = getAuthHeaders()
+  const res = await fetch(`/api/v1/admin/applications/${id}/reject`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify(data || {})
+  })
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok) return { ok: false, message: payload.error || '驳回失败' }
+  return { ok: true, message: payload.message || '驳回成功' }
+}

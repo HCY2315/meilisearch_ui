@@ -147,12 +147,18 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 		log.Printf("[DEBUG] uid=%s exists=%v drawer=%q", uid, exists, dbConf.DrawerFieldOrder)
 		log.Printf("[DEBUG] uid=%s, exists=%v, drawerFieldOrder=%q", uid, exists, dbConf.DrawerFieldOrder)
 		isLocked := false
+		isVisible := true
 		alias := uid
 		if exists {
 			isLocked = dbConf.IsLocked
+			isVisible = dbConf.IsVisible
 			if dbConf.Alias != "" {
 				alias = dbConf.Alias
 			}
+		}
+
+		if !isAdmin && !isVisible {
+			continue
 		}
 
 		isUnlocked := false
@@ -174,6 +180,7 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 		// 注入前台所需状态
 		idx["isLocked"] = isLocked
 		idx["isUnlocked"] = isUnlocked
+		idx["isVisible"] = isVisible
 		idx["displayName"] = alias
 
         if exists {

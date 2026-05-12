@@ -40,7 +40,7 @@
       </div>
 
       <div class="login-footer">
-        © 2026 Meilisearch Pro UI · Powered by Antigravity
+        {{ APP_COPYRIGHT }}
       </div>
     </div>
   </div>
@@ -50,6 +50,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { login } from '@/services/api'
+import { APP_COPYRIGHT } from '@/constants/branding'
 
 const router = useRouter()
 const username = ref('')

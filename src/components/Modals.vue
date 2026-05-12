@@ -236,6 +236,84 @@
       </div>
     </div>
   </div>
+
+  <div v-if="store.tokenApplicationOpen" class="modal-overlay" @click.self="store.tokenApplicationOpen = false">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>申请访问凭证 (Token)</h3>
+        <button class="modal-close" @click="store.tokenApplicationOpen = false">×</button>
+      </div>
+      <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+        <div class="form-group">
+          <label>电子邮箱 (163 邮箱)</label>
+          <div style="display:flex;gap:8px">
+            <input type="email" class="form-control" v-model="store.applicationForm.email" placeholder="example@163.com" />
+            <button class="btn btn-secondary btn-sm" :disabled="store.codeSending || store.codeCountdown > 0" @click="store.sendVerificationCode(store.applicationForm.email)">
+              {{ store.codeSending ? '发送中...' : (store.codeCountdown > 0 ? `${store.codeCountdown}s` : (store.codeSent ? '重新发送' : '获取验证码')) }}
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>验证码 (180分钟内有效)</label>
+          <input type="text" class="form-control" v-model="store.applicationForm.code" placeholder="输入 6 位验证码" maxlength="6" />
+        </div>
+        <div class="form-group">
+          <label>姓名</label>
+          <input type="text" class="form-control" v-model="store.applicationForm.name" placeholder="您的真实姓名" />
+        </div>
+        <div class="form-group">
+          <label>出生日期</label>
+          <div style="display:grid;grid-template-columns: 1fr 1fr 1fr;gap:8px;">
+            <select class="form-control" v-model="birthdayYear">
+              <option value="">年</option>
+              <option v-for="year in birthdayYears" :key="year" :value="String(year)">{{ year }}年</option>
+            </select>
+            <select class="form-control" v-model="birthdayMonth">
+              <option value="">月</option>
+              <option v-for="month in 12" :key="month" :value="String(month).padStart(2, '0')">{{ month }}月</option>
+            </select>
+            <select class="form-control" v-model="birthdayDay" :disabled="!birthdayYear || !birthdayMonth">
+              <option value="">日</option>
+              <option v-for="day in birthdayDays" :key="day" :value="String(day).padStart(2, '0')">{{ day }}日</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>性别</label>
+          <select class="form-control" v-model="store.applicationForm.gender">
+            <option value="男">男</option>
+            <option value="女">女</option>
+            <option value="保密">保密</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>申请用途</label>
+          <textarea class="form-control" v-model="store.applicationForm.purpose" rows="3" placeholder="请简述申请 Token 的用途"></textarea>
+        </div>
+        <div class="form-group">
+          <label>申请开通的索引 (多选)</label>
+          <div class="index-checkboxes" style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top:8px">
+            <label v-for="idx in store.indexes" :key="idx.uid" class="inline-check">
+              <input type="checkbox" :value="idx.uid" v-model="store.applicationForm.allowIndexes" />
+              {{ idx.displayName || idx.uid }}
+              <span
+                :title="idx.isLocked ? '私有资源' : '公开资源'"
+                style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-left:6px;font-size:13px;vertical-align:middle;"
+              >
+                {{ idx.isLocked ? '🔒' : '🔓' }}
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" @click="store.tokenApplicationOpen = false">取消</button>
+        <button class="btn btn-primary" :disabled="store.applicationLoading" @click="store.submitApplication">
+          {{ store.applicationLoading ? '提交中...' : '提交申请' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -260,6 +338,68 @@ const labels = reactive<Record<string, string>>({})
 const columnOrderDraft = ref<string[]>([])
 const draggingColumn = ref<string | null>(null)
 const dragOverColumn = ref<string | null>(null)
+const now = new Date()
+const currentYear = now.getFullYear()
+const birthdayYears = Array.from({ length: currentYear - 1899 }, (_, i) => currentYear - i)
+
+const birthdayYear = computed({
+  get() {
+    const [year = ''] = (store.applicationForm.birthday || '').split('-')
+    return year
+  },
+  set(year: string) {
+    const [, month = '', day = ''] = (store.applicationForm.birthday || '').split('-')
+    updateBirthday(year, month, day)
+  }
+})
+
+const birthdayMonth = computed({
+  get() {
+    const [, month = ''] = (store.applicationForm.birthday || '').split('-')
+    return month
+  },
+  set(month: string) {
+    const [year = '', , day = ''] = (store.applicationForm.birthday || '').split('-')
+    updateBirthday(year, month, day)
+  }
+})
+
+const birthdayDay = computed({
+  get() {
+    const [, , day = ''] = (store.applicationForm.birthday || '').split('-')
+    return day
+  },
+  set(day: string) {
+    const [year = '', month = ''] = (store.applicationForm.birthday || '').split('-')
+    updateBirthday(year, month, day)
+  }
+})
+
+const birthdayDays = computed(() => {
+  if (!birthdayYear.value || !birthdayMonth.value) return []
+  const year = Number(birthdayYear.value)
+  const month = Number(birthdayMonth.value)
+  const daysInMonth = new Date(year, month, 0).getDate()
+  return Array.from({ length: daysInMonth }, (_, i) => i + 1)
+})
+
+function updateBirthday(year: string, month: string, day: string) {
+  const normalizedYear = year || ''
+  const normalizedMonth = month || ''
+  let normalizedDay = day || ''
+
+  if (normalizedYear && normalizedMonth && normalizedDay) {
+    const maxDay = new Date(Number(normalizedYear), Number(normalizedMonth), 0).getDate()
+    if (Number(normalizedDay) > maxDay) normalizedDay = String(maxDay).padStart(2, '0')
+  }
+
+  if (normalizedYear && normalizedMonth && normalizedDay) {
+    store.applicationForm.birthday = `${normalizedYear}-${normalizedMonth}-${normalizedDay}`
+    return
+  }
+
+  store.applicationForm.birthday = [normalizedYear, normalizedMonth, normalizedDay].filter(Boolean).join('-')
+}
 
 watch(() => store.columnConfigOpen, (open) => {
   if (open) {

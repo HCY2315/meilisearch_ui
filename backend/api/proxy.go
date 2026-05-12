@@ -52,11 +52,18 @@ func HandleProxy(c *gin.Context) {
 		if len(parts) >= 2 && parts[0] == "indexes" {
 			requestedIndex := parts[1]
 
-			// 普通访客，检查该 Index 是否被上锁
+			// 普通访客，检查该 Index 是否在前台隐藏
 			var indexConf model.IndexConfig
+			isVisible := true
 			isLocked := false
 			if err := repository.DB.Where("uid = ?", requestedIndex).First(&indexConf).Error; err == nil {
+				isVisible = indexConf.IsVisible
 				isLocked = indexConf.IsLocked
+			}
+
+			if !isVisible {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "该索引已被前台隐藏"})
+				return
 			}
 
 			if isLocked {
@@ -68,6 +75,7 @@ func HandleProxy(c *gin.Context) {
 					var tok model.AccessToken
 					if err := repository.DB.Where("token = ?", userToken).First(&tok).Error; err == nil {
 						if tok.ExpiresAt != nil && tok.ExpiresAt.Before(time.Now()) {
+							// NOTE: Token 已过期，执行软删除（model 已配置 DeletedAt）
 							repository.DB.Delete(&tok)
 						} else {
 							var allowedArr []string

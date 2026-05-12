@@ -9,7 +9,7 @@
         <div class="header-left">
           <div class="brand-logo">🔍</div>
           <div class="brand-text">
-            <h1>{{ uiConfig.title || 'Meilisearch Pro' }}</h1>
+            <h1>{{ uiConfig.title || '搜索引擎 Pro' }}</h1>
             <p>高性能多维数据检索引擎</p>
           </div>
         </div>
@@ -23,7 +23,7 @@
             <span class="role-badge">{{ userRole === 'admin' ? '管理员' : '访客' }}</span>
             <button class="logout-btn" @click="logout" title="退出登录">退出</button>
           </div>
-          <button v-else class="btn btn-primary btn-sm" @click="router.push('/login')">登录后台</button>
+          <button v-else class="btn btn-primary btn-sm" @click="router.push('/admin')">登录后台</button>
         </div>
       </div>
 
@@ -84,7 +84,7 @@
 
     <footer class="app-footer">
       <div class="footer-divider"></div>
-      <p>© 2026 · Created by 冰城拓 </p>
+      <p>{{ APP_COPYRIGHT }}</p>
     </footer>
 
     <!-- 全局挂载组件 -->
@@ -110,6 +110,7 @@ import FilterDrawer from '@/components/FilterDrawer.vue'
 import AssetManagement from '@/components/AssetManagement.vue'
 import AdminPanel from '@/components/AdminPanel.vue'
 import { getAppConfig } from '@/services/api'
+import { APP_COPYRIGHT } from '@/constants/branding'
 
 const store = useAppStore()
 const router = useRouter()

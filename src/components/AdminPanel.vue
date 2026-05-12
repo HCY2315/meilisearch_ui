@@ -124,7 +124,7 @@
                       <tr v-if="task._showJson" class="json-expanded-row">
                         <td colspan="7" style="border-bottom: none; padding-top: 0;">
                           <div class="json-preview-container">
-                            <pre class="json-preview">{{ JSON.stringify(task, (k, v) => k === '_showJson' ? undefined : v, 2) }}</pre>
+                            <pre class="task-json-preview">{{ JSON.stringify(task, (k, v) => k === '_showJson' ? undefined : v, 2) }}</pre>
                           </div>
                         </td>
                       </tr>
@@ -169,6 +169,13 @@
                 <label for="lock-toggle">启用锁定 (需要 Token 访问)</label>
               </div>
             </div>
+            <div class="input-group">
+              <label>前台显示</label>
+              <div class="toggle-group">
+                <input type="checkbox" v-model="newIndex.isVisible" id="visible-toggle">
+                <label for="visible-toggle">在前台索引列表中显示</label>
+              </div>
+            </div>
           </div>
           <div class="editor-actions">
             <button class="btn btn-primary" @click="saveIndexConfig">保存策略</button>
@@ -195,7 +202,10 @@
                 </div>
               </td>
               <td>
-                <span :class="['status-badge', cfg.isLocked ? 'status-err' : 'status-ok']">
+                <span :class="['status-badge', cfg.isVisible === false ? 'status-err' : 'status-ok']">
+                  {{ cfg.isVisible === false ? '🙈 前台隐藏' : '👁️ 前台显示' }}
+                </span>
+                <span :class="['status-badge', cfg.isLocked ? 'status-err' : 'status-ok']" style="margin-left: 8px;">
                   {{ cfg.isLocked ? '🔒 私有锁定' : '🌐 公开访问' }}
                 </span>
               </td>
@@ -273,6 +283,60 @@
         </div>
       </section>
 
+      <!-- 申请列表管理 -->
+      <section v-if="activeTab === 'applications'" class="content-section">
+        <header class="section-header">
+          <h1>Token 申请管理 <span>Applications</span></h1>
+          <p>审核来自前台用户的 Token 申请请求。</p>
+        </header>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>申请人</th>
+              <th>联系方式</th>
+              <th>详细信息</th>
+              <th>申请索引</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="app in tokenApplications" :key="app.id">
+              <td>
+                <div class="user-info">
+                  <strong>{{ app.name }}</strong>
+                  <span class="meta">{{ app.gender }} | {{ app.birthday }}</span>
+                </div>
+              </td>
+              <td><code>{{ app.email }}</code></td>
+              <td>
+                <div class="purpose-info" :title="app.purpose">
+                  {{ app.purpose || '无说明' }}
+                </div>
+              </td>
+              <td>
+                <div class="index-tags">
+                  <span v-for="idx in JSON.parse(app.allowIndexes || '[]')" :key="idx" class="tag">{{ idx }}</span>
+                </div>
+              </td>
+              <td>
+                <span :class="['status-badge', app.status === 1 ? 'status-ok' : (app.status === 2 ? 'status-err' : 'status-warn')]">
+                  {{ app.status === 1 ? '已通过' : (app.status === 2 ? '已驳回' : '待审批') }}
+                </span>
+              </td>
+              <td>
+                <div v-if="app.status === 0" style="display:flex; gap:8px">
+                  <button class="btn btn-primary btn-sm" @click="openApproveModal(app)">通过</button>
+                  <button class="btn btn-danger btn-sm" @click="openRejectModal(app)">驳回</button>
+                </div>
+                <span v-else class="text-muted">已处理</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
       <!-- 3. Meilisearch 索引设置 -->
       <section v-if="activeTab === 'search'" class="content-section">
         <header class="section-header">
@@ -299,7 +363,7 @@
             <div v-if="subTab === 'searchable'" class="settings-pane animate-fade-in">
               <div class="input-group">
                 <label>配置搜索权重优先级 (影响主搜索框)</label>
-                <p class="helper-text" style="color: #64748b; font-size: 13px; margin-bottom: 16px;">
+                <p class="helper-text" style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
                   勾选字段加入搜索范围，并拖拽排序（排在前面的权重得分越高）。
                 </p>
                 
@@ -337,7 +401,7 @@
             <div v-if="subTab === 'filterable'" class="settings-pane animate-fade-in">
               <div class="input-group">
                 <label>配置可过滤字段 (影响查询条件构建器)</label>
-                <p class="helper-text" style="color: #64748b; font-size: 13px; margin-bottom: 16px;">
+                <p class="helper-text" style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
                   只有被勾选为「可过滤」的字段，才会出现在搜索页面的查询条件构建器中。
                 </p>
                 <div class="field-selector">
@@ -352,7 +416,7 @@
               </div>
             </div>
 
-            <div class="editor-actions" style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px;">
+            <div class="editor-actions" style="margin-top: 40px; border-top: 1px solid var(--border); padding-top: 24px;">
               <button class="btn btn-primary" @click="saveSearchSettings" :disabled="isSavingSearch">
                 {{ isSavingSearch ? '正在应用配置...' : '保存当前索引配置' }}
               </button>
@@ -424,6 +488,86 @@
         </div>
       </section>
     </main>
+
+    <div v-if="approveModalOpen" class="tasks-modal-overlay animate-fade-in" @click.self="closeApproveModal">
+      <div class="tasks-modal approve-modal">
+        <div class="modal-header">
+          <h3>审批通过并分发凭证</h3>
+          <button class="close-btn" @click="closeApproveModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label>申请人</label>
+            <input class="form-control" :value="pendingApproveApp?.name || '-'" disabled>
+          </div>
+          <div class="input-group" style="margin-top: 12px;">
+            <label>邮箱</label>
+            <input class="form-control" :value="pendingApproveApp?.email || '-'" disabled>
+          </div>
+          <div class="token-generator" style="margin-top: 16px;">
+            <input v-model="approveForm.token" class="form-control token-input" readonly>
+            <button class="btn btn-secondary" @click="approveForm.token = generateUUID()">重新生成</button>
+          </div>
+          <div class="input-group" style="margin-top: 16px;">
+            <label>授权范围</label>
+            <div class="index-chips">
+              <label v-for="uid in availableIndexes" :key="uid" :class="['chip', { selected: approveForm.allowIndexes.includes(uid) }]">
+                <input type="checkbox" :value="uid" v-model="approveForm.allowIndexes"> {{ uid }}
+              </label>
+              <label :class="['chip all', { selected: approveForm.allowIndexes.includes('*') }]">
+                <input type="checkbox" value="*" :checked="approveForm.allowIndexes.includes('*')" @change="toggleApproveAllIndexes"> [ 全部索引 * ]
+              </label>
+            </div>
+          </div>
+          <div class="grid-inputs" style="margin-top: 16px;">
+            <div class="input-group">
+              <label>备注</label>
+              <input v-model="approveForm.description" class="form-control" placeholder="审批分发备注">
+            </div>
+            <div class="input-group">
+              <label>有效期 (天，默认30天)</label>
+              <input type="number" v-model="approveForm.validDays" min="1" class="form-control">
+            </div>
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" @click="submitApprove">保存并通过</button>
+            <button class="btn btn-secondary" @click="closeApproveModal">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="rejectModalOpen" class="tasks-modal-overlay animate-fade-in" @click.self="closeRejectModal">
+      <div class="tasks-modal approve-modal">
+        <div class="modal-header">
+          <h3>驳回申请并通知用户</h3>
+          <button class="close-btn" @click="closeRejectModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label>申请人</label>
+            <input class="form-control" :value="pendingRejectApp?.name || '-'" disabled>
+          </div>
+          <div class="input-group" style="margin-top: 12px;">
+            <label>邮箱</label>
+            <input class="form-control" :value="pendingRejectApp?.email || '-'" disabled>
+          </div>
+          <div class="input-group" style="margin-top: 16px;">
+            <label>驳回消息（留空使用默认消息）</label>
+            <textarea
+              v-model="rejectForm.rejectMessage"
+              class="form-control"
+              rows="4"
+              placeholder="很抱歉，您的 Token 申请未通过审核。"
+            />
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-danger" @click="submitReject">确认驳回并发送邮件</button>
+            <button class="btn btn-secondary" @click="closeRejectModal">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -450,7 +594,10 @@ import {
   updateMeiliIndexSettings,
   loadIndexData,
   getMeiliTasks,
-  cancelMeiliTask
+  cancelMeiliTask,
+  getApplications,
+  approveApplication,
+  rejectApplication
 } from '@/services/api'
 
 function formatDuration(isoDuration: string | undefined): string {
@@ -493,6 +640,7 @@ const tabs = [
   { id: 'instances', label: '节点管理', icon: '☁️' },
   { id: 'security', label: '安全锁库', icon: '🛡️' },
   { id: 'tokens', label: '凭证分发', icon: '🎫' },
+  { id: 'applications', label: '申请管理', icon: '📝' },
   { id: 'search', label: '搜索配置', icon: '🔍' },
   { id: 'settings', label: '应用设置', icon: '⚙️' },
   { id: 'password', label: '账户安全', icon: '🔐' },
@@ -503,6 +651,82 @@ const accessTokens = ref<any[]>([])
 const apps = ref<any[]>([])
 const instances = ref<any[]>([])
 const availableIndexes = ref<string[]>([])
+const tokenApplications = ref<any[]>([])
+const approveModalOpen = ref(false)
+const pendingApproveApp = ref<any | null>(null)
+const approveForm = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: 30 })
+const rejectModalOpen = ref(false)
+const pendingRejectApp = ref<any | null>(null)
+const rejectForm = ref({ rejectMessage: '' })
+
+function openApproveModal(app: any) {
+  pendingApproveApp.value = app
+  let defaultAllowIndexes: string[] = []
+  try {
+    defaultAllowIndexes = JSON.parse(app.allowIndexes || '[]')
+  } catch {
+    defaultAllowIndexes = []
+  }
+  approveForm.value = {
+    token: generateUUID(),
+    allowIndexes: defaultAllowIndexes,
+    description: `申请人: ${app.name} (${app.email}) 用途: ${app.purpose || '无'}`,
+    validDays: 30
+  }
+  approveModalOpen.value = true
+}
+
+function closeApproveModal() {
+  approveModalOpen.value = false
+  pendingApproveApp.value = null
+}
+
+function toggleApproveAllIndexes(e: Event) {
+  const checked = (e.target as HTMLInputElement).checked
+  if (checked) {
+    approveForm.value.allowIndexes = ['*']
+  } else {
+    approveForm.value.allowIndexes = []
+  }
+}
+
+async function submitApprove() {
+  const app = pendingApproveApp.value
+  if (!app) return
+  if (!approveForm.value.token) return alert('请先生成凭证')
+  const validDays = Number(approveForm.value.validDays || 30)
+  const result = await approveApplication(app.id, {
+    token: approveForm.value.token,
+    allowIndexes: approveForm.value.allowIndexes,
+    description: approveForm.value.description,
+    validDays: validDays > 0 ? validDays : 30
+  })
+  if (!result.ok) return alert(result.message)
+  alert(result.message)
+  closeApproveModal()
+  loadAdminData()
+}
+
+function openRejectModal(app: any) {
+  pendingRejectApp.value = app
+  rejectForm.value = { rejectMessage: '' }
+  rejectModalOpen.value = true
+}
+
+function closeRejectModal() {
+  rejectModalOpen.value = false
+  pendingRejectApp.value = null
+}
+
+async function submitReject() {
+  const app = pendingRejectApp.value
+  if (!app) return
+  const result = await rejectApplication(app.id, { rejectMessage: rejectForm.value.rejectMessage.trim() })
+  if (!result.ok) return alert(result.message)
+  alert(result.message)
+  closeRejectModal()
+  loadAdminData()
+}
 
 const showAddInstance = ref(false)
 const editingInstanceId = ref<number | null>(null)
@@ -551,7 +775,7 @@ async function handleCancelTask(task: any) {
 
 const showAddIndexConf = ref(false)
 const editingIndexId = ref<number | null>(null)
-const newIndex = ref({ uid: '', alias: '', description: '', isLocked: false, fieldConfigs: '', viewConfigs: '', tableConfigs: '', canEdit: false })
+const newIndex = ref({ uid: '', alias: '', description: '', isVisible: true, isLocked: false, fieldConfigs: '', viewConfigs: '', tableConfigs: '', canEdit: false })
 
 const showAddToken = ref(false)
 const editingTokenId = ref<number | null>(null)
@@ -591,18 +815,20 @@ function isExpired(date: string | null) {
 
 async function loadAdminData() {
   try {
-    const [idxData, tokData, appsData, proxyData, insData] = await Promise.all([
+    const [idxData, tokData, appsData, proxyData, insData, applicationData] = await Promise.all([
       getAdminIndexConfigs(),
       getAdminAccessTokens(),
       getAdminApps(),
       getProxyIndexes(),
-      getAdminInstances()
+      getAdminInstances(),
+      getApplications()
     ])
 
     indexConfigs.value = idxData as any[]
     accessTokens.value = tokData as any[]
     apps.value = appsData as any[]
     instances.value = insData as any[]
+    tokenApplications.value = applicationData as any[]
     if (proxyData.results) {
       availableIndexes.value = proxyData.results.map(r => r.uid)
     }
@@ -666,6 +892,7 @@ function editIndex(cfg: any) {
     uid: cfg.uid,
     alias: cfg.alias,
     description: cfg.description,
+    isVisible: cfg.isVisible !== false,
     isLocked: cfg.isLocked,
     fieldConfigs: cfg.fieldConfigs || '',
     viewConfigs: cfg.viewConfigs || '',
@@ -678,7 +905,7 @@ function editIndex(cfg: any) {
 function cancelIndexEdit() {
   showAddIndexConf.value = false
   editingIndexId.value = null
-  newIndex.value = { uid: '', alias: '', description: '', isLocked: false, fieldConfigs: '', viewConfigs: '', tableConfigs: '', canEdit: false }
+  newIndex.value = { uid: '', alias: '', description: '', isVisible: true, isLocked: false, fieldConfigs: '', viewConfigs: '', tableConfigs: '', canEdit: false }
 }
 
 async function submitIndexConfig(payload: any) {
@@ -867,15 +1094,22 @@ onMounted(() => {
 .admin-layout {
   display: flex;
   min-height: 100vh;
-  background: #030712;
+  background: transparent;
+  color: var(--text-main);
 }
 
 /* 侧边栏 */
 .admin-sidebar {
   width: 260px;
+<<<<<<< HEAD
   background: rgba(15, 23, 42, 0.8);
   backdrop-filter: blur(20px);
   border-right: 1px solid rgba(0,0,0,0.05);
+=======
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  border-right: 1px solid var(--border);
+>>>>>>> main
   display: flex;
   flex-direction: column;
   padding: 32px 0;
@@ -892,7 +1126,11 @@ onMounted(() => {
 }
 
 .sidebar-logo { font-size: 32px; }
+<<<<<<< HEAD
 .sidebar-header h2 { font-family: 'Outfit'; font-size: 20px; font-weight: 700; color: #1f293b; }
+=======
+.sidebar-header h2 { font-family: 'Outfit'; font-size: 20px; font-weight: 700; color: var(--text-main); }
+>>>>>>> main
 
 .sidebar-nav { flex: 1; padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
 .nav-item {
@@ -903,40 +1141,99 @@ onMounted(() => {
   border-radius: 12px;
   border: none;
   background: transparent;
+<<<<<<< HEAD
   color: #6b7280;
+=======
+  color: var(--text-sub);
+>>>>>>> main
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
 }
+<<<<<<< HEAD
 .nav-item:hover { background: rgba(0,0,0,0.05); color: #1f293b; }
 .nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
 
 .nav-icon { font-size: 18px; }
 
 .sidebar-footer { padding: 0 32px; font-size: 11px; color: #6b7280; }
+=======
+.nav-item:hover { background: var(--bg-card-hover); color: var(--text-main); }
+.nav-item.active { background: rgba(var(--primary-color-rgb), 0.12); color: var(--primary); }
+.nav-icon { font-size: 18px; }
+
+.sidebar-footer { padding: 0 32px; font-size: 11px; color: var(--text-muted); }
+>>>>>>> main
 
 /* 主内容区 */
 .admin-main { flex: 1; margin-left: 260px; padding: 48px 64px; }
 
+<<<<<<< HEAD
 /* 编辑器容器 */
 .glass-editor {
   background: rgba(30, 41, 59, 0.5);
   border: 1px solid rgba(0,0,0,0.05);
+=======
+.content-section { max-width: 1000px; }
+
+.user-info { display: flex; flex-direction: column; gap: 2px; }
+.user-info strong { font-size: 14px; color: var(--text-primary); }
+.user-info .meta { font-size: 11px; color: var(--text-muted); }
+.purpose-info { 
+  max-width: 200px; 
+  font-size: 13px; 
+  color: var(--text-secondary); 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+}
+.index-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.index-tags .tag { 
+  background: rgba(var(--primary-color-rgb), 0.1); 
+  color: var(--primary-color); 
+  padding: 2px 6px; 
+  border-radius: 4px; 
+  font-size: 11px; 
+}
+.text-muted { color: var(--text-muted); font-size: 12px; }
+
+.section-header { margin-bottom: 40px; display: flex; flex-direction: column; gap: 8px; position: relative; }
+.section-header h1 { font-family: 'Outfit'; font-size: 32px; font-weight: 700; color: var(--text-main); }
+.section-header h1 span { font-weight: 300; opacity: 0.3; margin-left: 8px; font-size: 0.6em; }
+.section-header p { color: var(--text-sub); font-size: 15px; }
+.section-header .btn { position: absolute; right: 0; top: 0; }
+
+/* 编辑器容器 */
+.glass-editor {
+  background: var(--surface);
+  border: 1px solid var(--border);
+>>>>>>> main
   border-radius: 20px;
   padding: 32px;
   margin-bottom: 32px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
+<<<<<<< HEAD
 .glass-editor h3 { margin-bottom: 24px; font-size: 18px; color: #1f293b; }
 .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
 .input-group label { display: block; font-size: 13px; color: #374151; margin-bottom: 8px; }
+=======
+.glass-editor h3 { margin-bottom: 24px; font-size: 18px; color: var(--text-main); }
+.grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+.input-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+>>>>>>> main
 .editor-actions { margin-top: 32px; display: flex; gap: 12px; justify-content: flex-end; }
 
 /* 数据卡片 */
 .data-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
 .data-card {
+<<<<<<< HEAD
   background: rgba(15, 23, 42, 0.4);
   border: 1px solid rgba(0,0,0,0.05);
+=======
+  background: var(--surface);
+  border: 1px solid var(--border);
+>>>>>>> main
   border-radius: 16px;
   padding: 24px;
   display: flex;
@@ -944,27 +1241,40 @@ onMounted(() => {
   gap: 20px;
   transition: all 0.3s ease;
 }
-.data-card:hover { transform: translateY(-4px); border-color: rgba(99, 102, 241, 0.3); }
+.data-card:hover { transform: translateY(-4px); border-color: var(--border-active); }
 .card-info { display: flex; align-items: center; gap: 16px; }
+<<<<<<< HEAD
 .ins-avatar { width: 48px; height: 48px; border-radius: 12px; background: var(--primary); color: #1f293b; font-weight: 700; font-size: 20px; display: flex; align-items: center; justify-content: center; }
 .card-info h4 { font-size: 16px; color: #1f293b; margin-bottom: 4px; }
 .card-info code { font-size: 12px; color: var(--primary); }
 .card-ops { display: flex; gap: 10px; border-top: 1px solid rgba(0,0,0,0.05); pt: 16px; padding-top: 16px; }
+=======
+.ins-avatar { width: 48px; height: 48px; border-radius: 12px; background: var(--primary); color: white; font-weight: 700; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+.card-info h4 { font-size: 16px; color: var(--text-main); margin-bottom: 4px; }
+.card-info code { font-size: 12px; color: var(--primary); }
+.card-ops { display: flex; gap: 10px; border-top: 1px solid var(--border); pt: 16px; padding-top: 16px; }
+>>>>>>> main
 
 /* Token 特殊样式 */
 .token-list { display: flex; flex-direction: column; gap: 16px; }
 .token-card {
-  background: rgba(30, 41, 59, 0.4);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.tok-tag { font-size: 9px; font-weight: 800; color: var(--primary); letter-spacing: 0.1em; background: rgba(99, 102, 241, 0.1); padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
+.tok-tag { font-size: 9px; font-weight: 800; color: var(--primary); letter-spacing: 0.1em; background: rgba(var(--primary-color-rgb), 0.1); padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
 .tok-val { font-size: 16px; color: #fbbf24; font-family: monospace; display: block; margin: 12px 0; }
+<<<<<<< HEAD
 .tok-desc { color: #6b7280; font-size: 14px; margin-bottom: 8px; }
 .tok-meta { display: flex; gap: 24px; font-size: 12px; color: #374151; }
+=======
+.tok-desc { color: var(--text-main); font-size: 14px; margin-bottom: 8px; }
+.tok-meta { display: flex; gap: 24px; font-size: 12px; color: var(--text-muted); }
+>>>>>>> main
 
 /* 设置 */
 .settings-card { display: flex; flex-direction: column; gap: 32px; }
@@ -972,11 +1282,17 @@ onMounted(() => {
 .settings-row { display: flex; gap: 48px; align-items: flex-start; }
 
 .row-label { width: 240px; }
+<<<<<<< HEAD
 .row-label h4 { font-size: 16px; color: #1f293b; margin-bottom: 4px; }
 .row-label p { font-size: 13px; color: #6b7280; }
+=======
+.row-label h4 { font-size: 16px; color: var(--text-main); margin-bottom: 4px; }
+.row-label p { font-size: 13px; color: var(--text-muted); }
+>>>>>>> main
 .row-val { flex: 1; }
 
 .app-identity { display: flex; align-items: center; gap: 12px; font-size: 20px; }
+<<<<<<< HEAD
 
 .json-preview { background: #000; padding: 16px; border-radius: 8px; font-size: 12px; color: #10b981; max-height: 200px; overflow: auto; margin-bottom: 12px; }
 
@@ -990,6 +1306,20 @@ onMounted(() => {
 .chip { padding: 6px 12px; background: rgba(0,0,0,0.05); border-radius: 8px; font-size: 13px; color: #6b7280; cursor: pointer; border: 1px solid transparent; }
 .chip:hover { background: rgba(0,0,0,0.1); }
 .chip.selected { background: rgba(99, 102, 241, 0.15); border-color: var(--primary); color: #1f293b; }
+=======
+.json-preview { background: rgba(0, 0, 0, 0.2); padding: 16px; border-radius: 8px; font-size: 12px; color: #10b981; max-height: 200px; overflow: auto; margin-bottom: 12px; }
+
+/* 通用列表项 */
+.alias-info { display: flex; flex-direction: column; gap: 4px; }
+.alias { color: var(--text-main); font-weight: 600; }
+.desc { font-size: 12px; color: var(--text-muted); }
+
+/* 芯片多选 */
+.index-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 6px 12px; background: var(--bg-card); border-radius: 8px; font-size: 13px; color: var(--text-sub); cursor: pointer; border: 1px solid transparent; }
+.chip:hover { background: var(--bg-card-hover); }
+.chip.selected { background: rgba(var(--primary-color-rgb), 0.15); border-color: var(--primary); color: var(--text-main); }
+>>>>>>> main
 .chip input { display: none; }
 
 /* 搜索配置专用样式 */
@@ -1015,7 +1345,7 @@ onMounted(() => {
   gap: 10px;
   cursor: pointer;
   font-size: 14px;
-  color: #e2e8f0;
+  color: var(--text-main);
   user-select: none;
 }
 
@@ -1032,7 +1362,7 @@ onMounted(() => {
 .empty-state {
   text-align: center;
   padding: 60px 0;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .empty-icon {
@@ -1061,7 +1391,7 @@ onMounted(() => {
   border-radius: 8px;
   border: none;
   background: transparent;
-  color: #94a3b8;
+  color: var(--text-sub);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -1071,7 +1401,7 @@ onMounted(() => {
 .sub-tab.active {
   background: var(--primary);
   color: white;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px rgba(var(--primary-color-rgb), 0.3);
 }
 
 .mb-4 { margin-bottom: 24px; }
@@ -1110,7 +1440,7 @@ onMounted(() => {
 }
 
 .drag-handle {
-  color: #475569;
+  color: var(--text-muted);
   font-size: 18px;
   user-select: none;
 }
@@ -1126,13 +1456,13 @@ onMounted(() => {
   flex: 1;
   font-family: monospace;
   font-size: 14px;
-  color: white;
+  color: var(--text-main);
 }
 
 .remove-btn {
   background: transparent;
   border: none;
-  color: #64748b;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -1147,7 +1477,7 @@ onMounted(() => {
 .empty-priority {
   text-align: center;
   padding: 32px;
-  color: #475569;
+  color: var(--text-muted);
   font-size: 14px;
   font-style: italic;
 }
@@ -1185,7 +1515,7 @@ onMounted(() => {
 }
 .modal-header {
   padding: 20px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1198,7 +1528,7 @@ onMounted(() => {
 .close-btn {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--text-sub);
   font-size: 24px;
   cursor: pointer;
 }
@@ -1212,7 +1542,7 @@ onMounted(() => {
 }
 .loading-state {
   text-align: center;
-  color: #94a3b8;
+  color: var(--text-sub);
   padding: 40px;
 }
 .json-expanded-row {
@@ -1225,11 +1555,15 @@ onMounted(() => {
   margin-bottom: 12px;
   overflow-x: auto;
 }
-.json-preview {
+.task-json-preview {
   margin: 0;
   font-family: monospace;
   font-size: 13px;
-  color: #10b981;
+  color: #000000;
+}
+
+.approve-modal {
+  width: 760px;
 }
 
 /* ============ Mobile Responsiveness ============ */
@@ -1244,7 +1578,7 @@ onMounted(() => {
     height: auto;
     padding: 16px 0;
     border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--border);
   }
   
   .sidebar-header {

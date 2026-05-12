@@ -892,7 +892,11 @@ function handleClose() {
 
 .hidden-hint {
   font-size: 11.5px;
+<<<<<<< HEAD
   color: rgba(0,0,0,0.7);
+=======
+  color: #48bb78;
+>>>>>>> main
 }
 
 /* ─── 字段配置面板 ──────────────────────────────────────────────────────────── */
@@ -1063,7 +1067,11 @@ function handleClose() {
 .all-hidden-tip {
   padding: 32px 20px;
   text-align: center;
+<<<<<<< HEAD
   color: rgba(0,0,0,0.6);
+=======
+  color: #48bb78;
+>>>>>>> main
   font-size: 13px;
 }
 
@@ -1207,18 +1215,30 @@ function handleClose() {
   gap: 3px;
   padding: 2px 8px;
   border-radius: 4px;
+<<<<<<< HEAD
   border: 1px solid rgba(99,179,237,0.3);
   background: rgba(99,179,237,0.1);
   color: #0ea5e9;
+=======
+  border: 1px solid rgba(72, 187, 120, 0.3);
+  background: rgba(72, 187, 120, 0.08);
+  color: #48bb78;
+>>>>>>> main
   font-size: 11.5px;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .btn-drill:hover {
+<<<<<<< HEAD
   background: rgba(99,179,237,0.15);
   color: #0284c7;
   border-color: rgba(99,179,237,0.5);
+=======
+  background: rgba(72, 187, 120, 0.2);
+  color: #38a169;
+  border-color: rgba(72, 187, 120, 0.5);
+>>>>>>> main
 }
 
 /* ─── 动画 ──────────────────────────────────────────────────────────────────── */

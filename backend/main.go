@@ -17,7 +17,8 @@ func main() {
 	go func() {
 		ticker := time.NewTicker(time.Hour)
 		for range ticker.C {
-			log.Println("[Cleanup] Cleaning up expired access tokens...")
+			log.Println("[Cleanup] Cleaning up expired access tokens (soft delete)...")
+			// NOTE: 使用软删除，保留数据以便审计
 			repository.DB.Where("expires_at IS NOT NULL AND expires_at < ?", time.Now()).Delete(&model.AccessToken{})
 		}
 	}()

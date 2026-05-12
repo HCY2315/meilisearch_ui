@@ -17,6 +17,7 @@ type IndexConfigRequest struct {
 	Uid                string `json:"uid" binding:"required"`
 	Alias              string `json:"alias"`
 	Description        string `json:"description"`
+	IsVisible          bool   `json:"isVisible"`
 	IsLocked           bool   `json:"isLocked"`
 	FieldConfigs       string `json:"fieldConfigs"`
 	ViewConfigs        string `json:"viewConfigs"`
@@ -77,4 +78,31 @@ type IndexSettingsRequest struct {
 	Uid                  string   `json:"uid" binding:"required"`
 	SearchableAttributes []string `json:"searchableAttributes"`
 	FilterableAttributes []string `json:"filterableAttributes"`
+}
+
+// SendCodeRequest 发送验证码请求
+type SendCodeRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// TokenApplicationSubmitRequest 提交申请请求
+type TokenApplicationSubmitRequest struct {
+	Email        string   `json:"email" binding:"required,email"`
+	Code         string   `json:"code" binding:"required"`
+	Name         string   `json:"name" binding:"required"`
+	Birthday     string   `json:"birthday"`
+	Gender       string   `json:"gender"`
+	Purpose      string   `json:"purpose"`
+	AllowIndexes []string `json:"allowIndexes"`
+}
+
+type ApproveApplicationRequest struct {
+	Token        string   `json:"token"`
+	AllowIndexes []string `json:"allowIndexes"`
+	Description  string   `json:"description"`
+	ValidDays    *int     `json:"validDays"`
+}
+
+type RejectApplicationRequest struct {
+	RejectMessage string `json:"rejectMessage"`
 }

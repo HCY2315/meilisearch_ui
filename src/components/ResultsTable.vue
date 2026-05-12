@@ -529,9 +529,9 @@ function startResize(e: MouseEvent, col: string) {
   gap: 3px;
   padding: 1px 8px;
   border-radius: 4px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(72, 187, 120, 0.3);
+  background: rgba(72, 187, 120, 0.08);
+  color: #48bb78;
   font-size: 11.5px;
   cursor: pointer;
   white-space: nowrap;
@@ -539,9 +539,9 @@ function startResize(e: MouseEvent, col: string) {
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .btn-nested-view:hover {
-  background: rgba(99,179,237,0.15);
-  color: #63b3ed;
-  border-color: rgba(99,179,237,0.3);
+  background: rgba(72, 187, 120, 0.2);
+  color: #38a169;
+  border-color: rgba(72, 187, 120, 0.5);
 }
 
 /* ============ Mobile Responsiveness ============ */
