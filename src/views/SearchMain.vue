@@ -21,7 +21,7 @@
           
           <div v-if="isLoggedIn" class="user-pill">
             <span class="role-badge">{{ userRole === 'admin' ? '管理员' : '访客' }}</span>
-            <button class="logout-btn" @click="logout" title="退出登录">退出</button>© 2026 Meilisearch Pro UI · Powered by Antigravity
+            <button class="logout-btn" @click="logout" title="退出登录">退出</button>
           </div>
           <button v-else class="btn btn-primary btn-sm" @click="router.push('/admin')">登录后台</button>
         </div>
