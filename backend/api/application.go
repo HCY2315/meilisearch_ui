@@ -26,6 +26,17 @@ func HandleSendCode(c *gin.Context) {
 		return
 	}
 
+	// 频率检查：30天内只能申请一次
+	var lastApp model.TokenApplication
+	if err := repository.DB.Unscoped().Where("email = ?", req.Email).Order("created_at desc").First(&lastApp).Error; err == nil {
+		nextAvailableTime := lastApp.CreatedAt.Add(30 * 24 * time.Hour)
+		if time.Now().Before(nextAvailableTime) {
+			remainingDays := int(time.Until(nextAvailableTime).Hours()/24) + 1
+			c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("该邮箱 30 天内只能申请一次，请在 %d 天后再次尝试", remainingDays)})
+			return
+		}
+	}
+
 	// 生成 6 位验证码
 	code := fmt.Sprintf("%06d", rand.Intn(1000000))
 	expiresAt := time.Now().Add(180 * time.Minute)
@@ -127,6 +138,15 @@ func HandleSubmitApplication(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "参数校验失败"})
 		return
+	}
+
+	// 频率检查：30天内只能申请一次 (二次校验)
+	var lastApp model.TokenApplication
+	if err := repository.DB.Unscoped().Where("email = ?", req.Email).Order("created_at desc").First(&lastApp).Error; err == nil {
+		if time.Since(lastApp.CreatedAt) < 30*24*time.Hour {
+			c.JSON(http.StatusForbidden, gin.H{"error": "申请过于频繁，请 30 天后再试"})
+			return
+		}
 	}
 
 	// 验证码校验
