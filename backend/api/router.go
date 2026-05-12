@@ -14,6 +14,9 @@ func InitRouter() *gin.Engine {
 		v1.POST("/auth/login", HandleLogin)
 		v1.GET("/app/config", HandleAppConfig)
 
+		// 公开索引列表
+		v1.GET("/public/indexes", HandleGetPublicIndexes)
+
 		// Token 申请相关 (公开)
 		v1.POST("/application/send-code", HandleSendCode)
 		v1.POST("/application/submit", HandleSubmitApplication)
