@@ -317,7 +317,7 @@
               </td>
               <td>
                 <div v-if="app.status === 0" style="display:flex; gap:8px">
-                  <button class="btn btn-primary btn-sm" @click="handleApprove(app)">通过</button>
+                  <button class="btn btn-primary btn-sm" @click="openApproveModal(app)">通过</button>
                   <button class="btn btn-danger btn-sm" @click="handleReject(app)">驳回</button>
                 </div>
                 <span v-else class="text-muted">已处理</span>
@@ -478,6 +478,54 @@
         </div>
       </section>
     </main>
+
+    <div v-if="approveModalOpen" class="tasks-modal-overlay animate-fade-in" @click.self="closeApproveModal">
+      <div class="tasks-modal approve-modal">
+        <div class="modal-header">
+          <h3>审批通过并分发凭证</h3>
+          <button class="close-btn" @click="closeApproveModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label>申请人</label>
+            <input class="form-control" :value="pendingApproveApp?.name || '-'" disabled>
+          </div>
+          <div class="input-group" style="margin-top: 12px;">
+            <label>邮箱</label>
+            <input class="form-control" :value="pendingApproveApp?.email || '-'" disabled>
+          </div>
+          <div class="token-generator" style="margin-top: 16px;">
+            <input v-model="approveForm.token" class="form-control token-input" readonly>
+            <button class="btn btn-secondary" @click="approveForm.token = generateUUID()">重新生成</button>
+          </div>
+          <div class="input-group" style="margin-top: 16px;">
+            <label>授权范围</label>
+            <div class="index-chips">
+              <label v-for="uid in availableIndexes" :key="uid" :class="['chip', { selected: approveForm.allowIndexes.includes(uid) }]">
+                <input type="checkbox" :value="uid" v-model="approveForm.allowIndexes"> {{ uid }}
+              </label>
+              <label :class="['chip all', { selected: approveForm.allowIndexes.includes('*') }]">
+                <input type="checkbox" value="*" :checked="approveForm.allowIndexes.includes('*')" @change="toggleApproveAllIndexes"> [ 全部索引 * ]
+              </label>
+            </div>
+          </div>
+          <div class="grid-inputs" style="margin-top: 16px;">
+            <div class="input-group">
+              <label>备注</label>
+              <input v-model="approveForm.description" class="form-control" placeholder="审批分发备注">
+            </div>
+            <div class="input-group">
+              <label>有效期 (天，默认30天)</label>
+              <input type="number" v-model="approveForm.validDays" min="1" class="form-control">
+            </div>
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" @click="submitApprove">保存并通过</button>
+            <button class="btn btn-secondary" @click="closeApproveModal">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -562,23 +610,64 @@ const apps = ref<any[]>([])
 const instances = ref<any[]>([])
 const availableIndexes = ref<string[]>([])
 const tokenApplications = ref<any[]>([])
+const approveModalOpen = ref(false)
+const pendingApproveApp = ref<any | null>(null)
+const approveForm = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: 30 })
 
-async function handleApprove(app: any) {
-  if (!confirm(`确定通过 ${app.name} 的申请吗？`)) return
-  const ok = await approveApplication(app.id)
-  if (ok) {
-    alert('已通过申请并生成 Token')
-    loadAdminData()
+function openApproveModal(app: any) {
+  pendingApproveApp.value = app
+  let defaultAllowIndexes: string[] = []
+  try {
+    defaultAllowIndexes = JSON.parse(app.allowIndexes || '[]')
+  } catch {
+    defaultAllowIndexes = []
   }
+  approveForm.value = {
+    token: generateUUID(),
+    allowIndexes: defaultAllowIndexes,
+    description: `申请人: ${app.name} (${app.email}) 用途: ${app.purpose || '无'}`,
+    validDays: 30
+  }
+  approveModalOpen.value = true
+}
+
+function closeApproveModal() {
+  approveModalOpen.value = false
+  pendingApproveApp.value = null
+}
+
+function toggleApproveAllIndexes(e: Event) {
+  const checked = (e.target as HTMLInputElement).checked
+  if (checked) {
+    approveForm.value.allowIndexes = ['*']
+  } else {
+    approveForm.value.allowIndexes = []
+  }
+}
+
+async function submitApprove() {
+  const app = pendingApproveApp.value
+  if (!app) return
+  if (!approveForm.value.token) return alert('请先生成凭证')
+  const validDays = Number(approveForm.value.validDays || 30)
+  const result = await approveApplication(app.id, {
+    token: approveForm.value.token,
+    allowIndexes: approveForm.value.allowIndexes,
+    description: approveForm.value.description,
+    validDays: validDays > 0 ? validDays : 30
+  })
+  if (!result.ok) return alert(result.message)
+  alert(result.message)
+  closeApproveModal()
+  loadAdminData()
 }
 
 async function handleReject(app: any) {
   if (!confirm(`确定驳回 ${app.name} 的申请吗？`)) return
-  const ok = await rejectApplication(app.id)
-  if (ok) {
-    alert('已驳回申请')
-    loadAdminData()
-  }
+  const result = await rejectApplication(app.id)
+  if (!result.ok) return alert(result.message)
+  alert(result.message)
+  loadAdminData()
 }
 
 const showAddInstance = ref(false)
@@ -1332,6 +1421,10 @@ onMounted(() => {
   font-family: monospace;
   font-size: 13px;
   color: #10b981;
+}
+
+.approve-modal {
+  width: 760px;
 }
 
 /* ============ Mobile Responsiveness ============ */
