@@ -14,8 +14,9 @@ func InitRouter() *gin.Engine {
 		v1.POST("/auth/login", HandleLogin)
 		v1.GET("/app/config", HandleAppConfig)
 
-		// 前台拉取允许展示的 Index 列表
-		v1.GET("/public/indexes", HandleGetVisibleIndexes)
+		// Token 申请相关 (公开)
+		v1.POST("/application/send-code", HandleSendCode)
+		v1.POST("/application/submit", HandleSubmitApplication)
 
 		adminGroup := v1.Group("/admin")
 		adminGroup.Use(AuthMiddleware())
@@ -42,6 +43,11 @@ func InitRouter() *gin.Engine {
 			adminGroup.PUT("/access_tokens", HandleUpdateAccessToken)
 			adminGroup.DELETE("/access_tokens/:id", HandleDeleteAccessToken)
 			adminGroup.PUT("/password", HandleUpdateAdminPassword)
+
+			// Token 申请管理
+			adminGroup.GET("/applications", HandleGetApplications)
+			adminGroup.POST("/applications/:id/approve", HandleApproveApplication)
+			adminGroup.POST("/applications/:id/reject", HandleRejectApplication)
 
 			// Meilisearch 设置
 			adminGroup.GET("/meilisearch/settings/:uid", HandleGetIndexSettings)
