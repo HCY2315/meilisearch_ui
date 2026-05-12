@@ -4,21 +4,14 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="优化系统1">
-      <change beforePath="$PROJECT_DIR$/.claude/skills/gitnexus/gitnexus-cli/SKILL.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.claude/skills/gitnexus/gitnexus-debugging/SKILL.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.claude/skills/gitnexus/gitnexus-exploring/SKILL.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.claude/skills/gitnexus/gitnexus-guide/SKILL.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md" beforeDir="false" />
-    </list>
+    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="优化系统1" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="72" />
+    <option name="cachedIndexableFilesCount" value="74" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
