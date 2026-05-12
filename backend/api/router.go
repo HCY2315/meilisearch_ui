@@ -15,7 +15,7 @@ func InitRouter() *gin.Engine {
 		v1.GET("/app/config", HandleAppConfig)
 
 		// 公开索引列表
-		v1.GET("/public/indexes", HandleGetPublicIndexes)
+		v1.GET("/public/indexes", HandleGetVisibleIndexes)
 
 		// Token 申请相关 (公开)
 		v1.POST("/application/send-code", HandleSendCode)

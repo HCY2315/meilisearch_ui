@@ -4,10 +4,7 @@ import (
 	"backend/model"
 	"backend/repository"
 	"backend/schema"
-	"encoding/json"
-	"io"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/meilisearch/meilisearch-go"
@@ -360,78 +357,4 @@ func HandleUpdateIndexSettings(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, task)
-}
-
-// HandleGetPublicIndexes 返回所有索引列表及其锁定状态，供前台展示
-// NOTE: 使用直接 HTTP 请求代替 SDK 调用，避免 meilisearch-go v0.36 接口兼容性问题
-func HandleGetVisibleIndexes(c *gin.Context) {
-	var instance model.MeiliInstance
-	if err := repository.DB.First(&instance).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "未配置搜索引擎实例"})
-		return
-	}
-
-	// 直接向 Meilisearch 发起 HTTP 请求获取索引列表
-	meiliURL := strings.TrimRight(instance.Host, "/") + "/indexes?limit=200"
-	req, err := http.NewRequest("GET", meiliURL, nil)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"results": []interface{}{}})
-		return
-	}
-	req.Header.Set("Authorization", "Bearer "+instance.APIKey)
-
-	httpResp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"results": []interface{}{}})
-		return
-	}
-	defer httpResp.Body.Close()
-	body, _ := io.ReadAll(httpResp.Body)
-
-	var meiliData struct {
-		Results []struct {
-			UID        string `json:"uid"`
-			PrimaryKey string `json:"primaryKey"`
-		} `json:"results"`
-	}
-	if err := json.Unmarshal(body, &meiliData); err != nil {
-		c.JSON(http.StatusOK, gin.H{"results": []interface{}{}})
-		return
-	}
-
-	// 合并数据库中的索引配置（别名、锁定状态）
-	var configs []model.IndexConfig
-	repository.DB.Find(&configs)
-	configMap := make(map[string]model.IndexConfig)
-	for _, cfg := range configs {
-		configMap[cfg.Uid] = cfg
-	}
-
-	type PublicIndex struct {
-		Uid         string `json:"uid"`
-		DisplayName string `json:"displayName"`
-		IsLocked    bool   `json:"isLocked"`
-		PrimaryKey  string `json:"primaryKey"`
-	}
-	var results []PublicIndex
-
-	for _, idx := range meiliData.Results {
-		cfg, exists := configMap[idx.UID]
-		isLocked := false
-		displayName := idx.UID
-		if exists {
-			isLocked = cfg.IsLocked
-			if cfg.Alias != "" {
-				displayName = cfg.Alias
-			}
-		}
-		results = append(results, PublicIndex{
-			Uid:         idx.UID,
-			DisplayName: displayName,
-			IsLocked:    isLocked,
-			PrimaryKey:  idx.PrimaryKey,
-		})
-	}
-
-	c.JSON(http.StatusOK, gin.H{"results": results})
 }
