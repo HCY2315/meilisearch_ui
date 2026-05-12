@@ -3,14 +3,17 @@ package api
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"backend/model"
 	"backend/repository"
 	"backend/schema"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/meilisearch/meilisearch-go"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -365,74 +368,201 @@ func HandleUpdateIndexSettings(c *gin.Context) {
 
 // HandleGetPublicIndexes 返回所有索引列表及其锁定状态，供前台展示
 // NOTE: 使用直接 HTTP 请求代替 SDK 调用，避免 meilisearch-go v0.36 接口兼容性问题
-func HandleGetPublicIndexes(c *gin.Context) {
+//func HandleGetPublicIndexes(c *gin.Context) {
+//	var instance model.MeiliInstance
+//	if err := repository.DB.First(&instance).Error; err != nil {
+//		c.JSON(http.StatusInternalServerError, gin.H{"error": "未配置搜索引擎实例"})
+//		return
+//	}
+//
+//	// 直接向 Meilisearch 发起 HTTP 请求获取索引列表
+//	meiliURL := strings.TrimRight(instance.Host, "/") + "/indexes?limit=200"
+//	req, err := http.NewRequest("GET", meiliURL, nil)
+//	if err != nil {
+//		c.JSON(http.StatusOK, gin.H{"results": []interface{}{}})
+//		return
+//	}
+//	req.Header.Set("Authorization", "Bearer "+instance.APIKey)
+//
+//	httpResp, err := http.DefaultClient.Do(req)
+//	if err != nil {
+//		c.JSON(http.StatusOK, gin.H{"results": []interface{}{}})
+//		return
+//	}
+//	defer httpResp.Body.Close()
+//	body, _ := io.ReadAll(httpResp.Body)
+//
+//	var meiliData struct {
+//		Results []struct {
+//			UID        string `json:"uid"`
+//			PrimaryKey string `json:"primaryKey"`
+//		} `json:"results"`
+//	}
+//	if err := json.Unmarshal(body, &meiliData); err != nil {
+//		c.JSON(http.StatusOK, gin.H{"results": []interface{}{}})
+//		return
+//	}
+//
+//	// 合并数据库中的索引配置（别名、锁定状态）
+//	var configs []model.IndexConfig
+//	repository.DB.Find(&configs)
+//	configMap := make(map[string]model.IndexConfig)
+//	for _, cfg := range configs {
+//		configMap[cfg.Uid] = cfg
+//	}
+//
+//	type PublicIndex struct {
+//		Uid         string `json:"uid"`
+//		DisplayName string `json:"displayName"`
+//		IsLocked    bool   `json:"isLocked"`
+//		PrimaryKey  string `json:"primaryKey"`
+//	}
+//	var results []PublicIndex
+//
+//	for _, idx := range meiliData.Results {
+//		cfg, exists := configMap[idx.UID]
+//		isLocked := false
+//		displayName := idx.UID
+//		if exists {
+//			isLocked = cfg.IsLocked
+//			if cfg.Alias != "" {
+//				displayName = cfg.Alias
+//			}
+//		}
+//		results = append(results, PublicIndex{
+//			Uid:         idx.UID,
+//			DisplayName: displayName,
+//			IsLocked:    isLocked,
+//			PrimaryKey:  idx.PrimaryKey,
+//		})
+//	}
+//
+//	c.JSON(http.StatusOK, gin.H{"results": results})
+//}
+func HandleGetVisibleIndexes(c *gin.Context) {
 	var instance model.MeiliInstance
-	if err := repository.DB.First(&instance).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "未配置搜索引擎实例"})
-		return
+	repository.DB.First(&instance)
+
+	userToken := c.GetHeader("App-Token")
+	var allowedByToken []string
+
+	// ---- 特权检查：如果是系统管理员登录，无视一切锁，显示全部 ----
+	isAdmin := false
+	authHdr := c.GetHeader("Authorization")
+	if strings.HasPrefix(authHdr, "Bearer ") {
+		tStr := strings.TrimPrefix(authHdr, "Bearer ")
+		t, _ := jwt.Parse(tStr, func(token *jwt.Token) (interface{}, error) { return JwtSecret, nil })
+		if t != nil && t.Valid {
+			if claims, ok := t.Claims.(jwt.MapClaims); ok {
+				if r, _ := claims["role"].(string); r == "admin" {
+					isAdmin = true
+				}
+			}
+		}
 	}
 
-	// 直接向 Meilisearch 发起 HTTP 请求获取索引列表
-	meiliURL := strings.TrimRight(instance.Host, "/") + "/indexes?limit=200"
-	req, err := http.NewRequest("GET", meiliURL, nil)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"results": []interface{}{}})
-		return
-	}
-	req.Header.Set("Authorization", "Bearer "+instance.APIKey)
-
-	httpResp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"results": []interface{}{}})
-		return
-	}
-	defer httpResp.Body.Close()
-	body, _ := io.ReadAll(httpResp.Body)
-
-	var meiliData struct {
-		Results []struct {
-			UID        string `json:"uid"`
-			PrimaryKey string `json:"primaryKey"`
-		} `json:"results"`
-	}
-	if err := json.Unmarshal(body, &meiliData); err != nil {
-		c.JSON(http.StatusOK, gin.H{"results": []interface{}{}})
-		return
+	if userToken != "" {
+		var tok model.AccessToken
+		if err := repository.DB.Where("token = ?", userToken).First(&tok).Error; err == nil {
+			if tok.ExpiresAt != nil && tok.ExpiresAt.Before(time.Now()) {
+				repository.DB.Delete(&tok)
+			} else {
+				json.Unmarshal([]byte(tok.AllowIndexes), &allowedByToken)
+			}
+		}
 	}
 
-	// 合并数据库中的索引配置（别名、锁定状态）
+	// Load DB config map
 	var configs []model.IndexConfig
 	repository.DB.Find(&configs)
 	configMap := make(map[string]model.IndexConfig)
-	for _, cfg := range configs {
-		configMap[cfg.Uid] = cfg
+	for _, conf := range configs {
+		configMap[conf.Uid] = conf
 	}
+	log.Printf("[DEBUG] configMap keys: %v", configMap)
 
-	type PublicIndex struct {
-		Uid         string `json:"uid"`
-		DisplayName string `json:"displayName"`
-		IsLocked    bool   `json:"isLocked"`
-		PrimaryKey  string `json:"primaryKey"`
+	// 1. 直连 Meilisearch 获取真实全部的 indexes
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", instance.Host+"/indexes", nil)
+	req.Header.Set("Authorization", "Bearer "+instance.APIKey)
+	res, err := client.Do(req)
+	if err != nil {
+		log.Printf("[Proxy Error] Failed to connect to Meilisearch: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法连接到底层 Meilisearch"})
+		return
 	}
-	var results []PublicIndex
+	defer res.Body.Close()
 
-	for _, idx := range meiliData.Results {
-		cfg, exists := configMap[idx.UID]
+	var payload struct {
+		Results []map[string]interface{} `json:"results"`
+		Total   int                      `json:"total"`
+	}
+	bodyBytes, _ := io.ReadAll(res.Body)
+	json.Unmarshal(bodyBytes, &payload)
+
+	// 2. 增强逻辑：合并配置，标记锁定状态
+	enhancedResults := []map[string]interface{}{}
+	for _, idx := range payload.Results {
+		uid, _ := idx["uid"].(string)
+
+		dbConf, exists := configMap[uid]
+		log.Printf("[DEBUG] uid=%s exists=%v drawer=%q", uid, exists, dbConf.DrawerFieldOrder)
+		log.Printf("[DEBUG] uid=%s, exists=%v, drawerFieldOrder=%q", uid, exists, dbConf.DrawerFieldOrder)
 		isLocked := false
-		displayName := idx.UID
+		alias := uid
 		if exists {
-			isLocked = cfg.IsLocked
-			if cfg.Alias != "" {
-				displayName = cfg.Alias
+			isLocked = dbConf.IsLocked
+			if dbConf.Alias != "" {
+				alias = dbConf.Alias
 			}
 		}
-		results = append(results, PublicIndex{
-			Uid:         idx.UID,
-			DisplayName: displayName,
-			IsLocked:    isLocked,
-			PrimaryKey:  idx.PrimaryKey,
-		})
+
+		isUnlocked := false
+		if isAdmin {
+			isUnlocked = true
+		} else if isLocked {
+			// 加锁了，检查 token 是否有权访问该 UID
+			for _, allowed := range allowedByToken {
+				if allowed == uid || allowed == "*" {
+					isUnlocked = true
+					break
+				}
+			}
+		} else {
+			// 未上锁的默认即为已解锁状态
+			isUnlocked = true
+		}
+
+		// 注入前台所需状态
+		idx["isLocked"] = isLocked
+		idx["isUnlocked"] = isUnlocked
+		idx["displayName"] = alias
+
+		if exists {
+			idx["fieldConfigs"] = dbConf.FieldConfigs
+			idx["viewConfigs"] = dbConf.ViewConfigs
+			idx["tableConfigs"] = dbConf.TableConfigs
+			idx["canEdit"] = dbConf.CanEdit
+			idx["nestedFieldConfigs"] = dbConf.NestedFieldConfigs
+			if dbConf.DrawerFieldOrder != "" {
+				idx["drawerFieldOrder"] = dbConf.DrawerFieldOrder
+			} else {
+				idx["drawerFieldOrder"] = "{}"
+			}
+		} else {
+			idx["fieldConfigs"] = ""
+			idx["viewConfigs"] = ""
+			idx["tableConfigs"] = ""
+			idx["canEdit"] = false
+			idx["nestedFieldConfigs"] = ""
+			idx["drawerFieldOrder"] = "{}"
+		}
+
+		enhancedResults = append(enhancedResults, idx)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"results": results})
+	payload.Results = enhancedResults
+	payload.Total = len(enhancedResults)
+
+	c.JSON(http.StatusOK, payload)
 }
