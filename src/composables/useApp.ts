@@ -102,6 +102,7 @@ export const useAppStore = defineStore('app', () => {
   const exportTotal = ref(0)
 
   const loading = ref(false)
+  const searchLoading = ref(false)
   const toasts = ref<Toast[]>([])
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -625,15 +626,17 @@ async function connect() {
   function scheduleDebouncedSearch() {
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => {
-      performSearch()
+      performSearch({ silent: true })
     }, 300)
   }
 
-  async function performSearch() {
+  async function performSearch(options?: { silent?: boolean }) {
     if (!currentIndex.value) {
       return
     }
-    loading.value = true
+    const useGlobalLoading = !options?.silent
+    if (useGlobalLoading) loading.value = true
+    searchLoading.value = true
     try {
       const params = buildSearchParams()
       const res = await api.performSearch(getHost(), getApiKey(), currentIndex.value, searchInput.value.trim(), params)
@@ -667,7 +670,8 @@ async function connect() {
         pushToast(`搜索失败: ${e}`, 'error')
       }
     } finally {
-      loading.value = false
+      if (useGlobalLoading) loading.value = false
+      searchLoading.value = false
     }
   }
 
@@ -1327,7 +1331,7 @@ async function connect() {
     highlightEnabled, showRankingScore, cropLength, sortValue,
     filtersDrawerOpen, columnConfigOpen, fieldConfigOpen, viewModalOpen, advancedSettingsOpen,
     viewMode, viewNameInput, viewConfigs, exportDownloading, exportProgress,
-    exportTotal, loading, toasts, resultModalOpen, resultDetail, editLocked,
+    exportTotal, loading, searchLoading, toasts, resultModalOpen, resultDetail, editLocked,
     primaryKeyField, pendingEdits, imagePreviewEnabled, imagePreviewLinksOnly,
     imagePreviewSize, currentTab, assetForm, assetList, assetModalOpen,
     assetDetail, assetsLoading, uploadModalOpen, uploadData, uploadFileName,
