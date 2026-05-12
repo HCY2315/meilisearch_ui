@@ -84,7 +84,7 @@
 
     <footer class="app-footer">
       <div class="footer-divider"></div>
-      <p>© 2026 多维搜索引擎 - 数据集散中心 · Powered by 冰城拓</p>
+      <p>{{ APP_COPYRIGHT }}</p>
     </footer>
 
     <!-- 全局挂载组件 -->
@@ -110,6 +110,7 @@ import FilterDrawer from '@/components/FilterDrawer.vue'
 import AssetManagement from '@/components/AssetManagement.vue'
 import AdminPanel from '@/components/AdminPanel.vue'
 import { getAppConfig } from '@/services/api'
+import { APP_COPYRIGHT } from '@/constants/branding'
 
 const store = useAppStore()
 const router = useRouter()
