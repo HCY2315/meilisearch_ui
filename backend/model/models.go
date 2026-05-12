@@ -6,6 +6,8 @@ import (
 	"gorm.io/gorm"
 )
 
+
+
 // User 系统管理员表
 type User struct {
 	ID           uint      `gorm:"primarykey" json:"id"`
