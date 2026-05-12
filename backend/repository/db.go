@@ -3,6 +3,7 @@ package repository
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	"backend/model"
 
@@ -15,13 +16,31 @@ var DB *gorm.DB
 
 // InitDB 初始化本地 SQLite 数据库并进行字段迁移
 func InitDB() {
-	// 确保 data 目录存在
-	if _, err := os.Stat("data"); os.IsNotExist(err) {
-		os.MkdirAll("data", 0755)
+	// DB 路径优先级：
+	// 1) 环境变量 DB_PATH
+	// 2) 当前目录下历史路径 meili_admin.db（兼容旧部署）
+	// 3) 默认 data/meili_admin.db
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		if _, err := os.Stat("meili_admin.db"); err == nil {
+			dbPath = "meili_admin.db"
+		} else {
+			dbPath = filepath.Join("data", "meili_admin.db")
+		}
 	}
 
+	dbDir := filepath.Dir(dbPath)
+	if dbDir != "." {
+		if _, err := os.Stat(dbDir); os.IsNotExist(err) {
+			os.MkdirAll(dbDir, 0755)
+		}
+	}
+
+	absPath, _ := filepath.Abs(dbPath)
+	log.Printf("Using sqlite DB: %s", absPath)
+
 	var err error
-	DB, err = gorm.Open(sqlite.Open("data/meili_admin.db"), &gorm.Config{})
+	DB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}

@@ -1,7 +1,10 @@
 package api
 
 import (
+	"encoding/json"
+	"io"
 	"net/http"
+	"strings"
 
 	"backend/model"
 	"backend/repository"
@@ -361,6 +364,7 @@ func HandleUpdateIndexSettings(c *gin.Context) {
 }
 
 // HandleGetPublicIndexes 返回所有索引列表及其锁定状态，供前台展示
+// NOTE: 使用直接 HTTP 请求代替 SDK 调用，避免 meilisearch-go v0.36 接口兼容性问题
 func HandleGetPublicIndexes(c *gin.Context) {
 	var instance model.MeiliInstance
 	if err := repository.DB.First(&instance).Error; err != nil {
@@ -368,13 +372,35 @@ func HandleGetPublicIndexes(c *gin.Context) {
 		return
 	}
 
-	client := meilisearch.New(instance.Host, meilisearch.WithAPIKey(instance.APIKey))
-	resp, err := client.GetIndexes(nil)
+	// 直接向 Meilisearch 发起 HTTP 请求获取索引列表
+	meiliURL := strings.TrimRight(instance.Host, "/") + "/indexes?limit=200"
+	req, err := http.NewRequest("GET", meiliURL, nil)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"results": []string{}})
+		c.JSON(http.StatusOK, gin.H{"results": []interface{}{}})
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+instance.APIKey)
+
+	httpResp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"results": []interface{}{}})
+		return
+	}
+	defer httpResp.Body.Close()
+	body, _ := io.ReadAll(httpResp.Body)
+
+	var meiliData struct {
+		Results []struct {
+			UID        string `json:"uid"`
+			PrimaryKey string `json:"primaryKey"`
+		} `json:"results"`
+	}
+	if err := json.Unmarshal(body, &meiliData); err != nil {
+		c.JSON(http.StatusOK, gin.H{"results": []interface{}{}})
 		return
 	}
 
+	// 合并数据库中的索引配置（别名、锁定状态）
 	var configs []model.IndexConfig
 	repository.DB.Find(&configs)
 	configMap := make(map[string]model.IndexConfig)
@@ -390,7 +416,7 @@ func HandleGetPublicIndexes(c *gin.Context) {
 	}
 	var results []PublicIndex
 
-	for _, idx := range resp.Results {
+	for _, idx := range meiliData.Results {
 		cfg, exists := configMap[idx.UID]
 		isLocked := false
 		displayName := idx.UID
@@ -400,7 +426,6 @@ func HandleGetPublicIndexes(c *gin.Context) {
 				displayName = cfg.Alias
 			}
 		}
-
 		results = append(results, PublicIndex{
 			Uid:         idx.UID,
 			DisplayName: displayName,
