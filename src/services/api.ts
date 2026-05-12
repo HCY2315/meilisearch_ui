@@ -603,21 +603,25 @@ export async function getApplications(): Promise<any[]> {
   return res.json()
 }
 
-export async function approveApplication(id: number): Promise<boolean> {
+export async function approveApplication(id: number, data: Record<string, unknown>): Promise<{ ok: boolean; message: string }> {
   const headers = getAuthHeaders()
   const res = await fetch(`/api/v1/admin/applications/${id}/approve`, {
     method: 'POST',
-    headers
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
   })
-  return res.ok
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok) return { ok: false, message: payload.error || '审批失败' }
+  return { ok: true, message: payload.message || '审批成功' }
 }
 
-export async function rejectApplication(id: number): Promise<boolean> {
+export async function rejectApplication(id: number): Promise<{ ok: boolean; message: string }> {
   const headers = getAuthHeaders()
   const res = await fetch(`/api/v1/admin/applications/${id}/reject`, {
     method: 'POST',
     headers
   })
-  return res.ok
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok) return { ok: false, message: payload.error || '驳回失败' }
+  return { ok: true, message: payload.message || '驳回成功' }
 }
-
