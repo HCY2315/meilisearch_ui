@@ -102,7 +102,6 @@ export const useAppStore = defineStore('app', () => {
   const exportTotal = ref(0)
 
   const loading = ref(false)
-  const searching = ref(false)
   const toasts = ref<Toast[]>([])
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -615,6 +614,8 @@ async function connect() {
     facetDistribution.value = null
     sortableAttributes.value = []
     nestedFieldConfigs.value = {}
+    queryRows.value = [createQueryRow()]
+    searchInput.value = ''
     if (nestedConfigSaveTimer) {
       clearTimeout(nestedConfigSaveTimer)
       nestedConfigSaveTimer = null
@@ -623,19 +624,18 @@ async function connect() {
 
   function scheduleDebouncedSearch() {
     if (debounceTimer) clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => performSearch(), 300)
+    debounceTimer = setTimeout(() => {
+      performSearch()
+    }, 300)
   }
 
   async function performSearch() {
     if (!currentIndex.value) {
-      console.log('[performSearch] no currentIndex, skip')
       return
     }
-    console.log('[performSearch]', currentIndex.value, 'searching:', searching.value)
-    searching.value = true
+    loading.value = true
     try {
       const params = buildSearchParams()
-      console.log('[performSearch] params:', params)
       const res = await api.performSearch(getHost(), getApiKey(), currentIndex.value, searchInput.value.trim(), params)
       if (searchInput.value.trim()) addToHistory(searchInput.value.trim())
       console.log('[performSearch] result hits:', res.hits?.length)
@@ -667,7 +667,7 @@ async function connect() {
         pushToast(`搜索失败: ${e}`, 'error')
       }
     } finally {
-      searching.value = false
+      loading.value = false
     }
   }
 
@@ -1327,7 +1327,7 @@ async function connect() {
     highlightEnabled, showRankingScore, cropLength, sortValue,
     filtersDrawerOpen, columnConfigOpen, fieldConfigOpen, viewModalOpen, advancedSettingsOpen,
     viewMode, viewNameInput, viewConfigs, exportDownloading, exportProgress,
-    exportTotal, loading, searching, toasts, resultModalOpen, resultDetail, editLocked,
+    exportTotal, loading, toasts, resultModalOpen, resultDetail, editLocked,
     primaryKeyField, pendingEdits, imagePreviewEnabled, imagePreviewLinksOnly,
     imagePreviewSize, currentTab, assetForm, assetList, assetModalOpen,
     assetDetail, assetsLoading, uploadModalOpen, uploadData, uploadFileName,

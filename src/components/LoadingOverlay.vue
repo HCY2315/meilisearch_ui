@@ -14,7 +14,7 @@ const store = useAppStore()
 .loading-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.3);
   z-index: 9998;
   display: flex;
   flex-direction: column;
@@ -22,13 +22,25 @@ const store = useAppStore()
   justify-content: center;
   gap: 16px;
 }
+
+html[data-theme="light"] .loading-overlay {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+}
+
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(255,255,255,0.1);
+  border: 3px solid rgba(0, 0, 0, 0.1);
   border-top-color: var(--primary-color);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
+html[data-theme="light"] .spinner {
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--primary-color);
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>

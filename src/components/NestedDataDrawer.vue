@@ -139,6 +139,9 @@
                     <div class="cell-with-preview">
                       <template v-if="isNestedValue(row[col])">
                         <span class="nested-badge-sm">{{ getNestedBadgeText(row[col]) }}</span>
+                        <span class="nested-text">
+                          {{ primitiveToStr(row[col]) }}
+                        </span>
                         <button
                           class="btn-drill"
                           @click="push(`${currentPathLabel}[${ri}].${col}`, row[col])"
@@ -684,7 +687,7 @@ function handleClose() {
   display: flex;
   flex-direction: column;
   background: var(--bg-primary, #0f1117);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(0,0,0,0.08);
   box-shadow: -12px 0 48px rgba(0, 0, 0, 0.55);
   z-index: 1001;
   overflow: hidden;
@@ -696,8 +699,8 @@ function handleClose() {
   align-items: center;
   gap: 12px;
   padding: 12px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.025);
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+  background: rgba(0,0,0,0.025);
   flex-shrink: 0;
 }
 
@@ -722,10 +725,10 @@ function handleClose() {
   transition: background 0.15s;
   white-space: nowrap;
 }
-.bc-root:hover { background: rgba(255,255,255,0.06); }
+.bc-root:hover { background: rgba(0,0,0,0.06); }
 
 .bc-sep {
-  color: rgba(255, 255, 255, 0.25);
+  color: #6b7280;
   font-size: 14px;
   flex-shrink: 0;
 }
@@ -733,7 +736,7 @@ function handleClose() {
 .bc-item {
   background: transparent;
   border: none;
-  color: rgba(255,255,255,0.45);
+  color: #374151;
   font-size: 12.5px;
   cursor: pointer;
   padding: 3px 8px;
@@ -745,7 +748,31 @@ function handleClose() {
   transition: background 0.15s, color 0.15s;
 }
 .bc-item:not(:disabled):hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.06);
+  color: #1f293b;
+}
+.bc-current {
+  color: #4f46e5 !important;
+  font-weight: 600;
+  cursor: default;
+}
+
+.bc-item {
+  background: transparent;
+  border: none;
+  color: rgba(0,0,0,0.45);
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 4px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.bc-item:not(:disabled):hover {
+  background: rgba(0,0,0,0.06);
   color: #fff;
 }
 .bc-current {
@@ -768,18 +795,27 @@ function handleClose() {
   gap: 5px;
   padding: 5px 12px;
   border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(0,0,0,0.1);
   background: transparent;
-  color: rgba(255,255,255,0.55);
+  color: #374151;
   font-size: 12.5px;
   cursor: pointer;
   transition: all 0.15s;
-  white-space: nowrap;
 }
 .btn-config-toggle:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.06);
+  color: #1f293b;
+  border-color: rgba(99,179,237,0.3);
+}
+.btn-config-toggle.active {
+  background: rgba(var(--primary-color-rgb), 99,179,237), 0.15);
+  color: #4f46e5;
+  border-color: rgba(99,179,237,0.3);
+}
+.btn-config-toggle:hover {
+  background: rgba(0,0,0,0.06);
   color: #fff;
-  border-color: rgba(255,255,255,0.2);
+  border-color: rgba(0,0,0,0.2);
 }
 .btn-config-toggle.active {
   background: rgba(var(--primary-color-rgb, 99,179,237), 0.15);
@@ -790,7 +826,7 @@ function handleClose() {
 .nd-close-btn {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.35);
+  color: #6b7280;
   font-size: 16px;
   cursor: pointer;
   padding: 4px 8px;
@@ -799,8 +835,12 @@ function handleClose() {
   transition: color 0.15s, background 0.15s;
 }
 .nd-close-btn:hover {
+  color: #1f293b;
+  background: rgba(0,0,0,0.08);
+}
+.nd-close-btn:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0,0,0,0.08);
 }
 
 /* ─── 子头部（类型 + 路径） ─────────────────────────────────────────────────── */
@@ -809,7 +849,7 @@ function handleClose() {
   align-items: center;
   justify-content: space-between;
   padding: 8px 18px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   flex-shrink: 0;
   gap: 12px;
 }
@@ -827,7 +867,7 @@ function handleClose() {
 
 .path-hint {
   font-size: 11.5px;
-  color: rgba(255,255,255,0.25);
+  color: rgba(0,0,0,0.25);
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   max-width: 280px;
   overflow: hidden;
@@ -852,13 +892,17 @@ function handleClose() {
 
 .hidden-hint {
   font-size: 11.5px;
+<<<<<<< HEAD
+  color: rgba(0,0,0,0.7);
+=======
   color: #48bb78;
+>>>>>>> main
 }
 
 /* ─── 字段配置面板 ──────────────────────────────────────────────────────────── */
 .config-panel {
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+  background: rgba(0,0,0,0.02);
   flex-shrink: 0;
   max-height: 280px;
   overflow-y: auto;
@@ -873,7 +917,7 @@ function handleClose() {
   position: sticky;
   top: 0;
   background: var(--bg-primary, #0f1117);
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   z-index: 1;
 }
 
@@ -887,12 +931,12 @@ function handleClose() {
 .config-panel-title {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255,255,255,0.8);
+  color: #374151;
 }
 
 .config-panel-desc {
   font-size: 11.5px;
-  color: rgba(255,255,255,0.3);
+  color: #6b7280;
 }
 
 .btn-save-config {
@@ -929,7 +973,7 @@ function handleClose() {
   transition: background 0.1s;
   cursor: grab;
 }
-.config-row:hover { background: rgba(255,255,255,0.03); }
+.config-row:hover { background: rgba(0,0,0,0.03); }
 .config-row:active { cursor: grabbing; }
 
 .config-row .drag-handle {
@@ -945,7 +989,7 @@ function handleClose() {
 /* 可见性切换按钮 */
 .vis-btn {
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(0,0,0,0.1);
   border-radius: 5px;
   cursor: pointer;
   width: 28px;
@@ -957,15 +1001,21 @@ function handleClose() {
   flex-shrink: 0;
   transition: border-color 0.15s, background 0.15s;
 }
-.vis-btn:hover { background: rgba(255,255,255,0.06); }
+.vis-btn:hover { background: rgba(0,0,0,0.06); }
 .vis-btn.vis-off {
-  border-color: rgba(255,100,100,0.2);
-  background: rgba(255,100,100,0.05);
+  border-color: rgba(0,0,0,0.2);
+  background: rgba(0,0,0,0.05);
+  color: #ef4444;
+}
+.vis-btn:hover { background: rgba(0,0,0,0.06); }
+.vis-btn.vis-off {
+  border-color: rgba(0,0,0,0.2);
+  background: rgba(0,0,0,0.05);
 }
 
 .config-field-name {
   font-size: 12.5px;
-  color: rgba(255,255,255,0.6);
+  color: #6b7280;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   min-width: 100px;
   max-width: 180px;
@@ -976,7 +1026,7 @@ function handleClose() {
 }
 
 .config-arrow {
-  color: rgba(255,255,255,0.2);
+  color: #9ca3af;
   font-size: 12px;
   flex-shrink: 0;
 }
@@ -986,24 +1036,24 @@ function handleClose() {
   flex: 1;
   min-width: 80px;
   padding: 4px 9px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.1);
   border-radius: 5px;
-  color: var(--text-primary, #e2e8f0);
+  color: var(--text-primary, #1f293b);
   font-size: 12.5px;
   outline: none;
   transition: border-color 0.15s;
 }
 .alias-input:focus {
-  border-color: var(--primary-color, #63b3ed);
-  background: rgba(255,255,255,0.07);
+  border-color: var(--primary-color, #6366f1);
+  background: rgba(0,0,0,0.07);
 }
 .alias-input:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 .alias-input::placeholder {
-  color: rgba(255,255,255,0.2);
+  color: #9ca3af;
   font-style: italic;
 }
 
@@ -1017,7 +1067,11 @@ function handleClose() {
 .all-hidden-tip {
   padding: 32px 20px;
   text-align: center;
+<<<<<<< HEAD
+  color: rgba(0,0,0,0.6);
+=======
   color: #48bb78;
+>>>>>>> main
   font-size: 13px;
 }
 
@@ -1034,11 +1088,11 @@ function handleClose() {
 }
 
 .mini-table th {
-  background: rgba(255,255,255,0.04);
+  background: rgba(0,0,0,0.02);
   padding: 8px 12px;
   text-align: left;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  color: var(--text-main, #111827);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  color: #1f293b;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1046,24 +1100,23 @@ function handleClose() {
 .mini-table th .alias-tag {
   margin-left: 5px;
   font-size: 10.5px;
-  color: rgba(255,255,255,0.3);
+  color: #374151;
   font-weight: 400;
   font-family: 'JetBrains Mono', monospace;
 }
 
 .mini-table td {
   padding: 7px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(0,0,0,0.04);
   vertical-align: top;
-  transition: background 0.15s ease;
 }
 
-.mini-table tbody tr:hover td {
-  background: rgba(var(--primary-color-rgb, 15, 118, 110), 0.1);
+.mini-table tr:hover td {
+  background: rgba(0,0,0,0.02);
 }
 
-.row-num-th { color: rgba(255,255,255,0.25); font-weight: 400; width: 36px; }
-.row-num    { color: rgba(255,255,255,0.2);  font-size: 11px; }
+.row-num-th { color: #374151; font-weight: 400; width: 36px; }
+.row-num    { color: #4b5563; font-size: 11px; }
 
 .cell-text {
   display: block;
@@ -1071,7 +1124,7 @@ function handleClose() {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 260px;
-  color: var(--text-primary, #e2e8f0);
+  color: #1f293b;
 }
 
 /* ─── 键值对列表 ─────────────────────────────────────────────────────────────── */
@@ -1085,15 +1138,15 @@ function handleClose() {
   grid-template-columns: 200px 1fr;
   gap: 16px;
   padding: 9px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(0,0,0,0.04);
   align-items: flex-start;
   border-radius: 6px;
   transition: background 0.1s;
 }
-.kv-row:hover { background: rgba(255,255,255,0.025); }
+.kv-row:hover { background: rgba(0,0,0,0.025); }
 
 .kv-key {
-  color: var(--text-primary, #e2e8f0);
+  color: #374151;
   font-size: 13px;
   font-weight: 600;
   overflow: hidden;
@@ -1107,7 +1160,7 @@ function handleClose() {
 
 .alias-raw-tag {
   font-size: 10.5px;
-  color: var(--text-muted, #94a3b8);
+  color: #6b7280;
   font-weight: 400;
   font-family: 'JetBrains Mono', monospace;
   overflow: hidden;
@@ -1138,16 +1191,11 @@ function handleClose() {
   padding: 7px 12px;
   border-radius: 6px;
   font-size: 13px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  transition: background 0.15s ease;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
 }
 
-.prim-array-item:hover {
-  background: rgba(var(--primary-color-rgb, 15, 118, 110), 0.1);
-}
-
-.prim-idx { color: rgba(255,255,255,0.25); font-size: 11px; min-width: 30px; flex-shrink: 0; }
-.prim-val { color: var(--text-primary, #e2e8f0); word-break: break-word; }
+.prim-idx { color: #4b5563; font-size: 11px; min-width: 30px; flex-shrink: 0; }
+.prim-val { color: #1f293b; word-break: break-word; }
 
 /* ─── 嵌套徽章 & 下钻按钮 ───────────────────────────────────────────────────── */
 .nested-badge-sm {
@@ -1167,18 +1215,30 @@ function handleClose() {
   gap: 3px;
   padding: 2px 8px;
   border-radius: 4px;
+<<<<<<< HEAD
+  border: 1px solid rgba(99,179,237,0.3);
+  background: rgba(99,179,237,0.1);
+  color: #0ea5e9;
+=======
   border: 1px solid rgba(72, 187, 120, 0.3);
   background: rgba(72, 187, 120, 0.08);
   color: #48bb78;
+>>>>>>> main
   font-size: 11.5px;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .btn-drill:hover {
+<<<<<<< HEAD
+  background: rgba(99,179,237,0.15);
+  color: #0284c7;
+  border-color: rgba(99,179,237,0.5);
+=======
   background: rgba(72, 187, 120, 0.2);
   color: #38a169;
   border-color: rgba(72, 187, 120, 0.5);
+>>>>>>> main
 }
 
 /* ─── 动画 ──────────────────────────────────────────────────────────────────── */
@@ -1207,7 +1267,17 @@ function handleClose() {
   font-size: 13px; cursor: pointer; border-radius: 4px; transition: all 0.15s;
 }
 .config-panel-tabs button.active {
-  background: var(--primary-color); color: #fff;
+  background: var(--primary-color); color: #1f293b;
+}
+
+/* ─── 字段排序面板 ───────────────────────────────────────────────────── */
+.order-panel { padding: 12px; }
+.order-panel-hd {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+}
+.btn-save-order {
+  padding: 6px 12px; background: var(--primary-color); color: #1f293b; border: none;
+  border-radius: 4px; font-size: 12px; cursor: pointer;
 }
 
 /* ─── 字段排序面板 ───────────────────────────────────────────────────────────── */
@@ -1253,146 +1323,5 @@ function handleClose() {
   padding: 10px; margin: 0; font-size: 12px; font-family: monospace;
   white-space: pre-wrap; word-break: break-all; overflow-y: auto;
   color: var(--text-primary); max-height: 250px;
-}
-
-/* 浅色主题：Clean Gray 抽屉配色 */
-:global(html[data-theme="light"]) .nd-drawer {
-  --nd-bg: #ffffff;
-  --nd-subtle-bg: #f5f7fa;
-  --nd-hover-bg: #f9fafb;
-  --nd-border: #e5e7eb;
-  --nd-text: #111827;
-  --nd-text-secondary: #6b7280;
-  --nd-accent: #0f766e;
-  background: var(--nd-bg);
-  border-left: 1px solid var(--nd-border);
-  box-shadow: -12px 0 36px rgba(15, 23, 42, 0.12);
-  color: #111827;
-}
-
-:global(html[data-theme="light"]) .nd-header,
-:global(html[data-theme="light"]) .nd-subheader {
-  background: var(--nd-subtle-bg);
-  border-bottom-color: var(--nd-border);
-}
-
-:global(html[data-theme="light"]) .path-hint,
-:global(html[data-theme="light"]) .hidden-hint,
-:global(html[data-theme="light"]) .bc-sep,
-:global(html[data-theme="light"]) .bc-item,
-:global(html[data-theme="light"]) .config-panel-desc,
-:global(html[data-theme="light"]) .config-arrow,
-:global(html[data-theme="light"]) .row-num-th,
-:global(html[data-theme="light"]) .row-num {
-  color: var(--nd-text-secondary);
-}
-
-:global(html[data-theme="light"]) .bc-item:not(:disabled):hover,
-:global(html[data-theme="light"]) .bc-current,
-:global(html[data-theme="light"]) .bc-root {
-  color: var(--nd-accent);
-}
-
-:global(html[data-theme="light"]) .bc-item:not(:disabled):hover,
-:global(html[data-theme="light"]) .bc-root:hover {
-  background: #e8f5f3;
-}
-
-:global(html[data-theme="light"]) .btn-config-toggle {
-  border-color: var(--nd-border);
-  color: var(--nd-text-secondary);
-  background: #fff;
-}
-
-:global(html[data-theme="light"]) .btn-config-toggle:hover {
-  border-color: #cbd5e1;
-  color: var(--nd-text);
-  background: var(--nd-hover-bg);
-}
-
-:global(html[data-theme="light"]) .btn-config-toggle.active {
-  background: #eaf7f5;
-  color: var(--nd-accent);
-  border-color: #b7ddd8;
-}
-
-:global(html[data-theme="light"]) .nd-close-btn {
-  color: var(--nd-text-secondary);
-}
-
-:global(html[data-theme="light"]) .nd-close-btn:hover {
-  color: var(--nd-text);
-  background: #f3f4f6;
-}
-
-:global(html[data-theme="light"]) .config-panel {
-  background: #fcfcfd;
-  border-bottom-color: var(--nd-border);
-}
-
-:global(html[data-theme="light"]) .config-panel-hd {
-  background: #f8fafc;
-  border-bottom-color: var(--nd-border);
-}
-
-:global(html[data-theme="light"]) .config-panel-title,
-:global(html[data-theme="light"]) .config-field-name,
-:global(html[data-theme="light"]) .kv-key,
-:global(html[data-theme="light"]) .kv-val,
-:global(html[data-theme="light"]) .val-text,
-:global(html[data-theme="light"]) .prim-val,
-:global(html[data-theme="light"]) .cell-text,
-:global(html[data-theme="light"]) .mini-table td {
-  color: var(--nd-text, #111827) !important;
-}
-
-:global(html[data-theme="light"]) .kv-key,
-:global(html[data-theme="light"]) .kv-val,
-:global(html[data-theme="light"]) .val-text {
-  color: #111827 !important;
-}
-
-:global(html[data-theme="light"]) .nd-drawer *::selection {
-  background: #cfe5e2;
-  color: #111827;
-}
-
-:global(html[data-theme="light"]) .config-row:hover,
-:global(html[data-theme="light"]) .kv-row:hover,
-:global(html[data-theme="light"]) .mini-table tbody tr:hover td,
-:global(html[data-theme="light"]) .prim-array-item:hover {
-  background: var(--nd-hover-bg);
-}
-
-:global(html[data-theme="light"]) .alias-input {
-  background: #fff;
-  border-color: #d1d5db;
-  color: var(--nd-text);
-}
-
-:global(html[data-theme="light"]) .alias-input:focus {
-  border-color: var(--nd-accent);
-  background: #fff;
-}
-
-:global(html[data-theme="light"]) .alias-input::placeholder,
-:global(html[data-theme="light"]) .mini-table th .alias-tag,
-:global(html[data-theme="light"]) .alias-raw-tag {
-  color: var(--nd-text-secondary);
-}
-
-:global(html[data-theme="light"]) .mini-table th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--nd-subtle-bg);
-  border-bottom: 1px solid var(--nd-border);
-  color: var(--nd-text);
-}
-
-:global(html[data-theme="light"]) .mini-table td,
-:global(html[data-theme="light"]) .kv-row,
-:global(html[data-theme="light"]) .prim-array-item {
-  border-bottom-color: var(--nd-border);
 }
 </style>

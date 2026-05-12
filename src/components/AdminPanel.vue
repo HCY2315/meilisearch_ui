@@ -1101,9 +1101,15 @@ onMounted(() => {
 /* 侧边栏 */
 .admin-sidebar {
   width: 260px;
+<<<<<<< HEAD
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(0,0,0,0.05);
+=======
   background: var(--surface-glass);
   backdrop-filter: var(--glass-blur);
   border-right: 1px solid var(--border);
+>>>>>>> main
   display: flex;
   flex-direction: column;
   padding: 32px 0;
@@ -1118,8 +1124,13 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
 }
+
 .sidebar-logo { font-size: 32px; }
+<<<<<<< HEAD
+.sidebar-header h2 { font-family: 'Outfit'; font-size: 20px; font-weight: 700; color: #1f293b; }
+=======
 .sidebar-header h2 { font-family: 'Outfit'; font-size: 20px; font-weight: 700; color: var(--text-main); }
+>>>>>>> main
 
 .sidebar-nav { flex: 1; padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
 .nav-item {
@@ -1130,20 +1141,39 @@ onMounted(() => {
   border-radius: 12px;
   border: none;
   background: transparent;
+<<<<<<< HEAD
+  color: #6b7280;
+=======
   color: var(--text-sub);
+>>>>>>> main
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
 }
+<<<<<<< HEAD
+.nav-item:hover { background: rgba(0,0,0,0.05); color: #1f293b; }
+.nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+
+.nav-icon { font-size: 18px; }
+
+.sidebar-footer { padding: 0 32px; font-size: 11px; color: #6b7280; }
+=======
 .nav-item:hover { background: var(--bg-card-hover); color: var(--text-main); }
 .nav-item.active { background: rgba(var(--primary-color-rgb), 0.12); color: var(--primary); }
 .nav-icon { font-size: 18px; }
 
 .sidebar-footer { padding: 0 32px; font-size: 11px; color: var(--text-muted); }
+>>>>>>> main
 
 /* 主内容区 */
 .admin-main { flex: 1; margin-left: 260px; padding: 48px 64px; }
 
+<<<<<<< HEAD
+/* 编辑器容器 */
+.glass-editor {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(0,0,0,0.05);
+=======
 .content-section { max-width: 1000px; }
 
 .user-info { display: flex; flex-direction: column; gap: 2px; }
@@ -1177,21 +1207,33 @@ onMounted(() => {
 .glass-editor {
   background: var(--surface);
   border: 1px solid var(--border);
+>>>>>>> main
   border-radius: 20px;
   padding: 32px;
   margin-bottom: 32px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
+<<<<<<< HEAD
+.glass-editor h3 { margin-bottom: 24px; font-size: 18px; color: #1f293b; }
+.grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+.input-group label { display: block; font-size: 13px; color: #374151; margin-bottom: 8px; }
+=======
 .glass-editor h3 { margin-bottom: 24px; font-size: 18px; color: var(--text-main); }
 .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
 .input-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+>>>>>>> main
 .editor-actions { margin-top: 32px; display: flex; gap: 12px; justify-content: flex-end; }
 
 /* 数据卡片 */
 .data-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
 .data-card {
+<<<<<<< HEAD
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(0,0,0,0.05);
+=======
   background: var(--surface);
   border: 1px solid var(--border);
+>>>>>>> main
   border-radius: 16px;
   padding: 24px;
   display: flex;
@@ -1201,10 +1243,17 @@ onMounted(() => {
 }
 .data-card:hover { transform: translateY(-4px); border-color: var(--border-active); }
 .card-info { display: flex; align-items: center; gap: 16px; }
+<<<<<<< HEAD
+.ins-avatar { width: 48px; height: 48px; border-radius: 12px; background: var(--primary); color: #1f293b; font-weight: 700; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+.card-info h4 { font-size: 16px; color: #1f293b; margin-bottom: 4px; }
+.card-info code { font-size: 12px; color: var(--primary); }
+.card-ops { display: flex; gap: 10px; border-top: 1px solid rgba(0,0,0,0.05); pt: 16px; padding-top: 16px; }
+=======
 .ins-avatar { width: 48px; height: 48px; border-radius: 12px; background: var(--primary); color: white; font-weight: 700; font-size: 20px; display: flex; align-items: center; justify-content: center; }
 .card-info h4 { font-size: 16px; color: var(--text-main); margin-bottom: 4px; }
 .card-info code { font-size: 12px; color: var(--primary); }
 .card-ops { display: flex; gap: 10px; border-top: 1px solid var(--border); pt: 16px; padding-top: 16px; }
+>>>>>>> main
 
 /* Token 特殊样式 */
 .token-list { display: flex; flex-direction: column; gap: 16px; }
@@ -1219,17 +1268,45 @@ onMounted(() => {
 }
 .tok-tag { font-size: 9px; font-weight: 800; color: var(--primary); letter-spacing: 0.1em; background: rgba(var(--primary-color-rgb), 0.1); padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
 .tok-val { font-size: 16px; color: #fbbf24; font-family: monospace; display: block; margin: 12px 0; }
+<<<<<<< HEAD
+.tok-desc { color: #6b7280; font-size: 14px; margin-bottom: 8px; }
+.tok-meta { display: flex; gap: 24px; font-size: 12px; color: #374151; }
+=======
 .tok-desc { color: var(--text-main); font-size: 14px; margin-bottom: 8px; }
 .tok-meta { display: flex; gap: 24px; font-size: 12px; color: var(--text-muted); }
+>>>>>>> main
 
 /* 设置 */
 .settings-card { display: flex; flex-direction: column; gap: 32px; }
+
 .settings-row { display: flex; gap: 48px; align-items: flex-start; }
+
 .row-label { width: 240px; }
+<<<<<<< HEAD
+.row-label h4 { font-size: 16px; color: #1f293b; margin-bottom: 4px; }
+.row-label p { font-size: 13px; color: #6b7280; }
+=======
 .row-label h4 { font-size: 16px; color: var(--text-main); margin-bottom: 4px; }
 .row-label p { font-size: 13px; color: var(--text-muted); }
+>>>>>>> main
 .row-val { flex: 1; }
+
 .app-identity { display: flex; align-items: center; gap: 12px; font-size: 20px; }
+<<<<<<< HEAD
+
+.json-preview { background: #000; padding: 16px; border-radius: 8px; font-size: 12px; color: #10b981; max-height: 200px; overflow: auto; margin-bottom: 12px; }
+
+/* 通用列表项 */
+.alias-info { display: flex; flex-direction: column; gap: 4px; }
+.alias { color: #1f293b; font-weight: 600; }
+.desc { font-size: 12px; color: #6b7280; }
+
+/* 芯片多选 */
+.index-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 6px 12px; background: rgba(0,0,0,0.05); border-radius: 8px; font-size: 13px; color: #6b7280; cursor: pointer; border: 1px solid transparent; }
+.chip:hover { background: rgba(0,0,0,0.1); }
+.chip.selected { background: rgba(99, 102, 241, 0.15); border-color: var(--primary); color: #1f293b; }
+=======
 .json-preview { background: rgba(0, 0, 0, 0.2); padding: 16px; border-radius: 8px; font-size: 12px; color: #10b981; max-height: 200px; overflow: auto; margin-bottom: 12px; }
 
 /* 通用列表项 */
@@ -1242,6 +1319,7 @@ onMounted(() => {
 .chip { padding: 6px 12px; background: var(--bg-card); border-radius: 8px; font-size: 13px; color: var(--text-sub); cursor: pointer; border: 1px solid transparent; }
 .chip:hover { background: var(--bg-card-hover); }
 .chip.selected { background: rgba(var(--primary-color-rgb), 0.15); border-color: var(--primary); color: var(--text-main); }
+>>>>>>> main
 .chip input { display: none; }
 
 /* 搜索配置专用样式 */
