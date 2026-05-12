@@ -46,7 +46,10 @@
           <div class="ai-weight-hint">基础 {{ baseWeight }}% · AI {{ store.aiConfig.aiWeight }}%</div>
         </div>
       </div>
-      <button class="btn btn-primary" @click="store.performSearch()">搜索</button>
+      <button class="btn btn-primary search-btn" @click="store.performSearch()" :disabled="store.searchLoading">
+        <span v-if="store.searchLoading" class="btn-spinner" aria-hidden="true"></span>
+        <span>{{ store.searchLoading ? '搜索中...' : '搜索' }}</span>
+      </button>
       <button class="btn btn-secondary" @click="handleClearQuery">清空</button>
     </div>
 
@@ -277,6 +280,16 @@ onBeforeUnmount(() => {
 .search-section { display: flex; flex-direction: column; gap: 14px; }
 .search-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; position: relative; }
 .search-box-wrap { position: relative; flex: 1; z-index: 10; }
+.search-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 96px; }
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 .search-input {
   width: 100%;
   padding: 15px 70px 15px 50px;
