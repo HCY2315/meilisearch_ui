@@ -6,7 +6,7 @@ services:
     image: meilisearch-ui:latest
     environment:
       - SMTP_USER=13832286642@163.com
-      - SMTP_PASS=your_master_key
+      - SMTP_PASS=DVbwcgpFwBmzuX3X
     ports:
       - "7701:8080"
     volumes:
