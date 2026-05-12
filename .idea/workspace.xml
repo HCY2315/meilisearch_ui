@@ -4,14 +4,28 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="优化系统" />
+    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="优化系统1">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/api/admin.go" beforeDir="false" afterPath="$PROJECT_DIR$/backend/api/admin.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/api/auth.go" beforeDir="false" afterPath="$PROJECT_DIR$/backend/api/auth.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/api/proxy.go" beforeDir="false" afterPath="$PROJECT_DIR$/backend/api/proxy.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/data/meili_admin.db" beforeDir="false" afterPath="$PROJECT_DIR$/backend/data/meili_admin.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/model/models.go" beforeDir="false" afterPath="$PROJECT_DIR$/backend/model/models.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/schema/dto.go" beforeDir="false" afterPath="$PROJECT_DIR$/backend/schema/dto.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/AdminPanel.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/AdminPanel.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/NestedDataDrawer.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/NestedDataDrawer.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ResultsTable.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ResultsTable.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/api.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tsconfig.tsbuildinfo" beforeDir="false" afterPath="$PROJECT_DIR$/tsconfig.tsbuildinfo" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="71" />
+    <option name="cachedIndexableFilesCount" value="72" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
@@ -92,7 +106,7 @@
       <workItem from="1778578010448" duration="697000" />
       <workItem from="1778579188661" duration="338000" />
       <workItem from="1778579560908" duration="108000" />
-      <workItem from="1778582399822" duration="1059000" />
+      <workItem from="1778582399822" duration="2957000" />
     </task>
     <task id="LOCAL-00001" summary="自动备份: 2026-05-08 12:40:07">
       <option name="closed" value="true" />
@@ -134,6 +148,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="自动备份: 2026-05-08 12:40:07" />
     <MESSAGE value="优化系统" />
-    <option name="LAST_COMMIT_MESSAGE" value="优化系统" />
+    <MESSAGE value="优化系统1" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化系统1" />
   </component>
 </project>

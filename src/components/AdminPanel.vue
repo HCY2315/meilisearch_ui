@@ -169,6 +169,13 @@
                 <label for="lock-toggle">启用锁定 (需要 Token 访问)</label>
               </div>
             </div>
+            <div class="input-group">
+              <label>前台显示</label>
+              <div class="toggle-group">
+                <input type="checkbox" v-model="newIndex.isVisible" id="visible-toggle">
+                <label for="visible-toggle">在前台索引列表中显示</label>
+              </div>
+            </div>
           </div>
           <div class="editor-actions">
             <button class="btn btn-primary" @click="saveIndexConfig">保存策略</button>
@@ -195,7 +202,10 @@
                 </div>
               </td>
               <td>
-                <span :class="['status-badge', cfg.isLocked ? 'status-err' : 'status-ok']">
+                <span :class="['status-badge', cfg.isVisible === false ? 'status-err' : 'status-ok']">
+                  {{ cfg.isVisible === false ? '🙈 前台隐藏' : '👁️ 前台显示' }}
+                </span>
+                <span :class="['status-badge', cfg.isLocked ? 'status-err' : 'status-ok']" style="margin-left: 8px;">
                   {{ cfg.isLocked ? '🔒 私有锁定' : '🌐 公开访问' }}
                 </span>
               </td>
@@ -765,7 +775,7 @@ async function handleCancelTask(task: any) {
 
 const showAddIndexConf = ref(false)
 const editingIndexId = ref<number | null>(null)
-const newIndex = ref({ uid: '', alias: '', description: '', isLocked: false, fieldConfigs: '', viewConfigs: '', tableConfigs: '', canEdit: false })
+const newIndex = ref({ uid: '', alias: '', description: '', isVisible: true, isLocked: false, fieldConfigs: '', viewConfigs: '', tableConfigs: '', canEdit: false })
 
 const showAddToken = ref(false)
 const editingTokenId = ref<number | null>(null)
@@ -882,6 +892,7 @@ function editIndex(cfg: any) {
     uid: cfg.uid,
     alias: cfg.alias,
     description: cfg.description,
+    isVisible: cfg.isVisible !== false,
     isLocked: cfg.isLocked,
     fieldConfigs: cfg.fieldConfigs || '',
     viewConfigs: cfg.viewConfigs || '',
@@ -894,7 +905,7 @@ function editIndex(cfg: any) {
 function cancelIndexEdit() {
   showAddIndexConf.value = false
   editingIndexId.value = null
-  newIndex.value = { uid: '', alias: '', description: '', isLocked: false, fieldConfigs: '', viewConfigs: '', tableConfigs: '', canEdit: false }
+  newIndex.value = { uid: '', alias: '', description: '', isVisible: true, isLocked: false, fieldConfigs: '', viewConfigs: '', tableConfigs: '', canEdit: false }
 }
 
 async function submitIndexConfig(payload: any) {

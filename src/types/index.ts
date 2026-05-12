@@ -35,6 +35,7 @@ export interface IndexListResponse {
 
 export interface IndexItem {
   uid: string
+  isVisible?: boolean
   isLocked?: boolean
   isUnlocked?: boolean
   displayName?: string
@@ -81,6 +82,7 @@ export interface SearchResponse {
 export interface IndexInfo {
   uid: string
   count?: number
+  isVisible?: boolean
   isLocked?: boolean
   isUnlocked?: boolean
   displayName?: string

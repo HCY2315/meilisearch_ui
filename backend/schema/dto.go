@@ -17,6 +17,7 @@ type IndexConfigRequest struct {
 	Uid                string `json:"uid" binding:"required"`
 	Alias              string `json:"alias"`
 	Description        string `json:"description"`
+	IsVisible          bool   `json:"isVisible"`
 	IsLocked           bool   `json:"isLocked"`
 	FieldConfigs       string `json:"fieldConfigs"`
 	ViewConfigs        string `json:"viewConfigs"`

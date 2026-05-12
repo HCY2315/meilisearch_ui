@@ -852,7 +852,7 @@ function handleClose() {
 
 .hidden-hint {
   font-size: 11.5px;
-  color: rgba(255,200,100,0.7);
+  color: #48bb78;
 }
 
 /* ─── 字段配置面板 ──────────────────────────────────────────────────────────── */
@@ -1017,7 +1017,7 @@ function handleClose() {
 .all-hidden-tip {
   padding: 32px 20px;
   text-align: center;
-  color: rgba(255,200,100,0.6);
+  color: #48bb78;
   font-size: 13px;
 }
 
@@ -1167,18 +1167,18 @@ function handleClose() {
   gap: 3px;
   padding: 2px 8px;
   border-radius: 4px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(72, 187, 120, 0.3);
+  background: rgba(72, 187, 120, 0.08);
+  color: #48bb78;
   font-size: 11.5px;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .btn-drill:hover {
-  background: rgba(99,179,237,0.15);
-  color: #63b3ed;
-  border-color: rgba(99,179,237,0.3);
+  background: rgba(72, 187, 120, 0.2);
+  color: #38a169;
+  border-color: rgba(72, 187, 120, 0.5);
 }
 
 /* ─── 动画 ──────────────────────────────────────────────────────────────────── */

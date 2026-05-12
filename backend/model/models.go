@@ -21,6 +21,7 @@ type IndexConfig struct {
 	Uid                string `gorm:"uniqueIndex;not null" json:"uid"`
 	Alias              string `gorm:"size:255" json:"alias"`
 	Description        string `gorm:"size:512" json:"description"`
+	IsVisible          bool   `gorm:"default:true" json:"isVisible"`
 	IsLocked           bool   `gorm:"default:false" json:"isLocked"`
 	FieldConfigs       string `gorm:"type:text" json:"fieldConfigs"`       // JSON: Field settings
 	ViewConfigs        string `gorm:"type:text" json:"viewConfigs"`        // JSON: Custom views

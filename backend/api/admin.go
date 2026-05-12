@@ -128,6 +128,7 @@ func HandleSaveIndexConfig(c *gin.Context) {
 			Uid:                req.Uid,
 			Alias:              req.Alias,
 			Description:        req.Description,
+			IsVisible:          req.IsVisible,
 			IsLocked:           req.IsLocked,
 			FieldConfigs:       req.FieldConfigs,
 			ViewConfigs:        req.ViewConfigs,
@@ -140,6 +141,7 @@ func HandleSaveIndexConfig(c *gin.Context) {
 		// Update
 		config.Alias = req.Alias
 		config.Description = req.Description
+		config.IsVisible = req.IsVisible
 		config.IsLocked = req.IsLocked
 		config.FieldConfigs = req.FieldConfigs
 		config.ViewConfigs = req.ViewConfigs

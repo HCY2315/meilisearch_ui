@@ -62,6 +62,7 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
       results.push({ 
         uid: idx.uid, 
         count: statsResp.data.numberOfDocuments,
+        isVisible: idx.isVisible,
         isLocked: idx.isLocked,
         isUnlocked: idx.isUnlocked,
         displayName: idx.displayName,
@@ -76,6 +77,7 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
     } catch {
       results.push({ 
         uid: idx.uid,
+        isVisible: idx.isVisible,
         isLocked: idx.isLocked,
         isUnlocked: idx.isUnlocked,
         displayName: idx.displayName,
