@@ -1304,4 +1304,39 @@ function handleClose() {
   white-space: pre-wrap; word-break: break-all; overflow-y: auto;
   color: var(--text-primary); max-height: 250px;
 }
+
+@media (max-width: 768px) {
+  .nd-drawer {
+    width: 100%;
+    min-width: 0;
+    border-left: none;
+  }
+
+  .nd-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .bc-item {
+    max-width: 120px;
+  }
+
+  .config-panel {
+    max-height: 240px;
+  }
+
+  .nd-body {
+    padding: 12px;
+  }
+
+  .mini-table {
+    font-size: 12px;
+    min-width: 260px;
+  }
+
+  .preview-popup {
+    max-width: calc(100vw - 24px);
+    max-height: 50vh;
+  }
+}
 </style>

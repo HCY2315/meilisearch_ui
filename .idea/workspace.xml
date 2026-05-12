@@ -4,7 +4,14 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="优化系统1" />
+    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="适配移动端">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/data/meili_admin.db" beforeDir="false" afterPath="$PROJECT_DIR$/backend/data/meili_admin.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/AdminPanel.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/AdminPanel.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/Modals.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Modals.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/NestedDataDrawer.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/NestedDataDrawer.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ResultsTable.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ResultsTable.vue" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -136,6 +143,7 @@
     <MESSAGE value="自动备份: 2026-05-08 12:40:07" />
     <MESSAGE value="优化系统" />
     <MESSAGE value="优化系统1" />
-    <option name="LAST_COMMIT_MESSAGE" value="优化系统1" />
+    <MESSAGE value="适配移动端" />
+    <option name="LAST_COMMIT_MESSAGE" value="适配移动端" />
   </component>
 </project>

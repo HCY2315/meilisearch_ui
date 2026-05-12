@@ -717,4 +717,63 @@ async function copyResultJson() {
   margin-bottom: 10px;
 }
 .adv-setting-item:last-child { margin-bottom: 0; }
+
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+  }
+
+  .modal,
+  .modal-lg {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+    height: 100vh;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .modal-header {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .modal-body {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 10px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  .field-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .detail-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .detail-row strong {
+    min-width: 0;
+  }
+}
 </style>

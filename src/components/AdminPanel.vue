@@ -290,51 +290,89 @@
           <p>审核来自前台用户的 Token 申请请求。</p>
         </header>
 
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>申请人</th>
-              <th>联系方式</th>
-              <th>详细信息</th>
-              <th>申请索引</th>
-              <th>状态</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="app in tokenApplications" :key="app.id">
-              <td>
-                <div class="user-info">
-                  <strong>{{ app.name }}</strong>
-                  <span class="meta">{{ app.gender }} | {{ app.birthday }}</span>
-                </div>
-              </td>
-              <td><code>{{ app.email }}</code></td>
-              <td>
-                <div class="purpose-info" :title="app.purpose">
-                  {{ app.purpose || '无说明' }}
-                </div>
-              </td>
-              <td>
-                <div class="index-tags">
-                  <span v-for="idx in JSON.parse(app.allowIndexes || '[]')" :key="idx" class="tag">{{ idx }}</span>
-                </div>
-              </td>
-              <td>
-                <span :class="['status-badge', app.status === 1 ? 'status-ok' : (app.status === 2 ? 'status-err' : 'status-warn')]">
-                  {{ app.status === 1 ? '已通过' : (app.status === 2 ? '已驳回' : '待审批') }}
-                </span>
-              </td>
-              <td>
-                <div v-if="app.status === 0" style="display:flex; gap:8px">
-                  <button class="btn btn-primary btn-sm" @click="openApproveModal(app)">通过</button>
-                  <button class="btn btn-danger btn-sm" @click="openRejectModal(app)">驳回</button>
-                </div>
-                <span v-else class="text-muted">已处理</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="applications-table">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>申请人</th>
+                <th>联系方式</th>
+                <th>详细信息</th>
+                <th>申请索引</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="app in tokenApplications" :key="app.id">
+                <td>
+                  <div class="user-info">
+                    <strong>{{ app.name }}</strong>
+                    <span class="meta">{{ app.gender }} | {{ app.birthday }}</span>
+                  </div>
+                </td>
+                <td><code>{{ app.email }}</code></td>
+                <td>
+                  <div class="purpose-info" :title="app.purpose">
+                    {{ app.purpose || '无说明' }}
+                  </div>
+                </td>
+                <td>
+                  <div class="index-tags">
+                    <span v-for="idx in parseAllowIndexes(app.allowIndexes)" :key="idx" class="tag">{{ idx }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span :class="['status-badge', app.status === 1 ? 'status-ok' : (app.status === 2 ? 'status-err' : 'status-warn')]">
+                    {{ app.status === 1 ? '已通过' : (app.status === 2 ? '已驳回' : '待审批') }}
+                  </span>
+                </td>
+                <td>
+                  <div v-if="app.status === 0" style="display:flex; gap:8px">
+                    <button class="btn btn-primary btn-sm" @click="openApproveModal(app)">通过</button>
+                    <button class="btn btn-danger btn-sm" @click="openRejectModal(app)">驳回</button>
+                  </div>
+                  <span v-else class="text-muted">已处理</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="applications-mobile">
+          <div v-if="tokenApplications.length === 0" class="empty-state">暂无申请记录</div>
+          <div v-for="app in tokenApplications" :key="`mobile-${app.id}`" class="application-card">
+            <div class="application-card-header">
+              <div class="user-info">
+                <strong>{{ app.name }}</strong>
+                <span class="meta">{{ app.gender }} | {{ app.birthday }}</span>
+              </div>
+              <span :class="['status-badge', app.status === 1 ? 'status-ok' : (app.status === 2 ? 'status-err' : 'status-warn')]">
+                {{ app.status === 1 ? '已通过' : (app.status === 2 ? '已驳回' : '待审批') }}
+              </span>
+            </div>
+            <div class="application-field">
+              <label>联系方式</label>
+              <code>{{ app.email }}</code>
+            </div>
+            <div class="application-field">
+              <label>用途说明</label>
+              <div class="application-purpose">{{ app.purpose || '无说明' }}</div>
+            </div>
+            <div class="application-field">
+              <label>申请索引</label>
+              <div class="index-tags">
+                <span v-for="idx in parseAllowIndexes(app.allowIndexes)" :key="`mobile-idx-${app.id}-${idx}`" class="tag">{{ idx }}</span>
+              </div>
+            </div>
+            <div class="application-actions">
+              <template v-if="app.status === 0">
+                <button class="btn btn-primary btn-sm" @click="openApproveModal(app)">通过</button>
+                <button class="btn btn-danger btn-sm" @click="openRejectModal(app)">驳回</button>
+              </template>
+              <span v-else class="text-muted">已处理</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- 3. Meilisearch 索引设置 -->
@@ -658,6 +696,16 @@ const approveForm = ref({ token: '', allowIndexes: [] as string[], description: 
 const rejectModalOpen = ref(false)
 const pendingRejectApp = ref<any | null>(null)
 const rejectForm = ref({ rejectMessage: '' })
+
+function parseAllowIndexes(raw: string | null | undefined): string[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
 
 function openApproveModal(app: any) {
   pendingApproveApp.value = app
@@ -1168,6 +1216,51 @@ onMounted(() => {
 }
 .text-muted { color: var(--text-muted); font-size: 12px; }
 
+.applications-mobile {
+  display: none;
+}
+
+.application-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.application-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.application-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.application-field label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.application-purpose {
+  color: var(--text-main);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.application-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 6px;
+}
+
 .section-header { margin-bottom: 40px; display: flex; flex-direction: column; gap: 8px; position: relative; }
 .section-header h1 { font-family: 'Outfit'; font-size: 32px; font-weight: 700; color: var(--text-main); }
 .section-header h1 span { font-weight: 300; opacity: 0.3; margin-left: 8px; font-size: 0.6em; }
@@ -1556,6 +1649,24 @@ onMounted(() => {
   
   .data-grid {
     grid-template-columns: 1fr;
+  }
+
+  .applications-table {
+    display: none;
+  }
+
+  .applications-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .application-actions .btn {
+    flex: 1;
+  }
+
+  .application-card .index-tags {
+    gap: 6px;
   }
   
   .tasks-modal {

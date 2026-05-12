@@ -546,6 +546,32 @@ function startResize(e: MouseEvent, col: string) {
 
 /* ============ Mobile Responsiveness ============ */
 @media (max-width: 768px) {
+  .table-wrap.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .results-table {
+    font-size: 12px;
+    min-width: 680px;
+  }
+
+  .results-table th,
+  .results-table td {
+    padding: 6px 8px;
+  }
+
+  .th-label {
+    gap: 2px;
+  }
+
+  .pagination {
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+
   .custom-row-columns {
     grid-template-columns: 1fr !important;
   }
