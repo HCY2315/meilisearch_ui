@@ -997,6 +997,27 @@ onMounted(() => {
 
 .content-section { max-width: 1000px; }
 
+.user-info { display: flex; flex-direction: column; gap: 2px; }
+.user-info strong { font-size: 14px; color: var(--text-primary); }
+.user-info .meta { font-size: 11px; color: var(--text-muted); }
+.purpose-info { 
+  max-width: 200px; 
+  font-size: 13px; 
+  color: var(--text-secondary); 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+}
+.index-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.index-tags .tag { 
+  background: rgba(var(--primary-color-rgb), 0.1); 
+  color: var(--primary-color); 
+  padding: 2px 6px; 
+  border-radius: 4px; 
+  font-size: 11px; 
+}
+.text-muted { color: var(--text-muted); font-size: 12px; }
+
 .section-header { margin-bottom: 40px; display: flex; flex-direction: column; gap: 8px; position: relative; }
 .section-header h1 { font-family: 'Outfit'; font-size: 32px; font-weight: 700; color: white; }
 .section-header h1 span { font-weight: 300; opacity: 0.3; margin-left: 8px; font-size: 0.6em; }
