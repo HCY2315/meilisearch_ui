@@ -375,6 +375,50 @@
         </div>
       </section>
 
+      <section v-if="activeTab === 'metrics'" class="content-section">
+        <header class="section-header">
+          <h1>用量监控 <span>Usage Metrics</span></h1>
+          <p>按天统计查询请求、文档导入量和存储空间占用（仅保留最近六个月）。</p>
+        </header>
+
+        <div class="data-grid metrics-grid">
+          <div class="data-card">
+            <h4>总查询量</h4>
+            <strong class="metric-value">{{ totalQueryCount.toLocaleString() }}</strong>
+          </div>
+          <div class="data-card">
+            <h4>总导入量</h4>
+            <strong class="metric-value">{{ totalImportCount.toLocaleString() }}</strong>
+          </div>
+          <div class="data-card">
+            <h4>当前存储占用</h4>
+            <strong class="metric-value">{{ formatBytes(latestDatabaseSize) }}</strong>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>查询量</th>
+              <th>导入量</th>
+              <th>存储占用</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in usageMetrics" :key="item.date">
+              <td>{{ item.date }}</td>
+              <td>{{ Number(item.queryCount || 0).toLocaleString() }}</td>
+              <td>{{ Number(item.importCount || 0).toLocaleString() }}</td>
+              <td>{{ formatBytes(Number(item.databaseSize || 0)) }}</td>
+            </tr>
+            <tr v-if="usageMetrics.length === 0">
+              <td colspan="4" class="text-muted">暂无统计数据</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
       <!-- 3. Meilisearch 索引设置 -->
       <section v-if="activeTab === 'search'" class="content-section">
         <header class="section-header">
@@ -610,7 +654,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { generateUUID } from '@/utils'
 import {
   getAdminIndexConfigs,
@@ -635,7 +679,8 @@ import {
   cancelMeiliTask,
   getApplications,
   approveApplication,
-  rejectApplication
+  rejectApplication,
+  getAdminUsageMetrics
 } from '@/services/api'
 
 function formatDuration(isoDuration: string | undefined): string {
@@ -679,6 +724,7 @@ const tabs = [
   { id: 'security', label: '安全锁库', icon: '🛡️' },
   { id: 'tokens', label: '凭证分发', icon: '🎫' },
   { id: 'applications', label: '申请管理', icon: '📝' },
+  { id: 'metrics', label: '用量监控', icon: '📊' },
   { id: 'search', label: '搜索配置', icon: '🔍' },
   { id: 'settings', label: '应用设置', icon: '⚙️' },
   { id: 'password', label: '账户安全', icon: '🔐' },
@@ -690,6 +736,7 @@ const apps = ref<any[]>([])
 const instances = ref<any[]>([])
 const availableIndexes = ref<string[]>([])
 const tokenApplications = ref<any[]>([])
+const usageMetrics = ref<any[]>([])
 const approveModalOpen = ref(false)
 const pendingApproveApp = ref<any | null>(null)
 const approveForm = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: 30 })
@@ -840,6 +887,26 @@ const allFieldsForIndex = ref<string[]>([])
 const isSavingSearch = ref(false)
 const draggedIndex = ref<number | null>(null)
 
+const totalQueryCount = computed(() => usageMetrics.value.reduce((sum, item) => sum + Number(item.queryCount || 0), 0))
+const totalImportCount = computed(() => usageMetrics.value.reduce((sum, item) => sum + Number(item.importCount || 0), 0))
+const latestDatabaseSize = computed(() => {
+  if (!usageMetrics.value.length) return 0
+  const last = usageMetrics.value[usageMetrics.value.length - 1]
+  return Number(last.databaseSize || 0)
+})
+
+function formatBytes(bytes: number): string {
+  if (!bytes || bytes <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let n = bytes
+  let i = 0
+  while (n >= 1024 && i < units.length - 1) {
+    n /= 1024
+    i++
+  }
+  return `${n.toFixed(i === 0 ? 0 : 2)} ${units[i]}`
+}
+
 
 function openAddToken() {
   showAddToken.value = true
@@ -863,13 +930,14 @@ function isExpired(date: string | null) {
 
 async function loadAdminData() {
   try {
-    const [idxData, tokData, appsData, proxyData, insData, applicationData] = await Promise.all([
+    const [idxData, tokData, appsData, proxyData, insData, applicationData, metricsData] = await Promise.all([
       getAdminIndexConfigs(),
       getAdminAccessTokens(),
       getAdminApps(),
       getProxyIndexes(),
       getAdminInstances(),
-      getApplications()
+      getApplications(),
+      getAdminUsageMetrics()
     ])
 
     indexConfigs.value = idxData as any[]
@@ -877,6 +945,7 @@ async function loadAdminData() {
     apps.value = appsData as any[]
     instances.value = insData as any[]
     tokenApplications.value = applicationData as any[]
+    usageMetrics.value = metricsData as any[]
     if (proxyData.results) {
       availableIndexes.value = proxyData.results.map(r => r.uid)
     }
@@ -1194,6 +1263,8 @@ onMounted(() => {
 .admin-main { flex: 1; margin-left: 260px; padding: 48px 64px; }
 
 .content-section { max-width: 1000px; }
+.metric-value { display: inline-block; margin-top: 8px; font-size: 24px; font-weight: 700; }
+.metrics-grid { margin-bottom: 20px; }
 
 .user-info { display: flex; flex-direction: column; gap: 2px; }
 .user-info strong { font-size: 14px; color: var(--text-primary); }

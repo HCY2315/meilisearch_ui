@@ -628,3 +628,11 @@ export async function rejectApplication(id: number, data?: Record<string, unknow
   if (!res.ok) return { ok: false, message: payload.error || '驳回失败' }
   return { ok: true, message: payload.message || '驳回成功' }
 }
+
+export async function getAdminUsageMetrics(): Promise<any[]> {
+  const headers = getAuthHeaders()
+  const res = await fetch('/api/v1/admin/usage_metrics', { headers })
+  if (!res.ok) return []
+  const payload = await res.json().catch(() => ({ results: [] }))
+  return payload.results || []
+}
