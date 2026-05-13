@@ -1,7 +1,9 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -98,6 +100,21 @@ func HandleProxy(c *gin.Context) {
 		}
 	}
 
+	method := c.Request.Method
+	pathSuffix := c.Request.URL.Path
+	isSearchReq := strings.HasSuffix(pathSuffix, "/search") || strings.HasSuffix(pathSuffix, "/multi-search")
+	if isSearchReq && (method == http.MethodGet || method == http.MethodPost) {
+		increaseQueryMetric(1)
+	}
+
+	if (strings.HasSuffix(pathSuffix, "/documents") || strings.Contains(pathSuffix, "/documents?")) &&
+		(method == http.MethodPost || method == http.MethodPut) {
+		if n := estimateImportCountFromBody(c); n > 0 {
+			increaseImportMetric(n)
+			refreshTodayStorageMetric()
+		}
+	}
+
 	target, _ := url.Parse(instance.Host)
 	proxy := httputil.NewSingleHostReverseProxy(target)
 
@@ -111,4 +128,28 @@ func HandleProxy(c *gin.Context) {
 	}
 
 	proxy.ServeHTTP(c.Writer, c.Request)
+}
+
+func estimateImportCountFromBody(c *gin.Context) int64 {
+	if c.Request.Body == nil {
+		return 0
+	}
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		return 0
+	}
+	c.Request.Body = io.NopCloser(bytes.NewReader(body))
+	if len(bytes.TrimSpace(body)) == 0 {
+		return 0
+	}
+
+	var arr []map[string]any
+	if err := json.Unmarshal(body, &arr); err == nil {
+		return int64(len(arr))
+	}
+	var single map[string]any
+	if err := json.Unmarshal(body, &single); err == nil && len(single) > 0 {
+		return 1
+	}
+	return 0
 }
