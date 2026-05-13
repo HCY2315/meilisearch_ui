@@ -480,6 +480,7 @@
             <div class="sub-tabs">
               <button :class="['sub-tab', { active: subTab === 'searchable' }]" @click="subTab = 'searchable'">🔍 搜索权重 (Searchable)</button>
               <button :class="['sub-tab', { active: subTab === 'filterable' }]" @click="subTab = 'filterable'">📋 过滤构建 (Filterable)</button>
+              <button :class="['sub-tab', { active: subTab === 'embedding' }]" @click="subTab = 'embedding'">🧠 Embedding 模型</button>
             </div>
 
             <div v-if="subTab === 'searchable'" class="settings-pane animate-fade-in">
@@ -535,6 +536,55 @@
                     </label>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div v-if="subTab === 'embedding'" class="settings-pane animate-fade-in">
+              <div class="input-group">
+                <label>配置索引 Embedding 模型</label>
+                <p class="helper-text" style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+                  这里会更新 Meilisearch 的 embedders 设置。建议先配置一套默认模型，再按需扩展高级参数。
+                </p>
+                <label class="checkbox-container" style="margin-bottom: 16px;">
+                  <input type="checkbox" v-model="embeddingEnabled">
+                  <span class="checkmark"></span>
+                  <span class="field-name">启用 Embedding（关闭时将清空当前索引的 embedders）</span>
+                </label>
+
+                <template v-if="embeddingEnabled">
+                  <div class="grid-inputs">
+                    <div class="input-group">
+                      <label>Embedder 名称</label>
+                      <input v-model="currentEmbedderName" class="form-control" placeholder="default">
+                    </div>
+                    <div class="input-group">
+                      <label>来源 (Source)</label>
+                      <select v-model="currentEmbedder.source" class="form-control">
+                        <option value="openAi">openAi</option>
+                        <option value="huggingFace">huggingFace</option>
+                        <option value="ollama">ollama</option>
+                        <option value="rest">rest</option>
+                        <option value="userProvided">userProvided</option>
+                      </select>
+                    </div>
+                    <div class="input-group">
+                      <label>模型名 (Model)</label>
+                      <input v-model="currentEmbedder.model" class="form-control" placeholder="text-embedding-3-small / BAAI/bge-base-en-v1.5">
+                    </div>
+                    <div class="input-group">
+                      <label>向量维度 (可选)</label>
+                      <input type="number" min="1" v-model.number="currentEmbedder.dimensions" class="form-control" placeholder="1536">
+                    </div>
+                    <div class="input-group">
+                      <label>API 地址 / URL (可选)</label>
+                      <input v-model="currentEmbedder.url" class="form-control" placeholder="https://api.openai.com/v1/embeddings">
+                    </div>
+                    <div class="input-group">
+                      <label>API Key (可选)</label>
+                      <input type="password" v-model="currentEmbedder.apiKey" class="form-control" placeholder="sk-...">
+                    </div>
+                  </div>
+                </template>
               </div>
             </div>
 
