@@ -135,4 +135,3 @@ func HandleGetUsageMetrics(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"results": metrics})
 }
-

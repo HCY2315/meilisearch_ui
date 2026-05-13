@@ -97,10 +97,10 @@ func seedData() {
 		DB.Create(&testInstance)
 
 		testApp := model.Application{
-			Name: "默认前台",
-			AppKey: "default-app-key",
-			InstanceID: testInstance.ID,
-			UIConfig: `{"theme":"dark", "title":"🔍 多维查询系统"}`,
+			Name:         "默认前台",
+			AppKey:       "default-app-key",
+			InstanceID:   testInstance.ID,
+			UIConfig:     `{"theme":"dark", "title":"🔍 多维查询系统"}`,
 			AllowIndexes: `[]`,
 		}
 		DB.Create(&testApp)
