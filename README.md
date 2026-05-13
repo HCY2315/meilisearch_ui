@@ -1,20 +1,121 @@
+# 🚀 MeiliSearch UI
+
+MeiliSearch UI 是一款专为 Meilisearch 打造的现代化、功能全面且高性能的管理后台与搜索界面系统。它不仅提供了直观的索引管理和数据探索功能，还深度集成了 SaaS 多租户架构、安全网关代理以及完善的访问控制体系。
+
+---
+
+## ✨ 核心特性
+
+### 🔍 卓越的搜索与探索体验
+*   **即时搜索 (Instant Search)**：基于 Meilisearch 的高性能特性，提供毫秒级的搜索响应。
+*   **嵌套数据查看器 (Nested Data Viewer)**：
+    *   独创的深层 JSON 数据可视化展示。
+    *   支持无限层级点击下钻，方便查看复杂的嵌套文档结构。
+*   **高级过滤面板 (Filter Drawer)**：
+    *   动态生成过滤项，支持布尔、数值范围和分类过滤。
+*   **高度可定制的搜索结果表**：
+    *   自定义列的显示与隐藏。
+    *   拖拽调整列顺序，并持久化保存用户配置。
+
+### 🛠️ 深度索引管理与数据导入
+*   **可视化配置中心**：
+    *   管理 `Searchable Attributes`、`Filterable Attributes`、`Sortable Attributes`。
+    *   配置 `Stop Words`、`Synonyms` 和 `Typo Tolerance`。
+*   **权重调整 (Ranking Rules)**：通过拖拽方式直观调整搜索字段的排序权重。
+*   **资产管理与批量导入**：
+    *   支持 **JSON 文件上传** 与 **JSON 文本输入** 两种模式。
+    *   **实时数据预览**：导入前可预览解析结果，支持分页查看。
+    *   **智能解析校验**：自动校验 JSON 格式并提供详细的错误反馈。
+    *   **导入进度监控**：可视化展示大规模数据导入的实时进度。
+*   **索引生命周期**：轻松创建（支持自定义 UID 和主键）、重命名、清空或删除索引。
+
+### 🛡️ 企业级安全与访问控制
+*   **代理网关 (Proxy Gateway)**：
+    *   所有客户端请求经由 Go 后端代理，隐藏真实的 Meilisearch 地址和 Master Key。
+    *   实现请求限流、黑白名单和详细的日志审计。
+*   **Token 申请与审批流**：
+    *   面向外部用户的 Token 申请页面。
+    *   集成 163 邮箱验证码校验，防止恶意申请。
+    *   管理员后台一键审批/拒绝，自动生成并分发受限权限的凭证。
+
+### 🏢 基础多租户支持
+*   **访问权限隔离**：支持针对索引(Index)级别的可见性控制与上锁功能。
+*   **Token 凭证系统**：支持发放限时、限索引范围的 App-Token，确保数据访问的最小化授权。
+
+### 📊 任务监控 (Task Management)
+*   **实时任务流水线**：实时监控 Meilisearch 的异步任务（如文档更新、索引创建）。
+*   **任务控制**：支持对正在运行或排队中的任务进行取消或强制终止。
+*   **性能分析**：提供任务耗时的精准展示，帮助优化索引效率。
+
+### 📱 全平台适配
+*   **极致响应式设计**：完美适配手机、平板及桌面设备。
+*   **暗黑模式支持**：提供舒适的视觉体验。
+
+---
+
+## 📅 待实现 / 规划中 (Roadmap)
+
+*   **⚡ 配额管理 (Quota Management)**：
+    *   实时监控查询量、文档导入量及存储空间使用情况。
+    *   基于套餐等级的用量自动限流。
+*   **📊 商业化仪表盘**：租户用量统计与可视化账单预览。
+*   **🤖 AI 语义搜索**：集成向量检索功能，实现更智能的搜索体验。
+*   **📤 多格式导出**：支持 CSV、Excel 等更多数据导出格式。
+
+---
+
+## 🛠️ 技术栈
+
+### 前端
+*   **框架**: Vue 3 (Composition API)
+*   **构建工具**: Vite
+*   **状态管理**: Pinia
+*   **样式**: Vanilla CSS + 现代 CSS 特性 (Grid, Flexbox)
+*   **语言**: TypeScript
+
+### 后端
+*   **核心**: Golang
+*   **Web 框架**: Gin
+*   **数据库**: GORM (SQLite/MySQL)
+*   **搜索引擎**: Meilisearch
+
+---
+
+## 🚀 快速开始
+
+### 1. 克隆项目
+```bash
+git clone https://github.com/your-repo/meilisearch_ui.git
+cd meilisearch_ui
 ```
-src/
-├── composables/
-│   ├── index.ts                    # 统一导出
-│   ├── useConnectionStore.ts       # 连接
-│   ├── useSearchStore.ts       # 搜索
-│   ├── useUIStore.ts       # UI
-│   ├── useImportStore.ts # 导入/导出
-│   └── useAssetStore.ts   # 资产
-├── services/
-│   └── api.ts              # 统一 API 封装
-├── components/
-│   ├── SearchSection.vue    # 已迁移
-│   ├── AdminPanel.vue    # 已迁移
-│   └── ...
-├── views/
-│   ├── SearchMain.vue   # 已迁移
-│   └── Login.vue      # 已迁移
-└── main.ts             # 全局错误拦截
+
+### 2. 后端启动
+```bash
+cd backend
+go mod tidy
+go run main.go
 ```
+
+### 3. 前端启动
+```bash
+npm install
+npm run dev
+```
+
+### 4. 环境变量配置
+在 `backend/config` 中配置您的 Meilisearch 地址、Master Key 以及数据库连接信息。
+
+---
+
+## 🏗️ 系统架构图 (简述)
+
+1.  **用户终端**：Vue 3 编写的高级交互界面。
+2.  **安全代理层 (Go)**：负责身份校验、租户识别、配额检查及请求转发。
+3.  **核心引擎 (Meilisearch)**：处理极速搜索和索引存储。
+4.  **管理后台 (Admin)**：管理员用于配置租户、审批 Token 和监控系统状态。
+
+---
+
+## 📝 许可证
+
+本项目遵循 MIT 许可证。
