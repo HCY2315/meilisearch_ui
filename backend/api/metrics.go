@@ -23,9 +23,10 @@ func sixMonthsAgoDate() string {
 
 func cleanupUsageMetrics() {
 	_ = repository.DB.Where("date < ?", sixMonthsAgoDate()).Delete(&model.UsageMetric{}).Error
+	_ = repository.DB.Where("date < ?", sixMonthsAgoDate()).Delete(&model.UsageMetricIndex{}).Error
 }
 
-func increaseQueryMetric(count int64) {
+func increaseQueryMetric(count int64, indexUID string) {
 	if count <= 0 {
 		return
 	}
@@ -38,11 +39,24 @@ func increaseQueryMetric(count int64) {
 			UpdateColumn("query_count", gorm.Expr("query_count + ?", count)).Error; err != nil {
 			return err
 		}
+		if indexUID != "" {
+			if err := tx.Where("date = ? AND index_uid = ?", date, indexUID).
+				FirstOrCreate(&model.UsageMetricIndex{Date: date, IndexUID: indexUID}).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&model.UsageMetricIndex{}).Where("date = ? AND index_uid = ?", date, indexUID).
+				UpdateColumn("query_count", gorm.Expr("query_count + ?", count)).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("date < ?", sixMonthsAgoDate()).Delete(&model.UsageMetricIndex{}).Error; err != nil {
+			return err
+		}
 		return tx.Where("date < ?", sixMonthsAgoDate()).Delete(&model.UsageMetric{}).Error
 	})
 }
 
-func increaseImportMetric(count int64) {
+func increaseImportMetric(count int64, indexUID string) {
 	if count <= 0 {
 		return
 	}
@@ -55,10 +69,20 @@ func increaseImportMetric(count int64) {
 			UpdateColumn("import_count", gorm.Expr("import_count + ?", count)).Error; err != nil {
 			return err
 		}
+		if indexUID != "" {
+			if err := tx.Where("date = ? AND index_uid = ?", date, indexUID).
+				FirstOrCreate(&model.UsageMetricIndex{Date: date, IndexUID: indexUID}).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&model.UsageMetricIndex{}).Where("date = ? AND index_uid = ?", date, indexUID).
+				UpdateColumn("import_count", gorm.Expr("import_count + ?", count)).Error; err != nil {
+				return err
+			}
+		}
 		if err := tx.Where("date < ?", sixMonthsAgoDate()).Delete(&model.UsageMetric{}).Error; err != nil {
 			return err
 		}
-		return nil
+		return tx.Where("date < ?", sixMonthsAgoDate()).Delete(&model.UsageMetricIndex{}).Error
 	})
 }
 
@@ -133,5 +157,21 @@ func HandleGetUsageMetrics(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load usage metrics"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"results": metrics})
+
+	type indexAgg struct {
+		IndexUID    string `json:"indexUid"`
+		QueryCount  int64  `json:"queryCount"`
+		ImportCount int64  `json:"importCount"`
+	}
+	var indexMetrics []indexAgg
+	if err := repository.DB.Model(&model.UsageMetricIndex{}).
+		Select("index_uid, SUM(query_count) as query_count, SUM(import_count) as import_count").
+		Group("index_uid").
+		Order("query_count desc, import_count desc").
+		Scan(&indexMetrics).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load index usage metrics"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"results": metrics, "indexResults": indexMetrics})
 }

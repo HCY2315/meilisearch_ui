@@ -629,10 +629,13 @@ export async function rejectApplication(id: number, data?: Record<string, unknow
   return { ok: true, message: payload.message || '驳回成功' }
 }
 
-export async function getAdminUsageMetrics(): Promise<any[]> {
+export async function getAdminUsageMetrics(): Promise<{ results: any[]; indexResults: any[] }> {
   const headers = getAuthHeaders()
   const res = await fetch('/api/v1/admin/usage_metrics', { headers })
-  if (!res.ok) return []
-  const payload = await res.json().catch(() => ({ results: [] }))
-  return payload.results || []
+  if (!res.ok) return { results: [], indexResults: [] }
+  const payload = await res.json().catch(() => ({ results: [], indexResults: [] }))
+  return {
+    results: payload.results || [],
+    indexResults: payload.indexResults || [],
+  }
 }

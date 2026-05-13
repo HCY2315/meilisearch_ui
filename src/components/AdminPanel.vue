@@ -396,6 +396,23 @@
           </div>
         </div>
 
+        <div class="glass-editor chart-panel">
+          <h3>按天趋势（查询量 / 导入量）</h3>
+          <div v-if="chartPointsQuery.length" class="line-chart-wrap">
+            <svg viewBox="0 0 1000 260" preserveAspectRatio="none" class="line-chart">
+              <line x1="40" y1="220" x2="980" y2="220" class="axis-line" />
+              <line x1="40" y1="20" x2="40" y2="220" class="axis-line" />
+              <polyline :points="chartPointsQuery" class="line-query" />
+              <polyline :points="chartPointsImport" class="line-import" />
+            </svg>
+            <div class="chart-legend">
+              <span class="legend-item"><i class="legend-dot query"></i>查询量</span>
+              <span class="legend-item"><i class="legend-dot import"></i>导入量</span>
+            </div>
+          </div>
+          <div v-else class="text-muted">暂无趋势数据</div>
+        </div>
+
         <table class="data-table">
           <thead>
             <tr>
@@ -417,6 +434,29 @@
             </tr>
           </tbody>
         </table>
+
+        <div class="glass-editor" style="margin-top: 20px;">
+          <h3>按索引维度统计（六个月汇总）</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>索引</th>
+                <th>查询量</th>
+                <th>导入量</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in indexUsageMetrics" :key="item.indexUid">
+                <td>{{ item.indexUid }}</td>
+                <td>{{ Number(item.queryCount || 0).toLocaleString() }}</td>
+                <td>{{ Number(item.importCount || 0).toLocaleString() }}</td>
+              </tr>
+              <tr v-if="indexUsageMetrics.length === 0">
+                <td colspan="3" class="text-muted">暂无索引维度数据</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <!-- 3. Meilisearch 索引设置 -->
@@ -737,6 +777,7 @@ const instances = ref<any[]>([])
 const availableIndexes = ref<string[]>([])
 const tokenApplications = ref<any[]>([])
 const usageMetrics = ref<any[]>([])
+const indexUsageMetrics = ref<any[]>([])
 const approveModalOpen = ref(false)
 const pendingApproveApp = ref<any | null>(null)
 const approveForm = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: 30 })
@@ -894,6 +935,13 @@ const latestDatabaseSize = computed(() => {
   const last = usageMetrics.value[usageMetrics.value.length - 1]
   return Number(last.databaseSize || 0)
 })
+const maxChartValue = computed(() => {
+  const maxInQuery = usageMetrics.value.reduce((m, item) => Math.max(m, Number(item.queryCount || 0)), 0)
+  const maxInImport = usageMetrics.value.reduce((m, item) => Math.max(m, Number(item.importCount || 0)), 0)
+  return Math.max(1, maxInQuery, maxInImport)
+})
+const chartPointsQuery = computed(() => buildLinePoints('queryCount'))
+const chartPointsImport = computed(() => buildLinePoints('importCount'))
 
 function formatBytes(bytes: number): string {
   if (!bytes || bytes <= 0) return '0 B'
@@ -905,6 +953,23 @@ function formatBytes(bytes: number): string {
     i++
   }
   return `${n.toFixed(i === 0 ? 0 : 2)} ${units[i]}`
+}
+
+function buildLinePoints(field: 'queryCount' | 'importCount'): string {
+  const rows = usageMetrics.value
+  if (!rows.length) return ''
+  if (rows.length === 1) {
+    const value = Number(rows[0][field] || 0)
+    const y = 220 - (value / maxChartValue.value) * 200
+    return `40,${y.toFixed(2)} 980,${y.toFixed(2)}`
+  }
+  const step = 940 / (rows.length - 1)
+  return rows.map((item, idx) => {
+    const x = 40 + step * idx
+    const value = Number(item[field] || 0)
+    const y = 220 - (value / maxChartValue.value) * 200
+    return `${x.toFixed(2)},${y.toFixed(2)}`
+  }).join(' ')
 }
 
 
@@ -945,7 +1010,8 @@ async function loadAdminData() {
     apps.value = appsData as any[]
     instances.value = insData as any[]
     tokenApplications.value = applicationData as any[]
-    usageMetrics.value = metricsData as any[]
+    usageMetrics.value = (metricsData as any).results || []
+    indexUsageMetrics.value = (metricsData as any).indexResults || []
     if (proxyData.results) {
       availableIndexes.value = proxyData.results.map(r => r.uid)
     }
@@ -1265,6 +1331,17 @@ onMounted(() => {
 .content-section { max-width: 1000px; }
 .metric-value { display: inline-block; margin-top: 8px; font-size: 24px; font-weight: 700; }
 .metrics-grid { margin-bottom: 20px; }
+.chart-panel { margin-bottom: 20px; }
+.line-chart-wrap { width: 100%; }
+.line-chart { width: 100%; height: 260px; display: block; border: 1px solid var(--border); border-radius: 8px; background: rgba(var(--surface-rgb), 0.35); }
+.axis-line { stroke: var(--border); stroke-width: 1; }
+.line-query { fill: none; stroke: #3b82f6; stroke-width: 2.5; }
+.line-import { fill: none; stroke: #22c55e; stroke-width: 2.5; }
+.chart-legend { display: flex; gap: 20px; margin-top: 10px; color: var(--text-sub); font-size: 13px; }
+.legend-item { display: inline-flex; align-items: center; gap: 8px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.legend-dot.query { background: #3b82f6; }
+.legend-dot.import { background: #22c55e; }
 
 .user-info { display: flex; flex-direction: column; gap: 2px; }
 .user-info strong { font-size: 14px; color: var(--text-primary); }

@@ -102,15 +102,16 @@ func HandleProxy(c *gin.Context) {
 
 	method := c.Request.Method
 	pathSuffix := c.Request.URL.Path
+	indexUID := extractIndexUIDFromProxyPath(proxyPath)
 	isSearchReq := strings.HasSuffix(pathSuffix, "/search") || strings.HasSuffix(pathSuffix, "/multi-search")
 	if isSearchReq && (method == http.MethodGet || method == http.MethodPost) {
-		increaseQueryMetric(1)
+		increaseQueryMetric(1, indexUID)
 	}
 
 	if (strings.HasSuffix(pathSuffix, "/documents") || strings.Contains(pathSuffix, "/documents?")) &&
 		(method == http.MethodPost || method == http.MethodPut) {
 		if n := estimateImportCountFromBody(c); n > 0 {
-			increaseImportMetric(n)
+			increaseImportMetric(n, indexUID)
 			refreshTodayStorageMetric()
 		}
 	}
@@ -152,4 +153,12 @@ func estimateImportCountFromBody(c *gin.Context) int64 {
 		return 1
 	}
 	return 0
+}
+
+func extractIndexUIDFromProxyPath(proxyPath string) string {
+	parts := strings.Split(strings.Trim(strings.TrimPrefix(proxyPath, "/"), "/"), "/")
+	if len(parts) >= 2 && parts[0] == "indexes" && parts[1] != "" {
+		return parts[1]
+	}
+	return ""
 }
