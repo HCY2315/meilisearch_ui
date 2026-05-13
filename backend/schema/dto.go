@@ -78,6 +78,7 @@ type IndexSettingsRequest struct {
 	Uid                  string   `json:"uid" binding:"required"`
 	SearchableAttributes []string `json:"searchableAttributes"`
 	FilterableAttributes []string `json:"filterableAttributes"`
+	Embedders            any      `json:"embedders"`
 }
 
 // SendCodeRequest 发送验证码请求

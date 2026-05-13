@@ -4,6 +4,7 @@ import (
 	"backend/model"
 	"backend/repository"
 	"backend/schema"
+	"encoding/json"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -351,6 +352,19 @@ func HandleUpdateIndexSettings(c *gin.Context) {
 	settings := &meilisearch.Settings{
 		SearchableAttributes: req.SearchableAttributes,
 		FilterableAttributes: req.FilterableAttributes,
+	}
+	if req.Embedders != nil {
+		raw, err := json.Marshal(req.Embedders)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid embedders payload"})
+			return
+		}
+		embedders := make(map[string]meilisearch.Embedder)
+		if err := json.Unmarshal(raw, &embedders); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid embedders payload"})
+			return
+		}
+		settings.Embedders = embedders
 	}
 	task, err := index.UpdateSettings(settings)
 	if err != nil {

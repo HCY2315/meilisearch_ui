@@ -544,7 +544,14 @@ export async function getMeiliIndexSettings(uid: string): Promise<any> {
   return res.json()
 }
 
-export async function updateMeiliIndexSettings(uid: string, settings: { searchableAttributes: string[]; filterableAttributes: string[] }): Promise<boolean> {
+export async function updateMeiliIndexSettings(
+  uid: string,
+  settings: {
+    searchableAttributes: string[]
+    filterableAttributes: string[]
+    embedders?: Record<string, unknown>
+  }
+): Promise<boolean> {
   const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
   const res = await fetch(`/api/v1/admin/meilisearch/settings/${uid}`, {
     method: 'PUT',
