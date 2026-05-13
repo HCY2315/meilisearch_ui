@@ -975,6 +975,15 @@ const subTab = ref('searchable')
 const currentSearchableAttributes = ref<string[]>([])
 const currentFilterableAttributes = ref<string[]>([])
 const allFieldsForIndex = ref<string[]>([])
+const embeddingEnabled = ref(false)
+const currentEmbedderName = ref('default')
+const currentEmbedder = ref({
+  source: 'openAi',
+  model: '',
+  url: '',
+  apiKey: '',
+  dimensions: undefined as number | undefined
+})
 const isSavingSearch = ref(false)
 const draggedIndex = ref<number | null>(null)
 
@@ -1250,6 +1259,25 @@ async function fetchSearchSettings() {
     if (settings) {
       currentSearchableAttributes.value = settings.searchableAttributes || []
       currentFilterableAttributes.value = settings.filterableAttributes || []
+      const embedders = settings.embedders || settings.embedding || {}
+      const names = Object.keys(embedders || {})
+      if (names.length > 0) {
+        const name = names[0]
+        const cfg = embedders[name] || {}
+        embeddingEnabled.value = true
+        currentEmbedderName.value = name
+        currentEmbedder.value = {
+          source: cfg.source || 'openAi',
+          model: cfg.model || '',
+          url: cfg.url || '',
+          apiKey: cfg.apiKey || '',
+          dimensions: typeof cfg.dimensions === 'number' ? cfg.dimensions : undefined
+        }
+      } else {
+        embeddingEnabled.value = false
+        currentEmbedderName.value = 'default'
+        currentEmbedder.value = { source: 'openAi', model: '', url: '', apiKey: '', dimensions: undefined }
+      }
     }
 
     // 2. 获取所有可用字段 (通过采样数据和现有设置)
@@ -1274,9 +1302,33 @@ async function saveSearchSettings() {
   if (!selectedSearchIndex.value) return
   isSavingSearch.value = true
   try {
+    let embedders: Record<string, unknown> = {}
+    if (embeddingEnabled.value) {
+      const name = (currentEmbedderName.value || 'default').trim() || 'default'
+      const model = currentEmbedder.value.model.trim()
+      if (!model) {
+        alert('启用 Embedding 时必须填写模型名')
+        isSavingSearch.value = false
+        return
+      }
+      const embedderConfig: Record<string, unknown> = {
+        source: currentEmbedder.value.source,
+        model
+      }
+      const url = currentEmbedder.value.url.trim()
+      const apiKey = currentEmbedder.value.apiKey.trim()
+      if (url) embedderConfig.url = url
+      if (apiKey) embedderConfig.apiKey = apiKey
+      if (typeof currentEmbedder.value.dimensions === 'number' && currentEmbedder.value.dimensions > 0) {
+        embedderConfig.dimensions = currentEmbedder.value.dimensions
+      }
+      embedders = { [name]: embedderConfig }
+    }
+
     const payload = {
       searchableAttributes: currentSearchableAttributes.value,
-      filterableAttributes: currentFilterableAttributes.value
+      filterableAttributes: currentFilterableAttributes.value,
+      embedders
     }
     const ok = await updateMeiliIndexSettings(selectedSearchIndex.value, payload)
     if (ok) {
@@ -1294,6 +1346,9 @@ async function saveSearchSettings() {
 function resetSearchSettings() {
   currentSearchableAttributes.value = [...allFieldsForIndex.value]
   currentFilterableAttributes.value = [...allFieldsForIndex.value]
+  embeddingEnabled.value = false
+  currentEmbedderName.value = 'default'
+  currentEmbedder.value = { source: 'openAi', model: '', url: '', apiKey: '', dimensions: undefined }
 }
 
 function handleDragStart(index: number) {
