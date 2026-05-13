@@ -87,3 +87,11 @@ type EmailVerification struct {
 	Code      string    `gorm:"size:10;not null" json:"code"`
 	ExpiresAt time.Time `gorm:"index" json:"expiresAt"`
 }
+
+// UsageMetric 每日使用统计
+type UsageMetric struct {
+	Date         string `gorm:"primaryKey;size:20" json:"date"` // 格式: YYYY-MM-DD
+	QueryCount   int64  `gorm:"default:0" json:"queryCount"`
+	ImportCount  int64  `gorm:"default:0" json:"importCount"`  // 每日导入文档数
+	DatabaseSize int64  `gorm:"default:0" json:"databaseSize"` // 存储占用 (Bytes)
+}
