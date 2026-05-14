@@ -55,6 +55,7 @@ func InitRouter() *gin.Engine {
 			// Meilisearch 设置
 			adminGroup.GET("/meilisearch/settings/:uid", HandleGetIndexSettings)
 			adminGroup.PUT("/meilisearch/settings/:uid", HandleUpdateIndexSettings)
+			adminGroup.POST("/meilisearch/settings/:uid/validate-embedder", HandleValidateEmbedder)
 			adminGroup.GET("/usage_metrics", HandleGetUsageMetrics)
 		}
 

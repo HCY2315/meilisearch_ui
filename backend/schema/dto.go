@@ -75,10 +75,15 @@ type PasswordUpdateRequest struct {
 
 // IndexSettingsRequest 更新索引的可搜索和可过滤字段配置
 type IndexSettingsRequest struct {
-	Uid                  string   `json:"uid" binding:"required"`
-	SearchableAttributes []string `json:"searchableAttributes"`
-	FilterableAttributes []string `json:"filterableAttributes"`
-	Embedders            any      `json:"embedders"`
+	Uid                  string    `json:"uid" binding:"required"`
+	SearchableAttributes *[]string `json:"searchableAttributes"`
+	FilterableAttributes *[]string `json:"filterableAttributes"`
+	Embedders            any       `json:"embedders"`
+}
+
+type ValidateEmbedderRequest struct {
+	Uid      string `json:"uid" binding:"required"`
+	Embedder any    `json:"embedder" binding:"required"`
 }
 
 // SendCodeRequest 发送验证码请求

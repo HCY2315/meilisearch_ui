@@ -519,6 +519,12 @@
                   </div>
                 </div>
               </div>
+              <div class="editor-actions" style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px;">
+                <button class="btn btn-primary" @click="saveSearchFieldSettings" :disabled="isSavingSearchFields">
+                  {{ isSavingSearchFields ? '正在应用配置...' : '保存搜索/过滤配置' }}
+                </button>
+                <button class="btn btn-secondary" @click="resetSearchFieldSettings">恢复搜索/过滤默认</button>
+              </div>
             </div>
 
             <div v-if="subTab === 'filterable'" class="settings-pane animate-fade-in">
@@ -536,6 +542,12 @@
                     </label>
                   </div>
                 </div>
+              </div>
+              <div class="editor-actions" style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px;">
+                <button class="btn btn-primary" @click="saveSearchFieldSettings" :disabled="isSavingSearchFields">
+                  {{ isSavingSearchFields ? '正在应用配置...' : '保存搜索/过滤配置' }}
+                </button>
+                <button class="btn btn-secondary" @click="resetSearchFieldSettings">恢复搜索/过滤默认</button>
               </div>
             </div>
 
@@ -583,16 +595,28 @@
                       <label>API Key (可选)</label>
                       <input type="password" v-model="currentEmbedder.apiKey" class="form-control" placeholder="sk-...">
                     </div>
+                    <div class="input-group" style="grid-column: 1 / -1;">
+                      <label>Document Template (可选，推荐)</label>
+                      <textarea
+                        v-model="currentEmbedder.documentTemplate"
+                        class="form-control"
+                        rows="4"
+                        placeholder="{% for field in fields %}{% if field.is_searchable and not field.value == nil %}{{ field.name }}: {{ field.value }} {% endif %}{% endfor %}"
+                      />
+                    </div>
+                    <div class="input-group">
+                      <label>Template 最大字节数 (可选)</label>
+                      <input type="number" min="1" v-model.number="currentEmbedder.documentTemplateMaxBytes" class="form-control" placeholder="400">
+                    </div>
                   </div>
                 </template>
               </div>
-            </div>
-
-            <div class="editor-actions" style="margin-top: 40px; border-top: 1px solid var(--border); padding-top: 24px;">
-              <button class="btn btn-primary" @click="saveSearchSettings" :disabled="isSavingSearch">
-                {{ isSavingSearch ? '正在应用配置...' : '保存当前索引配置' }}
-              </button>
-              <button class="btn btn-secondary" @click="resetSearchSettings">恢复全部字段</button>
+              <div class="editor-actions" style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px;">
+                <button class="btn btn-primary" @click="saveEmbeddingSettings" :disabled="isSavingEmbedding">
+                  {{ isSavingEmbedding ? '正在应用配置...' : '保存 Embedding 配置' }}
+                </button>
+                <button class="btn btn-secondary" @click="resetEmbeddingSettings">恢复 Embedding 默认</button>
+              </div>
             </div>
           </div>
           <div v-else class="empty-state">
@@ -764,6 +788,7 @@ import {
   updateAdminPassword,
   getMeiliIndexSettings,
   updateMeiliIndexSettings,
+  validateMeiliEmbedder,
   loadIndexData,
   getMeiliTasks,
   cancelMeiliTask,
@@ -982,9 +1007,12 @@ const currentEmbedder = ref({
   model: '',
   url: '',
   apiKey: '',
-  dimensions: undefined as number | undefined
+  dimensions: undefined as number | undefined,
+  documentTemplate: '',
+  documentTemplateMaxBytes: undefined as number | undefined
 })
-const isSavingSearch = ref(false)
+const isSavingSearchFields = ref(false)
+const isSavingEmbedding = ref(false)
 const draggedIndex = ref<number | null>(null)
 
 const totalQueryCount = computed(() => usageMetrics.value.reduce((sum, item) => sum + Number(item.queryCount || 0), 0))
@@ -1271,12 +1299,22 @@ async function fetchSearchSettings() {
           model: cfg.model || '',
           url: cfg.url || '',
           apiKey: cfg.apiKey || '',
-          dimensions: typeof cfg.dimensions === 'number' ? cfg.dimensions : undefined
+          dimensions: typeof cfg.dimensions === 'number' ? cfg.dimensions : undefined,
+          documentTemplate: cfg.documentTemplate || '',
+          documentTemplateMaxBytes: typeof cfg.documentTemplateMaxBytes === 'number' ? cfg.documentTemplateMaxBytes : undefined
         }
       } else {
         embeddingEnabled.value = false
         currentEmbedderName.value = 'default'
-        currentEmbedder.value = { source: 'openAi', model: '', url: '', apiKey: '', dimensions: undefined }
+        currentEmbedder.value = {
+          source: 'openAi',
+          model: '',
+          url: '',
+          apiKey: '',
+          dimensions: undefined,
+          documentTemplate: '',
+          documentTemplateMaxBytes: undefined
+        }
       }
     }
 
@@ -1298,57 +1336,127 @@ async function fetchSearchSettings() {
   }
 }
 
-async function saveSearchSettings() {
+async function saveSearchFieldSettings() {
   if (!selectedSearchIndex.value) return
-  isSavingSearch.value = true
+  isSavingSearchFields.value = true
   try {
-    let embedders: Record<string, unknown> = {}
-    if (embeddingEnabled.value) {
-      const name = (currentEmbedderName.value || 'default').trim() || 'default'
-      const model = currentEmbedder.value.model.trim()
-      if (!model) {
-        alert('启用 Embedding 时必须填写模型名')
-        isSavingSearch.value = false
-        return
-      }
-      const embedderConfig: Record<string, unknown> = {
-        source: currentEmbedder.value.source,
-        model
-      }
-      const url = currentEmbedder.value.url.trim()
-      const apiKey = currentEmbedder.value.apiKey.trim()
-      if (url) embedderConfig.url = url
-      if (apiKey) embedderConfig.apiKey = apiKey
-      if (typeof currentEmbedder.value.dimensions === 'number' && currentEmbedder.value.dimensions > 0) {
-        embedderConfig.dimensions = currentEmbedder.value.dimensions
-      }
-      embedders = { [name]: embedderConfig }
-    }
-
     const payload = {
       searchableAttributes: currentSearchableAttributes.value,
-      filterableAttributes: currentFilterableAttributes.value,
-      embedders
+      filterableAttributes: currentFilterableAttributes.value
     }
     const ok = await updateMeiliIndexSettings(selectedSearchIndex.value, payload)
     if (ok) {
-      alert('索引设置更新成功！Meilisearch 正在异步处理更新任务。')
+      alert('搜索/过滤配置更新成功！Meilisearch 正在异步处理更新任务。')
     } else {
       alert('更新失败，请检查后端日志')
     }
   } catch (e) {
     alert('请求失败: ' + (e as Error).message)
   } finally {
-    isSavingSearch.value = false
+    isSavingSearchFields.value = false
   }
 }
 
-function resetSearchSettings() {
+function resetSearchFieldSettings() {
   currentSearchableAttributes.value = [...allFieldsForIndex.value]
   currentFilterableAttributes.value = [...allFieldsForIndex.value]
+}
+
+async function saveEmbeddingSettings() {
+  if (!selectedSearchIndex.value) return
+  isSavingEmbedding.value = true
+  try {
+    let embedders: Record<string, unknown> = {}
+    if (embeddingEnabled.value) {
+      const name = (currentEmbedderName.value || 'default').trim() || 'default'
+      const source = currentEmbedder.value.source
+      const model = currentEmbedder.value.model.trim()
+      const url = currentEmbedder.value.url.trim()
+      const apiKey = currentEmbedder.value.apiKey.trim()
+
+      if (source === 'openAi') {
+        if (!model) {
+          alert('openAi 模式下必须填写 model')
+          isSavingEmbedding.value = false
+          return
+        }
+        if (!apiKey) {
+          alert('openAi 模式下必须填写 apiKey')
+          isSavingEmbedding.value = false
+          return
+        }
+      }
+      if (source === 'huggingFace' && !model) {
+        alert('huggingFace 模式下必须填写 model')
+        isSavingEmbedding.value = false
+        return
+      }
+      if (source === 'ollama' && !model) {
+        alert('ollama 模式下必须填写 model')
+        isSavingEmbedding.value = false
+        return
+      }
+      if (source === 'rest' && !url) {
+        alert('rest 模式下必须填写 url')
+        isSavingEmbedding.value = false
+        return
+      }
+      if (source === 'userProvided' && !(typeof currentEmbedder.value.dimensions === 'number' && currentEmbedder.value.dimensions > 0)) {
+        alert('userProvided 模式下必须填写 dimensions')
+        isSavingEmbedding.value = false
+        return
+      }
+      const embedderConfig: Record<string, unknown> = {
+        source
+      }
+      if (model) embedderConfig.model = model
+      if (url) embedderConfig.url = url
+      if (apiKey) embedderConfig.apiKey = apiKey
+      if (typeof currentEmbedder.value.dimensions === 'number' && currentEmbedder.value.dimensions > 0) {
+        embedderConfig.dimensions = currentEmbedder.value.dimensions
+      }
+      if (currentEmbedder.value.source !== 'userProvided') {
+        const documentTemplate = currentEmbedder.value.documentTemplate.trim()
+        if (documentTemplate) embedderConfig.documentTemplate = documentTemplate
+        if (typeof currentEmbedder.value.documentTemplateMaxBytes === 'number' && currentEmbedder.value.documentTemplateMaxBytes > 0) {
+          embedderConfig.documentTemplateMaxBytes = currentEmbedder.value.documentTemplateMaxBytes
+        }
+      }
+      embedders = { [name]: embedderConfig }
+
+      const validation = await validateMeiliEmbedder(selectedSearchIndex.value, embedderConfig)
+      if (!validation.ok) {
+        alert(`Embedding 模型校验失败: ${validation.message || '未知错误'}`)
+        isSavingEmbedding.value = false
+        return
+      }
+    }
+
+    const ok = await updateMeiliIndexSettings(selectedSearchIndex.value, { embedders })
+    if (ok) {
+      alert('Embedding 配置更新成功！Meilisearch 正在异步处理更新任务。')
+    } else {
+      alert('更新失败，请检查后端日志')
+    }
+  } catch (e) {
+    alert('请求失败: ' + (e as Error).message)
+  } finally {
+    isSavingEmbedding.value = false
+  }
+}
+
+function resetEmbeddingSettings() {
   embeddingEnabled.value = false
   currentEmbedderName.value = 'default'
-  currentEmbedder.value = { source: 'openAi', model: '', url: '', apiKey: '', dimensions: undefined }
+  currentEmbedder.value = {
+    source: 'openAi',
+    model: '',
+    url: '',
+    apiKey: '',
+    dimensions: undefined,
+    documentTemplate: '',
+    documentTemplateMaxBytes: undefined
+  }
 }
 
 function handleDragStart(index: number) {

@@ -4,8 +4,12 @@ import (
 	"backend/model"
 	"backend/repository"
 	"backend/schema"
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/meilisearch/meilisearch-go"
@@ -349,9 +353,12 @@ func HandleUpdateIndexSettings(c *gin.Context) {
 	client := meilisearch.New(instance.Host, meilisearch.WithAPIKey(instance.APIKey))
 	index := client.Index(req.Uid)
 
-	settings := &meilisearch.Settings{
-		SearchableAttributes: req.SearchableAttributes,
-		FilterableAttributes: req.FilterableAttributes,
+	settings := &meilisearch.Settings{}
+	if req.SearchableAttributes != nil {
+		settings.SearchableAttributes = *req.SearchableAttributes
+	}
+	if req.FilterableAttributes != nil {
+		settings.FilterableAttributes = *req.FilterableAttributes
 	}
 	if req.Embedders != nil {
 		raw, err := json.Marshal(req.Embedders)
@@ -373,4 +380,131 @@ func HandleUpdateIndexSettings(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, task)
+}
+
+func HandleValidateEmbedder(c *gin.Context) {
+	uid := c.Param("uid")
+	var req schema.ValidateEmbedderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+	if req.Uid != uid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "UID mismatch"})
+		return
+	}
+
+	raw, err := json.Marshal(req.Embedder)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid embedder payload"})
+		return
+	}
+	var emb meilisearch.Embedder
+	if err := json.Unmarshal(raw, &emb); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid embedder payload"})
+		return
+	}
+
+	if err := validateEmbedderConfig(emb); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := probeEmbedderAvailability(emb); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func validateEmbedderConfig(emb meilisearch.Embedder) error {
+	source := strings.TrimSpace(string(emb.Source))
+	if source == "" {
+		return fmt.Errorf("source is required")
+	}
+	switch source {
+	case "openAi":
+		if strings.TrimSpace(emb.Model) == "" {
+			return fmt.Errorf("openAi source requires model")
+		}
+		if strings.TrimSpace(emb.APIKey) == "" {
+			return fmt.Errorf("openAi source requires apiKey")
+		}
+	case "huggingFace":
+		if strings.TrimSpace(emb.Model) == "" {
+			return fmt.Errorf("huggingFace source requires model")
+		}
+	case "ollama":
+		if strings.TrimSpace(emb.Model) == "" {
+			return fmt.Errorf("ollama source requires model")
+		}
+	case "rest":
+		if strings.TrimSpace(emb.URL) == "" {
+			return fmt.Errorf("rest source requires url")
+		}
+	case "userProvided":
+		if emb.Dimensions <= 0 {
+			return fmt.Errorf("userProvided source requires dimensions")
+		}
+	default:
+		return fmt.Errorf("unsupported source: %s", source)
+	}
+	return nil
+}
+
+func probeEmbedderAvailability(emb meilisearch.Embedder) error {
+	source := strings.TrimSpace(string(emb.Source))
+	switch source {
+	case "openAi":
+		targetURL := strings.TrimSpace(emb.URL)
+		if targetURL == "" {
+			targetURL = "https://api.openai.com/v1/embeddings"
+		}
+		payload := map[string]any{"model": emb.Model, "input": "ping"}
+		return doJSONProbe(targetURL, emb.APIKey, payload)
+	case "ollama":
+		targetURL := strings.TrimSpace(emb.URL)
+		if targetURL == "" {
+			targetURL = "http://localhost:11434/api/embeddings"
+		}
+		payload := map[string]any{"model": emb.Model, "prompt": "ping"}
+		return doJSONProbe(targetURL, emb.APIKey, payload)
+	case "huggingFace":
+		targetURL := "https://api-inference.huggingface.co/models/" + strings.TrimSpace(emb.Model)
+		payload := map[string]any{"inputs": "ping"}
+		return doJSONProbe(targetURL, emb.APIKey, payload)
+	case "rest":
+		// 对于自定义 REST，只验证 URL 可访问和返回 2xx
+		payload := map[string]any{"input": "ping"}
+		return doJSONProbe(strings.TrimSpace(emb.URL), emb.APIKey, payload)
+	case "userProvided":
+		// userProvided 由上游提供向量，无法在服务端主动探测模型可用性
+		return nil
+	default:
+		return fmt.Errorf("unsupported source: %s", source)
+	}
+}
+
+func doJSONProbe(targetURL string, apiKey string, payload map[string]any) error {
+	body, _ := json.Marshal(payload)
+	req, err := http.NewRequest(http.MethodPost, targetURL, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("probe request build failed: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if strings.TrimSpace(apiKey) != "" {
+		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(apiKey))
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("probe failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return fmt.Errorf("probe failed with status %d: %s", resp.StatusCode, strings.TrimSpace(string(respBody)))
+	}
+	return nil
 }

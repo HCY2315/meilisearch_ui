@@ -547,8 +547,8 @@ export async function getMeiliIndexSettings(uid: string): Promise<any> {
 export async function updateMeiliIndexSettings(
   uid: string,
   settings: {
-    searchableAttributes: string[]
-    filterableAttributes: string[]
+    searchableAttributes?: string[]
+    filterableAttributes?: string[]
     embedders?: Record<string, unknown>
   }
 ): Promise<boolean> {
@@ -559,6 +559,18 @@ export async function updateMeiliIndexSettings(
     body: JSON.stringify({ uid, ...settings })
   })
   return res.ok
+}
+
+export async function validateMeiliEmbedder(uid: string, embedder: Record<string, unknown>): Promise<{ ok: boolean; message?: string }> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch(`/api/v1/admin/meilisearch/settings/${uid}/validate-embedder`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ uid, embedder })
+  })
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok) return { ok: false, message: payload.error || '模型校验失败' }
+  return { ok: true }
 }
 
 export async function getMeiliTasks(host: string, apiKey: string): Promise<any> {
