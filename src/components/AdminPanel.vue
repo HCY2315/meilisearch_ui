@@ -579,7 +579,7 @@
                         <option value="userProvided">userProvided</option>
                       </select>
                     </div>
-                    <div class="input-group">
+                    <div class="input-group" v-if="currentEmbedder.source !== 'rest'">
                       <label>模型名 (Model)</label>
                       <input v-model="currentEmbedder.model" class="form-control" placeholder="text-embedding-3-small / BAAI/bge-base-en-v1.5">
                     </div>
@@ -594,6 +594,24 @@
                     <div class="input-group">
                       <label>API Key (可选)</label>
                       <input type="password" v-model="currentEmbedder.apiKey" class="form-control" placeholder="sk-...">
+                    </div>
+                    <div class="input-group" style="grid-column: 1 / -1;" v-if="currentEmbedder.source === 'rest'">
+                      <label>REST 请求体 (Request JSON)</label>
+                      <textarea
+                        v-model="currentEmbedder.request"
+                        class="form-control json-editor"
+                        rows="5"
+                        placeholder='{ "model": "bge-large-zh-v1.5", "input": ["{{text}}"] }'
+                      />
+                    </div>
+                    <div class="input-group" style="grid-column: 1 / -1;" v-if="currentEmbedder.source === 'rest'">
+                      <label>REST 响应解析 (Response JSON)</label>
+                      <textarea
+                        v-model="currentEmbedder.response"
+                        class="form-control json-editor"
+                        rows="3"
+                        placeholder='{ "embedding": "$.data[0].embedding" }'
+                      />
                     </div>
                     <div class="input-group" style="grid-column: 1 / -1;">
                       <label>Document Template (可选，推荐)</label>
@@ -1009,7 +1027,9 @@ const currentEmbedder = ref({
   apiKey: '',
   dimensions: undefined as number | undefined,
   documentTemplate: '',
-  documentTemplateMaxBytes: undefined as number | undefined
+  documentTemplateMaxBytes: undefined as number | undefined,
+  request: '',
+  response: ''
 })
 const isSavingSearchFields = ref(false)
 const isSavingEmbedding = ref(false)
@@ -1301,7 +1321,9 @@ async function fetchSearchSettings() {
           apiKey: cfg.apiKey || '',
           dimensions: typeof cfg.dimensions === 'number' ? cfg.dimensions : undefined,
           documentTemplate: cfg.documentTemplate || '',
-          documentTemplateMaxBytes: typeof cfg.documentTemplateMaxBytes === 'number' ? cfg.documentTemplateMaxBytes : undefined
+          documentTemplateMaxBytes: typeof cfg.documentTemplateMaxBytes === 'number' ? cfg.documentTemplateMaxBytes : undefined,
+          request: cfg.request ? JSON.stringify(cfg.request, null, 2) : '',
+          response: cfg.response ? JSON.stringify(cfg.response, null, 2) : ''
         }
       } else {
         embeddingEnabled.value = false
@@ -1313,7 +1335,9 @@ async function fetchSearchSettings() {
           apiKey: '',
           dimensions: undefined,
           documentTemplate: '',
-          documentTemplateMaxBytes: undefined
+          documentTemplateMaxBytes: undefined,
+          request: '',
+          response: ''
         }
       }
     }
@@ -1409,9 +1433,24 @@ async function saveEmbeddingSettings() {
       const embedderConfig: Record<string, unknown> = {
         source
       }
-      if (model) embedderConfig.model = model
+      if (source !== 'rest' && model) embedderConfig.model = model
       if (url) embedderConfig.url = url
       if (apiKey) embedderConfig.apiKey = apiKey
+
+      if (source === 'rest') {
+        try {
+          if (currentEmbedder.value.request) {
+            embedderConfig.request = JSON.parse(currentEmbedder.value.request)
+          }
+          if (currentEmbedder.value.response) {
+            embedderConfig.response = JSON.parse(currentEmbedder.value.response)
+          }
+        } catch (e) {
+          alert('REST 请求体或响应解析 JSON 格式错误')
+          isSavingEmbedding.value = false
+          return
+        }
+      }
       if (typeof currentEmbedder.value.dimensions === 'number' && currentEmbedder.value.dimensions > 0) {
         embedderConfig.dimensions = currentEmbedder.value.dimensions
       }
@@ -1455,7 +1494,9 @@ function resetEmbeddingSettings() {
     apiKey: '',
     dimensions: undefined,
     documentTemplate: '',
-    documentTemplateMaxBytes: undefined
+    documentTemplateMaxBytes: undefined,
+    request: '',
+    response: ''
   }
 }
 
@@ -1689,6 +1730,7 @@ onMounted(() => {
 
 .app-identity { display: flex; align-items: center; gap: 12px; font-size: 20px; }
 .json-preview { background: rgba(0, 0, 0, 0.2); padding: 16px; border-radius: 8px; font-size: 12px; color: #10b981; max-height: 200px; overflow: auto; margin-bottom: 12px; }
+.json-editor { font-family: monospace; font-size: 13px; line-height: 1.4; color: #10b981; background: rgba(0, 0, 0, 0.3) !important; }
 
 /* 通用列表项 */
 .alias-info { display: flex; flex-direction: column; gap: 4px; }
