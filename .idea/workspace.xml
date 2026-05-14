@@ -4,14 +4,7 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="用量统计">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/api/admin.go" beforeDir="false" afterPath="$PROJECT_DIR$/backend/api/admin.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/data/meili_admin.db" beforeDir="false" afterPath="$PROJECT_DIR$/backend/data/meili_admin.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/schema/dto.go" beforeDir="false" afterPath="$PROJECT_DIR$/backend/schema/dto.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/AdminPanel.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/AdminPanel.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/api.ts" afterDir="false" />
-    </list>
+    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="用量统计" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
