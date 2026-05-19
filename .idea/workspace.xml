@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="用量统计">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/data/meili_admin.db" beforeDir="false" afterPath="$PROJECT_DIR$/backend/data/meili_admin.db" afterDir="false" />
-    </list>
+    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="用量统计" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -78,7 +75,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-WS-261.23567.141" />
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-WS-261.24374.125" />
       </set>
     </attachedChunks>
   </component>
@@ -98,6 +95,7 @@
       <workItem from="1778582399822" duration="2957000" />
       <workItem from="1778587026031" duration="332000" />
       <workItem from="1778661748941" duration="1216000" />
+      <workItem from="1779163260416" duration="10000" />
     </task>
     <task id="LOCAL-00001" summary="自动备份: 2026-05-08 12:40:07">
       <option name="closed" value="true" />
