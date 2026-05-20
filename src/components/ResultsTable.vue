@@ -119,6 +119,18 @@
           @click="store.goToPage(p)"
         >{{ p }}</button>
         <button class="btn btn-secondary btn-sm" :disabled="store.currentPage >= store.totalPages" @click="store.goToPage(store.currentPage + 1)">下一页</button>
+        <div class="page-jump">
+          <input
+            v-model.number="jumpPageInput"
+            type="number"
+            min="1"
+            :max="store.totalPages"
+            class="form-control page-jump-input"
+            placeholder="页码"
+            @keydown.enter.prevent="goToJumpPage"
+          />
+          <button class="btn btn-secondary btn-sm" @click="goToJumpPage">跳转</button>
+        </div>
       </div>
     </div>
   </div>
@@ -274,6 +286,15 @@ const pageRange = computed(() => {
   for (let i = start; i <= end; i++) range.push(i)
   return range
 })
+
+const jumpPageInput = ref<number | null>(null)
+
+function goToJumpPage() {
+  if (jumpPageInput.value === null || Number.isNaN(jumpPageInput.value)) return
+  const page = Math.max(1, Math.min(store.totalPages, Math.floor(jumpPageInput.value)))
+  store.goToPage(page)
+  jumpPageInput.value = page
+}
 
 function getId(hit: SearchHit): string {
   return getIdString(hit)
@@ -507,6 +528,8 @@ function startResize(e: MouseEvent, col: string) {
 }
 .field-width-resizer:hover::after { background: var(--primary-color); }
 .pagination { display: flex; gap: 4px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+.page-jump { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; }
+.page-jump-input { width: 88px; min-width: 88px; padding: 4px 8px; font-size: 12px; }
 
 /* ─── 嵌套字段徽章 & 查看按钮 ─────────────────────────────────────────────── */
 .nested-badge {

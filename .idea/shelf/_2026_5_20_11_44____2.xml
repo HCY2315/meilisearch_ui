@@ -1,0 +1,9 @@
+<changelist name="在进行合并之前于_2026_5_20_11_44_取消提交了更改_[更改]" date="1779248691954" recycled="true" deleted="true">
+  <option name="PATH" value="$PROJECT_DIR$/.idea/shelf/在进行合并之前于_2026_5_20_11_44_取消提交了更改_[更改]/shelved.patch" />
+  <option name="DESCRIPTION" value="在进行合并之前于 2026/5/20 11:44 取消提交了更改 [更改]" />
+  <binary>
+    <option name="BEFORE_PATH" value="backend/data/meili_admin.db" />
+    <option name="AFTER_PATH" value="backend/data/meili_admin.db" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/在进行合并之前于_2026_5_20_11_44_取消提交了更改_[更改]/meili_admin.db" />
+  </binary>
+</changelist>
