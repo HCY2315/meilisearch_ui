@@ -112,7 +112,7 @@ function isFacetChecked(facet: string, value: string): boolean {
   max-width: 90vw;
   background: var(--bg-secondary);
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }

@@ -183,10 +183,11 @@ onMounted(async () => {
 
 <style scoped>
 .main-layout {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow-y: auto;
   overflow-x: hidden;
 }
 
@@ -200,9 +201,6 @@ onMounted(async () => {
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
 
 .header-content {

@@ -4,14 +4,24 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="用量统计" />
+    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="用量统计">
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/_2026_5_20_11_44____.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/_2026_5_20_11_44____2.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/在进行合并之前于_2026_5_20_11_44_取消提交了更改_[更改]/meili_admin.db" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/在进行合并之前于_2026_5_20_11_44_取消提交了更改_[更改]/shelved.patch" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/在进行签出之前于_2026_5_20_11_44_取消提交了更改_[更改]/meili_admin.db" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/在进行签出之前于_2026_5_20_11_44_取消提交了更改_[更改]/shelved.patch" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/data/meili_admin.db" beforeDir="false" afterPath="$PROJECT_DIR$/backend/data/meili_admin.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/FilterDrawer.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/FilterDrawer.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/SearchMain.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/SearchMain.vue" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="74" />
+    <option name="cachedIndexableFilesCount" value="77" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
@@ -27,6 +37,65 @@
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0743254991222506" />
+      <entry key="MS500" value="1.64761452408624" />
+      <entry key="S2" value="3.1107753066640544" />
+      <entry key="S5" value="4.919831189257148" />
+      <entry key="S10" value="6.141598879943046" />
+      <entry key="S30" value="7.485538543583434" />
+      <entry key="S60" value="9.14109708263879" />
+      <entry key="M2" value="13.04100172964823" />
+      <entry key="M5" value="19.77632165130968" />
+      <entry key="M10" value="23.69995647271857" />
+      <entry key="M15" value="25.291814474052234" />
+      <entry key="M30" value="27.052260951859516" />
+      <entry key="H1" value="28.00146952744977" />
+      <entry key="H2" value="28.49440589067488" />
+      <entry key="H4" value="28.745599786728384" />
+      <entry key="D1" value="28.957375503122535" />
+      <entry key="W1" value="28.99390526551393" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="1.031557183760599" />
+      <entry key="MS500" value="1.6357254524164289" />
+      <entry key="S2" value="3.105480276703634" />
+      <entry key="S5" value="4.916472900928645" />
+      <entry key="S10" value="6.139489661926177" />
+      <entry key="S30" value="7.4846675572722825" />
+      <entry key="S60" value="9.140454560394287" />
+      <entry key="M2" value="13.040299793542678" />
+      <entry key="M5" value="19.775720644374047" />
+      <entry key="M10" value="23.699554775458935" />
+      <entry key="M15" value="25.29151856258722" />
+      <entry key="M30" value="27.052097240720745" />
+      <entry key="H1" value="28.0013833824632" />
+      <entry key="H2" value="28.49436169897073" />
+      <entry key="H4" value="28.745577405016245" />
+      <entry key="D1" value="28.95737173261068" />
+      <entry key="W1" value="28.993904725877346" />
+    </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
@@ -96,6 +165,7 @@
       <workItem from="1778587026031" duration="332000" />
       <workItem from="1778661748941" duration="1216000" />
       <workItem from="1779163260416" duration="10000" />
+      <workItem from="1779875207350" duration="343000" />
     </task>
     <task id="LOCAL-00001" summary="自动备份: 2026-05-08 12:40:07">
       <option name="closed" value="true" />
@@ -142,6 +212,12 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="dependencySupport" implementationName="executable:docker" />
+    <option featureType="dependencySupport" implementationName="javascript:npm:vite" />
+    <option featureType="dependencySupport" implementationName="javascript:npm:vue" />
+    <option featureType="dependencySupport" implementationName="executable:terraform" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
