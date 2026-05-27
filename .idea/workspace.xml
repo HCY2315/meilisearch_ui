@@ -4,17 +4,7 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="用量统计">
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/_2026_5_20_11_44____.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/_2026_5_20_11_44____2.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/在进行合并之前于_2026_5_20_11_44_取消提交了更改_[更改]/meili_admin.db" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/在进行合并之前于_2026_5_20_11_44_取消提交了更改_[更改]/shelved.patch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/在进行签出之前于_2026_5_20_11_44_取消提交了更改_[更改]/meili_admin.db" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/在进行签出之前于_2026_5_20_11_44_取消提交了更改_[更改]/shelved.patch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/data/meili_admin.db" beforeDir="false" afterPath="$PROJECT_DIR$/backend/data/meili_admin.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/FilterDrawer.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/FilterDrawer.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/SearchMain.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/SearchMain.vue" afterDir="false" />
-    </list>
+    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="用量统计" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -165,7 +155,7 @@
       <workItem from="1778587026031" duration="332000" />
       <workItem from="1778661748941" duration="1216000" />
       <workItem from="1779163260416" duration="10000" />
-      <workItem from="1779875207350" duration="343000" />
+      <workItem from="1779875207350" duration="406000" />
     </task>
     <task id="LOCAL-00001" summary="自动备份: 2026-05-08 12:40:07">
       <option name="closed" value="true" />
@@ -207,7 +197,15 @@
       <option name="project" value="LOCAL" />
       <updated>1778593152515</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="用量统计">
+      <option name="closed" value="true" />
+      <created>1779875592526</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1779875592526</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
