@@ -399,12 +399,35 @@
         <div class="glass-editor chart-panel">
           <h3>按天趋势（查询量 / 导入量）</h3>
           <div v-if="chartPointsQuery.length" class="line-chart-wrap">
-            <svg viewBox="0 0 1000 260" preserveAspectRatio="none" class="line-chart">
-              <line x1="40" y1="220" x2="980" y2="220" class="axis-line" />
-              <line x1="40" y1="20" x2="40" y2="220" class="axis-line" />
-              <polyline :points="chartPointsQuery" class="line-query" />
-              <polyline :points="chartPointsImport" class="line-import" />
-            </svg>
+            <div class="line-chart-stage" @mouseleave="clearChartHover">
+              <svg
+                viewBox="0 0 1000 260"
+                preserveAspectRatio="none"
+                class="line-chart"
+                @mousemove="handleChartHover"
+                @mouseenter="handleChartHover"
+              >
+                <line x1="40" y1="220" x2="980" y2="220" class="axis-line" />
+                <line x1="40" y1="20" x2="40" y2="220" class="axis-line" />
+                <polyline :points="chartPointsQuery" class="line-query" />
+                <polyline :points="chartPointsImport" class="line-import" />
+                <g v-if="hoveredChartPoint" class="chart-hover-points">
+                  <circle :cx="hoveredChartPoint.x" :cy="hoveredChartPoint.queryY" r="5" class="chart-point query" />
+                  <circle :cx="hoveredChartPoint.x" :cy="hoveredChartPoint.importY" r="5" class="chart-point import" />
+                </g>
+              </svg>
+              <div v-if="hoveredChartPoint" class="chart-tooltip" :style="chartTooltipStyle">
+                <div class="chart-tooltip-date">{{ hoveredChartPoint.date }}</div>
+                <div class="chart-tooltip-row">
+                  <i class="legend-dot query"></i>
+                  查询量：{{ hoveredChartPoint.queryCount.toLocaleString() }}
+                </div>
+                <div class="chart-tooltip-row">
+                  <i class="legend-dot import"></i>
+                  导入量：{{ hoveredChartPoint.importCount.toLocaleString() }}
+                </div>
+              </div>
+            </div>
             <div class="chart-legend">
               <span class="legend-item"><i class="legend-dot query"></i>查询量</span>
               <span class="legend-item"><i class="legend-dot import"></i>导入量</span>
@@ -1047,8 +1070,36 @@ const maxChartValue = computed(() => {
   const maxInImport = usageMetrics.value.reduce((m, item) => Math.max(m, Number(item.importCount || 0)), 0)
   return Math.max(1, maxInQuery, maxInImport)
 })
+type ChartPoint = {
+  index: number
+  date: string
+  queryCount: number
+  importCount: number
+  x: number
+  queryY: number
+  importY: number
+  tooltipY: number
+}
+const chartDataPoints = computed<ChartPoint[]>(() => buildChartDataPoints())
 const chartPointsQuery = computed(() => buildLinePoints('queryCount'))
 const chartPointsImport = computed(() => buildLinePoints('importCount'))
+const hoveredChartIndex = ref<number | null>(null)
+const hoveredChartPoint = computed(() => {
+  if (hoveredChartIndex.value === null) return null
+  return chartDataPoints.value[hoveredChartIndex.value] || null
+})
+const chartTooltipStyle = computed(() => {
+  const point = hoveredChartPoint.value
+  if (!point) return {}
+  const left = Math.min(Math.max((point.x / 1000) * 100, 10), 90)
+  const top = Math.max(8, (point.tooltipY / 260) * 100 - 12)
+  const placeBelow = top < 18
+  return {
+    left: `${left}%`,
+    top: `${placeBelow ? top + 8 : top}%`,
+    transform: `translate(-50%, ${placeBelow ? '0' : '-100%'})`
+  }
+})
 
 function formatBytes(bytes: number): string {
   if (!bytes || bytes <= 0) return '0 B'
@@ -1062,21 +1113,56 @@ function formatBytes(bytes: number): string {
   return `${n.toFixed(i === 0 ? 0 : 2)} ${units[i]}`
 }
 
-function buildLinePoints(field: 'queryCount' | 'importCount'): string {
+function buildChartDataPoints(): ChartPoint[] {
   const rows = usageMetrics.value
-  if (!rows.length) return ''
-  if (rows.length === 1) {
-    const value = Number(rows[0][field] || 0)
-    const y = 220 - (value / maxChartValue.value) * 200
+  const step = rows.length > 1 ? 940 / (rows.length - 1) : 0
+  return rows.map((item, idx) => {
+    const queryCount = Number(item.queryCount || 0)
+    const importCount = Number(item.importCount || 0)
+    const x = rows.length === 1 ? 500 : 40 + step * idx
+    return {
+      index: idx,
+      date: item.date,
+      queryCount,
+      importCount,
+      x,
+      queryY: 220 - (queryCount / maxChartValue.value) * 200,
+      importY: 220 - (importCount / maxChartValue.value) * 200,
+      tooltipY: Math.min(220 - (queryCount / maxChartValue.value) * 200, 220 - (importCount / maxChartValue.value) * 200),
+    }
+  })
+}
+
+function buildLinePoints(field: 'queryCount' | 'importCount'): string {
+  const points = chartDataPoints.value
+  if (!points.length) return ''
+  if (points.length === 1) {
+    const single = points[0]
+    const y = field === 'queryCount' ? single.queryY : single.importY
     return `40,${y.toFixed(2)} 980,${y.toFixed(2)}`
   }
-  const step = 940 / (rows.length - 1)
-  return rows.map((item, idx) => {
-    const x = 40 + step * idx
-    const value = Number(item[field] || 0)
-    const y = 220 - (value / maxChartValue.value) * 200
-    return `${x.toFixed(2)},${y.toFixed(2)}`
+  return points.map(point => {
+    const y = field === 'queryCount' ? point.queryY : point.importY
+    return `${point.x.toFixed(2)},${y.toFixed(2)}`
   }).join(' ')
+}
+
+function handleChartHover(event: MouseEvent) {
+  if (!chartDataPoints.value.length) return
+  const svg = event.currentTarget as SVGSVGElement | null
+  if (!svg) return
+  const rect = svg.getBoundingClientRect()
+  if (!rect.width) return
+  const x = ((event.clientX - rect.left) / rect.width) * 1000
+  const nearest = chartDataPoints.value.reduce((best, point) => {
+    if (!best) return point
+    return Math.abs(point.x - x) < Math.abs(best.x - x) ? point : best
+  }, null as ChartPoint | null)
+  hoveredChartIndex.value = nearest ? nearest.index : null
+}
+
+function clearChartHover() {
+  hoveredChartIndex.value = null
 }
 
 
@@ -1587,10 +1673,31 @@ onMounted(() => {
 .metrics-grid { margin-bottom: 20px; }
 .chart-panel { margin-bottom: 20px; }
 .line-chart-wrap { width: 100%; }
+.line-chart-stage { position: relative; }
 .line-chart { width: 100%; height: 260px; display: block; border: 1px solid var(--border); border-radius: 8px; background: rgba(var(--surface-rgb), 0.35); }
 .axis-line { stroke: var(--border); stroke-width: 1; }
 .line-query { fill: none; stroke: #3b82f6; stroke-width: 2.5; }
 .line-import { fill: none; stroke: #22c55e; stroke-width: 2.5; }
+.chart-hover-points { pointer-events: none; }
+.chart-point { stroke: #fff; stroke-width: 2; }
+.chart-point.query { fill: #3b82f6; }
+.chart-point.import { fill: #22c55e; }
+.chart-tooltip {
+  position: absolute;
+  min-width: 150px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-active);
+  background: rgba(var(--surface-rgb), 0.96);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  color: var(--text-main);
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 2;
+}
+.chart-tooltip-date { margin-bottom: 4px; font-weight: 700; color: var(--text-main); }
+.chart-tooltip-row { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .chart-legend { display: flex; gap: 20px; margin-top: 10px; color: var(--text-sub); font-size: 13px; }
 .legend-item { display: inline-flex; align-items: center; gap: 8px; }
 .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
