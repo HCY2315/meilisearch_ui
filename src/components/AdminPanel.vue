@@ -409,8 +409,8 @@
               >
                 <g class="chart-grid">
                   <line
-                    v-for="tick in chartYAxisTicks"
-                    :key="`grid-${tick.value}`"
+                    v-for="(tick, idx) in chartYAxisTicks"
+                    :key="`grid-${idx}-${tick.value}`"
                     :x1="chartPlotLeft"
                     :x2="chartPlotLeft + chartPlotWidth"
                     :y1="tick.y"
@@ -422,8 +422,8 @@
                 <line :x1="chartPlotLeft" :y1="chartPlotTop" :x2="chartPlotLeft" :y2="chartPlotBottom" class="axis-line" />
                 <g class="chart-axis-labels">
                   <text
-                    v-for="tick in chartYAxisTicks"
-                    :key="`y-${tick.value}`"
+                    v-for="(tick, idx) in chartYAxisTicks"
+                    :key="`y-${idx}-${tick.value}`"
                     :x="chartPlotLeft - 10"
                     :y="tick.y + 4"
                     class="chart-axis-label y-label"
@@ -433,7 +433,7 @@
                   </text>
                   <text
                     v-for="label in chartXAxisLabels"
-                    :key="`x-${label.value}`"
+                    :key="`x-${label.value}-${label.x}`"
                     :x="label.x"
                     :y="chartPlotBottom + 22"
                     class="chart-axis-label x-label"
@@ -1253,7 +1253,7 @@ function formatChartLabel(date: string): string {
   if (!normalized) return '-'
   const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/)
   if (match) return `${match[2]}/${match[3]}`
-  return normalized.replaceAll('-', '/')
+  return normalized.replace(/-/g, '/')
 }
 
 function buildChartXAxisLabels(): ChartAxisLabel[] {
@@ -1804,12 +1804,29 @@ onMounted(() => {
 .line-chart-stage { position: relative; }
 .line-chart { width: 100%; height: 260px; display: block; border: 1px solid var(--border); border-radius: 8px; background: rgba(var(--surface-rgb), 0.35); }
 .axis-line { stroke: var(--border); stroke-width: 1; }
+.chart-grid-line { stroke: var(--border); stroke-width: 1; opacity: 0.35; }
 .line-query { fill: none; stroke: #3b82f6; stroke-width: 2.5; }
 .line-import { fill: none; stroke: #22c55e; stroke-width: 2.5; }
+.chart-point-layer,
 .chart-hover-points { pointer-events: none; }
-.chart-point { stroke: #fff; stroke-width: 2; }
+.chart-point { stroke: rgba(255, 255, 255, 0.95); stroke-width: 1.5; opacity: 0.9; }
 .chart-point.query { fill: #3b82f6; }
 .chart-point.import { fill: #22c55e; }
+.chart-point.active { stroke-width: 3; opacity: 1; }
+.chart-crosshair {
+  stroke: rgba(var(--primary-color-rgb), 0.28);
+  stroke-width: 1.2;
+  stroke-dasharray: 6 6;
+  pointer-events: none;
+}
+.chart-axis-label {
+  fill: var(--text-muted);
+  font-size: 11px;
+  user-select: none;
+  pointer-events: none;
+}
+.chart-axis-label.y-label { letter-spacing: 0.01em; }
+.chart-axis-label.x-label { dominant-baseline: hanging; }
 .chart-tooltip {
   position: absolute;
   min-width: 150px;
