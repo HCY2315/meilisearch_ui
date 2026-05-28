@@ -401,19 +401,82 @@
           <div v-if="chartPointsQuery.length" class="line-chart-wrap">
             <div class="line-chart-stage" @mouseleave="clearChartHover">
               <svg
-                viewBox="0 0 1000 260"
+                :viewBox="`0 0 ${chartSvgWidth} ${chartSvgHeight}`"
                 preserveAspectRatio="none"
                 class="line-chart"
                 @mousemove="handleChartHover"
                 @mouseenter="handleChartHover"
               >
-                <line x1="40" y1="220" x2="980" y2="220" class="axis-line" />
-                <line x1="40" y1="20" x2="40" y2="220" class="axis-line" />
+                <g class="chart-grid">
+                  <line
+                    v-for="tick in chartYAxisTicks"
+                    :key="`grid-${tick.value}`"
+                    :x1="chartPlotLeft"
+                    :x2="chartPlotLeft + chartPlotWidth"
+                    :y1="tick.y"
+                    :y2="tick.y"
+                    class="chart-grid-line"
+                  />
+                </g>
+                <line :x1="chartPlotLeft" :y1="chartPlotBottom" :x2="chartPlotLeft + chartPlotWidth" :y2="chartPlotBottom" class="axis-line" />
+                <line :x1="chartPlotLeft" :y1="chartPlotTop" :x2="chartPlotLeft" :y2="chartPlotBottom" class="axis-line" />
+                <g class="chart-axis-labels">
+                  <text
+                    v-for="tick in chartYAxisTicks"
+                    :key="`y-${tick.value}`"
+                    :x="chartPlotLeft - 10"
+                    :y="tick.y + 4"
+                    class="chart-axis-label y-label"
+                    text-anchor="end"
+                  >
+                    {{ tick.label }}
+                  </text>
+                  <text
+                    v-for="label in chartXAxisLabels"
+                    :key="`x-${label.value}`"
+                    :x="label.x"
+                    :y="chartPlotBottom + 22"
+                    class="chart-axis-label x-label"
+                    text-anchor="middle"
+                  >
+                    {{ label.label }}
+                  </text>
+                </g>
+                <line
+                  v-if="chartHoverPosition"
+                  :x1="chartHoverPosition.x"
+                  :x2="chartHoverPosition.x"
+                  :y1="chartPlotTop"
+                  :y2="chartPlotBottom"
+                  class="chart-crosshair"
+                />
+                <line
+                  v-if="chartHoverPosition"
+                  :x1="chartPlotLeft"
+                  :x2="chartPlotLeft + chartPlotWidth"
+                  :y1="chartHoverPosition.y"
+                  :y2="chartHoverPosition.y"
+                  class="chart-crosshair"
+                />
                 <polyline :points="chartPointsQuery" class="line-query" />
                 <polyline :points="chartPointsImport" class="line-import" />
-                <g v-if="hoveredChartPoint" class="chart-hover-points">
-                  <circle :cx="hoveredChartPoint.x" :cy="hoveredChartPoint.queryY" r="5" class="chart-point query" />
-                  <circle :cx="hoveredChartPoint.x" :cy="hoveredChartPoint.importY" r="5" class="chart-point import" />
+                <g class="chart-point-layer">
+                  <circle
+                    v-for="point in chartDataPoints"
+                    :key="`query-point-${point.index}`"
+                    :cx="point.x"
+                    :cy="point.queryY"
+                    :r="hoveredChartPoint?.index === point.index ? 6 : 3.5"
+                    :class="['chart-point', 'query', { active: hoveredChartPoint?.index === point.index }]"
+                  />
+                  <circle
+                    v-for="point in chartDataPoints"
+                    :key="`import-point-${point.index}`"
+                    :cx="point.x"
+                    :cy="point.importY"
+                    :r="hoveredChartPoint?.index === point.index ? 6 : 3.5"
+                    :class="['chart-point', 'import', { active: hoveredChartPoint?.index === point.index }]"
+                  />
                 </g>
               </svg>
               <div v-if="hoveredChartPoint" class="chart-tooltip" :style="chartTooltipStyle">
@@ -1070,6 +1133,14 @@ const maxChartValue = computed(() => {
   const maxInImport = usageMetrics.value.reduce((m, item) => Math.max(m, Number(item.importCount || 0)), 0)
   return Math.max(1, maxInQuery, maxInImport)
 })
+const chartSvgWidth = 1000
+const chartSvgHeight = 260
+const chartPlotLeft = 40
+const chartPlotRight = 20
+const chartPlotTop = 20
+const chartPlotBottom = 220
+const chartPlotWidth = chartSvgWidth - chartPlotLeft - chartPlotRight
+const chartPlotHeight = chartPlotBottom - chartPlotTop
 type ChartPoint = {
   index: number
   date: string
@@ -1080,10 +1151,23 @@ type ChartPoint = {
   importY: number
   tooltipY: number
 }
+type ChartAxisTick = {
+  value: number
+  label: string
+  y: number
+}
+type ChartAxisLabel = {
+  value: string
+  label: string
+  x: number
+}
 const chartDataPoints = computed<ChartPoint[]>(() => buildChartDataPoints())
+const chartYAxisTicks = computed<ChartAxisTick[]>(() => buildChartYAxisTicks())
+const chartXAxisLabels = computed<ChartAxisLabel[]>(() => buildChartXAxisLabels())
 const chartPointsQuery = computed(() => buildLinePoints('queryCount'))
 const chartPointsImport = computed(() => buildLinePoints('importCount'))
 const hoveredChartIndex = ref<number | null>(null)
+const chartHoverPosition = ref<{ x: number; y: number } | null>(null)
 const hoveredChartPoint = computed(() => {
   if (hoveredChartIndex.value === null) return null
   return chartDataPoints.value[hoveredChartIndex.value] || null
@@ -1091,8 +1175,8 @@ const hoveredChartPoint = computed(() => {
 const chartTooltipStyle = computed(() => {
   const point = hoveredChartPoint.value
   if (!point) return {}
-  const left = Math.min(Math.max((point.x / 1000) * 100, 10), 90)
-  const top = Math.max(8, (point.tooltipY / 260) * 100 - 12)
+  const left = Math.min(Math.max((point.x / chartSvgWidth) * 100, 10), 90)
+  const top = Math.max(8, (point.tooltipY / chartSvgHeight) * 100 - 12)
   const placeBelow = top < 18
   return {
     left: `${left}%`,
@@ -1115,20 +1199,23 @@ function formatBytes(bytes: number): string {
 
 function buildChartDataPoints(): ChartPoint[] {
   const rows = usageMetrics.value
-  const step = rows.length > 1 ? 940 / (rows.length - 1) : 0
+  const step = rows.length > 1 ? chartPlotWidth / (rows.length - 1) : 0
   return rows.map((item, idx) => {
     const queryCount = Number(item.queryCount || 0)
     const importCount = Number(item.importCount || 0)
-    const x = rows.length === 1 ? 500 : 40 + step * idx
+    const x = rows.length === 1 ? chartPlotLeft + chartPlotWidth / 2 : chartPlotLeft + step * idx
     return {
       index: idx,
       date: item.date,
       queryCount,
       importCount,
       x,
-      queryY: 220 - (queryCount / maxChartValue.value) * 200,
-      importY: 220 - (importCount / maxChartValue.value) * 200,
-      tooltipY: Math.min(220 - (queryCount / maxChartValue.value) * 200, 220 - (importCount / maxChartValue.value) * 200),
+      queryY: chartPlotBottom - ((queryCount / maxChartValue.value) * chartPlotHeight),
+      importY: chartPlotBottom - ((importCount / maxChartValue.value) * chartPlotHeight),
+      tooltipY: Math.min(
+        chartPlotBottom - ((queryCount / maxChartValue.value) * chartPlotHeight),
+        chartPlotBottom - ((importCount / maxChartValue.value) * chartPlotHeight),
+      ),
     }
   })
 }
@@ -1139,12 +1226,47 @@ function buildLinePoints(field: 'queryCount' | 'importCount'): string {
   if (points.length === 1) {
     const single = points[0]
     const y = field === 'queryCount' ? single.queryY : single.importY
-    return `40,${y.toFixed(2)} 980,${y.toFixed(2)}`
+    return `${chartPlotLeft},${y.toFixed(2)} ${chartPlotLeft + chartPlotWidth},${y.toFixed(2)}`
   }
   return points.map(point => {
     const y = field === 'queryCount' ? point.queryY : point.importY
     return `${point.x.toFixed(2)},${y.toFixed(2)}`
   }).join(' ')
+}
+
+function buildChartYAxisTicks(): ChartAxisTick[] {
+  const max = maxChartValue.value
+  const tickCount = 4
+  return Array.from({ length: tickCount + 1 }, (_, idx) => {
+    const ratio = idx / tickCount
+    const value = Math.round(max * (1 - ratio))
+    return {
+      value,
+      label: value.toLocaleString(),
+      y: chartPlotTop + chartPlotHeight * ratio,
+    }
+  })
+}
+
+function formatChartLabel(date: string): string {
+  const normalized = (date || '').trim()
+  if (!normalized) return '-'
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (match) return `${match[2]}/${match[3]}`
+  return normalized.replaceAll('-', '/')
+}
+
+function buildChartXAxisLabels(): ChartAxisLabel[] {
+  const points = chartDataPoints.value
+  if (!points.length) return []
+  const step = Math.max(1, Math.ceil(points.length / 6))
+  return points
+    .filter((point, idx) => idx === 0 || idx === points.length - 1 || idx % step === 0)
+    .map(point => ({
+      value: point.date,
+      label: formatChartLabel(point.date),
+      x: point.x,
+    }))
 }
 
 function handleChartHover(event: MouseEvent) {
@@ -1153,7 +1275,12 @@ function handleChartHover(event: MouseEvent) {
   if (!svg) return
   const rect = svg.getBoundingClientRect()
   if (!rect.width) return
-  const x = ((event.clientX - rect.left) / rect.width) * 1000
+  const x = ((event.clientX - rect.left) / rect.width) * chartSvgWidth
+  const y = ((event.clientY - rect.top) / rect.height) * chartSvgHeight
+  chartHoverPosition.value = {
+    x: Math.min(Math.max(x, chartPlotLeft), chartPlotLeft + chartPlotWidth),
+    y: Math.min(Math.max(y, chartPlotTop), chartPlotBottom),
+  }
   const nearest = chartDataPoints.value.reduce((best, point) => {
     if (!best) return point
     return Math.abs(point.x - x) < Math.abs(best.x - x) ? point : best
@@ -1163,6 +1290,7 @@ function handleChartHover(event: MouseEvent) {
 
 function clearChartHover() {
   hoveredChartIndex.value = null
+  chartHoverPosition.value = null
 }
 
 
