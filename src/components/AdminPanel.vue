@@ -201,6 +201,7 @@
           <thead>
             <tr>
               <th>索引标识</th>
+              <th>文档数</th>
               <th>别名 / 备注</th>
               <th>对外状态</th>
               <th>操作</th>
@@ -209,6 +210,11 @@
           <tbody>
             <tr v-for="cfg in indexConfigs" :key="cfg.id">
               <td><strong>{{ cfg.uid }}</strong></td>
+              <td>
+                <span class="doc-count">
+                  {{ typeof cfg.documentCount === 'number' ? cfg.documentCount.toLocaleString() : '-' }}
+                </span>
+              </td>
               <td>
                 <div class="alias-info">
                   <span class="alias">{{ cfg.alias || '-' }}</span>
@@ -893,6 +899,7 @@ import {
   getAdminAccessTokens,
   getAdminApps,
   getProxyIndexes,
+  getProxyIndexStats,
   getAdminInstances,
   createAdminInstance,
   updateAdminInstance,
@@ -1364,7 +1371,18 @@ async function loadAdminData() {
       getAdminUsageMetrics()
     ])
 
-    indexConfigs.value = idxData as any[]
+    const docCountEntries = await Promise.all(
+      (idxData as any[]).map(async cfg => {
+        const stats = await getProxyIndexStats(cfg.uid).catch(() => null)
+        return [cfg.uid, stats?.numberOfDocuments] as const
+      })
+    )
+    const docCountMap = new Map(docCountEntries)
+
+    indexConfigs.value = (idxData as any[]).map(cfg => ({
+      ...cfg,
+      documentCount: docCountMap.get(cfg.uid)
+    }))
     accessTokens.value = tokData as any[]
     apps.value = appsData as any[]
     instances.value = insData as any[]

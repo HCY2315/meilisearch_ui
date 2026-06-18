@@ -432,6 +432,13 @@ export async function getProxyIndexes(): Promise<{ results: { uid: string }[] }>
   return res.json()
 }
 
+export async function getProxyIndexStats(uid: string): Promise<IndexStats | null> {
+  const headers = getAuthHeaders()
+  const res = await fetch(`/api/v1/proxy/indexes/${encodeURIComponent(uid)}/stats`, { headers })
+  if (!res.ok) return null
+  return res.json()
+}
+
 export async function getAdminInstances(): Promise<unknown[]> {
   const headers = getAuthHeaders()
   const res = await fetch('/api/v1/admin/instances', { headers })
