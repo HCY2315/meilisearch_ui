@@ -75,8 +75,22 @@
         <div v-if="showTasksModal" class="tasks-modal-overlay animate-fade-in" @click.self="showTasksModal = false">
           <div class="tasks-modal">
             <div class="modal-header">
-              <h3>⚡ 任务详情 - {{ currentTaskInstance?.name }}</h3>
-              <button class="close-btn" @click="showTasksModal = false">×</button>
+              <div class="modal-title">
+                <h3>⚡ 任务详情 - {{ currentTaskInstance?.name }}</h3>
+                <span v-if="taskLastUpdatedAt" class="task-refresh-time">
+                  更新于 {{ taskLastUpdatedAt.toLocaleTimeString() }}
+                </span>
+              </div>
+              <div class="modal-actions">
+                <button
+                  class="btn btn-secondary btn-sm"
+                  :disabled="isLoadingTasks || isRefreshingTasks"
+                  @click="refreshTasks"
+                >
+                  {{ isRefreshingTasks ? '刷新中...' : '刷新' }}
+                </button>
+                <button class="close-btn" @click="showTasksModal = false">×</button>
+              </div>
             </div>
             <div class="modal-body">
               <div v-if="isLoadingTasks" class="loading-state">
@@ -1051,20 +1065,44 @@ const showTasksModal = ref(false)
 const currentTaskInstance = ref<any>(null)
 const instanceTasks = ref<any[]>([])
 const isLoadingTasks = ref(false)
+const isRefreshingTasks = ref(false)
+const taskLastUpdatedAt = ref<Date | null>(null)
+
+async function loadTasks(ins: any, options: { clear?: boolean } = {}) {
+  if (!ins) return
+  const shouldClear = options.clear === true
+  if (shouldClear) {
+    isLoadingTasks.value = true
+    instanceTasks.value = []
+    taskLastUpdatedAt.value = null
+  } else {
+    isRefreshingTasks.value = true
+  }
+
+  try {
+    const data = await getMeiliTasks(ins.host, ins.apiKey || '')
+    instanceTasks.value = data.results || []
+    taskLastUpdatedAt.value = new Date()
+  } catch (e) {
+    alert('获取任务失败: ' + (e as Error).message)
+  } finally {
+    if (shouldClear) {
+      isLoadingTasks.value = false
+    } else {
+      isRefreshingTasks.value = false
+    }
+  }
+}
 
 async function viewTasks(ins: any) {
   currentTaskInstance.value = ins
   showTasksModal.value = true
-  isLoadingTasks.value = true
-  instanceTasks.value = []
-  try {
-    const data = await getMeiliTasks(ins.host, ins.apiKey || '')
-    instanceTasks.value = data.results || []
-  } catch (e) {
-    alert('获取任务失败: ' + (e as Error).message)
-  } finally {
-    isLoadingTasks.value = false
-  }
+  await loadTasks(ins, { clear: true })
+}
+
+async function refreshTasks() {
+  if (isLoadingTasks.value || isRefreshingTasks.value) return
+  await loadTasks(currentTaskInstance.value)
 }
 
 async function handleCancelTask(task: any) {
@@ -1077,7 +1115,7 @@ async function handleCancelTask(task: any) {
       // 延迟刷新列表
       setTimeout(() => {
         if (currentTaskInstance.value) {
-          viewTasks(currentTaskInstance.value)
+          refreshTasks()
         }
       }, 500)
     } else {
@@ -2198,6 +2236,26 @@ onMounted(() => {
   margin: 0;
   color: var(--text-main);
   font-size: 18px;
+}
+.modal-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.task-refresh-time {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.modal-actions .btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
 }
 .close-btn {
   background: transparent;
