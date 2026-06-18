@@ -2044,6 +2044,11 @@ onMounted(() => {
 .alias-info { display: flex; flex-direction: column; gap: 4px; }
 .alias { color: var(--text-main); font-weight: 600; }
 .desc { font-size: 12px; color: var(--text-muted); }
+.doc-count {
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
 
 /* 芯片多选 */
 .index-chips { display: flex; flex-wrap: wrap; gap: 8px; }
