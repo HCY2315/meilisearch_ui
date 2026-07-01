@@ -523,15 +523,25 @@
           <div class="metric-detail-header">
             <div>
               <h3>每日明细</h3>
-              <p>默认显示最近 {{ DAILY_METRIC_PREVIEW_LIMIT }} 天，共 {{ usageMetrics.length }} 条记录。</p>
+              <p>共 {{ usageMetrics.length }} 条记录，每页显示 {{ DAILY_METRIC_PAGE_SIZE }} 条。</p>
             </div>
-            <button
-              v-if="usageMetrics.length > DAILY_METRIC_PREVIEW_LIMIT"
-              class="btn btn-secondary btn-sm"
-              @click="showAllDailyMetrics = !showAllDailyMetrics"
-            >
-              {{ showAllDailyMetrics ? '收起' : '展开全部' }}
-            </button>
+            <div v-if="totalPages > 1" class="metrics-pagination">
+              <button 
+                class="btn btn-secondary btn-sm" 
+                :disabled="currentPage === 1"
+                @click="currentPage--"
+              >
+                ◀ 上一页
+              </button>
+              <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
+              <button 
+                class="btn btn-secondary btn-sm" 
+                :disabled="currentPage === totalPages"
+                @click="currentPage++"
+              >
+                下一页 ▶
+              </button>
+            </div>
           </div>
           <table class="data-table compact-metrics-table">
             <thead>
@@ -1006,19 +1016,24 @@ const tokenApplications = ref<any[]>([])
 const usageMetrics = ref<any[]>([])
 const indexUsageMetrics = ref<any[]>([])
 
-// NOTE: 用量监控预览数量限制及折叠控制
-const DAILY_METRIC_PREVIEW_LIMIT = 10
+// NOTE: 用量监控折叠及分页控制
+const DAILY_METRIC_PAGE_SIZE = 6
 const INDEX_METRIC_PREVIEW_LIMIT = 5
 
-const showAllDailyMetrics = ref(false)
+const currentPage = ref(1)
 const showAllIndexMetrics = ref(false)
 
-// 计算每日明细显示数据（默认仅显示最近 DAILY_METRIC_PREVIEW_LIMIT 天的记录）
+const totalPages = computed(() => {
+  return Math.ceil(usageMetrics.value.length / DAILY_METRIC_PAGE_SIZE) || 1
+})
+
+// 计算每日明细显示数据（按日期降序，且每页显示 DAILY_METRIC_PAGE_SIZE 条记录）
 const displayedUsageMetrics = computed(() => {
-  if (showAllDailyMetrics.value) {
-    return usageMetrics.value
-  }
-  return usageMetrics.value.slice(-DAILY_METRIC_PREVIEW_LIMIT)
+  const sorted = [...usageMetrics.value].sort((a, b) => {
+    return new Date(b.date).getTime() - new Date(a.date).getTime()
+  })
+  const start = (currentPage.value - 1) * DAILY_METRIC_PAGE_SIZE
+  return sorted.slice(start, start + DAILY_METRIC_PAGE_SIZE)
 })
 
 // 计算索引维度显示数据（默认仅显示前 INDEX_METRIC_PREVIEW_LIMIT 个索引）
@@ -1440,6 +1455,7 @@ async function loadAdminData() {
     tokenApplications.value = applicationData as any[]
     usageMetrics.value = (metricsData as any).results || []
     indexUsageMetrics.value = (metricsData as any).indexResults || []
+    currentPage.value = 1
     if (proxyData.results) {
       availableIndexes.value = proxyData.results.map(r => r.uid)
     }
@@ -1897,6 +1913,18 @@ onMounted(() => {
 .nav-item:hover { background: var(--bg-card-hover); color: var(--text-main); }
 .nav-item.active { background: rgba(var(--primary-color-rgb), 0.12); color: var(--primary); }
 .nav-icon { font-size: 18px; }
+
+.metrics-pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pagination-info {
+  font-size: 13px;
+  color: var(--text-sub);
+  min-width: 60px;
+  text-align: center;
+}
 
 .sidebar-footer { padding: 0 32px; font-size: 11px; color: var(--text-muted); }
 
