@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="用量统计" />
+    <list default="true" id="82418341-8fd7-4d6b-a866-a1b40d0d7920" name="更改" comment="用量统计">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/data/meili_admin.db" beforeDir="false" afterPath="$PROJECT_DIR$/backend/data/meili_admin.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/AdminPanel.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/AdminPanel.vue" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -30,23 +34,23 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0000857205124352" />
-      <entry key="MS500" value="1.1541561252838894" />
-      <entry key="S2" value="1.9518757198734096" />
-      <entry key="S5" value="3.8202146884412396" />
-      <entry key="S10" value="6.968151803597496" />
-      <entry key="S30" value="17.93551977672976" />
-      <entry key="S60" value="28.375189091864428" />
-      <entry key="M2" value="39.82852120755903" />
-      <entry key="M5" value="54.188185349078914" />
-      <entry key="M10" value="62.13559092133813" />
-      <entry key="M15" value="65.37268276689345" />
-      <entry key="M30" value="68.97617584714534" />
-      <entry key="H1" value="70.93185545464709" />
-      <entry key="H2" value="71.9513777789303" />
-      <entry key="H4" value="72.47198791043935" />
-      <entry key="D1" value="72.91147847485519" />
-      <entry key="W1" value="72.98734127295042" />
+      <entry key="MS100" value="1.2192926611464387" />
+      <entry key="MS500" value="1.9408042375773928" />
+      <entry key="S2" value="3.4046858964656614" />
+      <entry key="S5" value="5.411898745020115" />
+      <entry key="S10" value="8.379525419167939" />
+      <entry key="S30" value="20.985481866972098" />
+      <entry key="S60" value="35.33461820895732" />
+      <entry key="M2" value="51.888920673395916" />
+      <entry key="M5" value="72.09384234441482" />
+      <entry key="M10" value="83.06471855451144" />
+      <entry key="M15" value="87.51695367361043" />
+      <entry key="M30" value="92.46943659861114" />
+      <entry key="H1" value="95.15708795346485" />
+      <entry key="H2" value="96.55841664456327" />
+      <entry key="H4" value="97.27408329794056" />
+      <entry key="D1" value="97.87829400950196" />
+      <entry key="W1" value="97.98259569415406" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -68,23 +72,23 @@
       <entry key="W1" value="0.0" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9527202266558066" />
-      <entry key="MS500" value="1.1432222389194127" />
-      <entry key="S2" value="1.9475081787567203" />
-      <entry key="S5" value="3.816910272194263" />
-      <entry key="S10" value="6.964844568728965" />
-      <entry key="S30" value="17.930395176765966" />
-      <entry key="S60" value="28.369929504949607" />
-      <entry key="M2" value="39.824329953954724" />
-      <entry key="M5" value="54.185727419525016" />
-      <entry key="M10" value="62.134144148969405" />
-      <entry key="M15" value="65.3716587262873" />
-      <entry key="M30" value="68.97563055340012" />
-      <entry key="H1" value="70.93157374684179" />
-      <entry key="H2" value="71.95123455875968" />
-      <entry key="H4" value="72.47191569560536" />
-      <entry key="D1" value="72.9114663539112" />
-      <entry key="W1" value="72.98733953928685" />
+      <entry key="MS100" value="1.1564172279725586" />
+      <entry key="MS500" value="1.9219373064021912" />
+      <entry key="S2" value="3.39659148447544" />
+      <entry key="S5" value="5.406411942452583" />
+      <entry key="S10" value="8.373368073039748" />
+      <entry key="S30" value="20.97569969578749" />
+      <entry key="S60" value="35.32522176311996" />
+      <entry key="M2" value="51.88169958794586" />
+      <entry key="M5" value="72.0897705668917" />
+      <entry key="M10" value="83.06236678837564" />
+      <entry key="M15" value="87.51530058736412" />
+      <entry key="M30" value="92.46856265865215" />
+      <entry key="H1" value="95.15663811974426" />
+      <entry key="H2" value="96.55818837325315" />
+      <entry key="H4" value="97.2739683055672" />
+      <entry key="D1" value="97.87827472354269" />
+      <entry key="W1" value="97.98259293604362" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -96,37 +100,37 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.rust.reset.selective.auto.import&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;SHELLCHECK.PATH&quot;: &quot;/home/chaoyue/.local/share/JetBrains/WebStorm2026.1/Shell Script/shellcheck&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;a__main__1&quot;,
-    &quot;javascript.nodejs.core.library.configured.version&quot;: &quot;22.22.2&quot;,
-    &quot;javascript.nodejs.core.library.typings.version&quot;: &quot;22.19.19&quot;,
-    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/chaoyue/.nvm&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_interpreter_path&quot;: &quot;/home/chaoyue/.nvm/versions/node/v22.22.2/bin/node&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;/home/chaoyue/.nvm&quot;,
-    &quot;org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon&quot;: &quot;&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;settings.javascript.runtime&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;/home/chaoyue/code/meilisearch_ui/node_modules/typescript/lib&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.rust.reset.selective.auto.import": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "SHELLCHECK.PATH": "/home/chaoyue/.local/share/JetBrains/WebStorm2026.1/Shell Script/shellcheck",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "a__main__1",
+    "javascript.nodejs.core.library.configured.version": "22.22.2",
+    "javascript.nodejs.core.library.typings.version": "22.19.19",
+    "javascript.preferred.runtime.type.id": "node",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "/home/chaoyue/.nvm",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_interpreter_path": "/home/chaoyue/.nvm/versions/node/v22.22.2/bin/node",
+    "nodejs_package_manager_path": "/home/chaoyue/.nvm",
+    "org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon": "",
+    "settings.editor.selected.configurable": "ml.llm.LLMThirdPartyAiProvidersConfigurable",
+    "to.speed.mode.migration.done": "true",
+    "ts.external.directory.path": "/home/chaoyue/code/meilisearch_ui/node_modules/typescript/lib",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/backend/data" />
@@ -162,6 +166,7 @@
       <workItem from="1780561262498" duration="11000" />
       <workItem from="1781747474757" duration="1799000" />
       <workItem from="1782090906327" duration="4000" />
+      <workItem from="1782898540660" duration="761000" />
     </task>
     <task id="LOCAL-00001" summary="自动备份: 2026-05-08 12:40:07">
       <option name="closed" value="true" />

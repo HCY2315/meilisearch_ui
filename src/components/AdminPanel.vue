@@ -519,31 +519,58 @@
           <div v-else class="text-muted">暂无趋势数据</div>
         </div>
 
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>日期</th>
-              <th>查询量</th>
-              <th>导入量</th>
-              <th>存储占用</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in usageMetrics" :key="item.date">
-              <td>{{ item.date }}</td>
-              <td>{{ Number(item.queryCount || 0).toLocaleString() }}</td>
-              <td>{{ Number(item.importCount || 0).toLocaleString() }}</td>
-              <td>{{ formatBytes(Number(item.databaseSize || 0)) }}</td>
-            </tr>
-            <tr v-if="usageMetrics.length === 0">
-              <td colspan="4" class="text-muted">暂无统计数据</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="glass-editor metric-detail-panel">
+          <div class="metric-detail-header">
+            <div>
+              <h3>每日明细</h3>
+              <p>默认显示最近 {{ DAILY_METRIC_PREVIEW_LIMIT }} 天，共 {{ usageMetrics.length }} 条记录。</p>
+            </div>
+            <button
+              v-if="usageMetrics.length > DAILY_METRIC_PREVIEW_LIMIT"
+              class="btn btn-secondary btn-sm"
+              @click="showAllDailyMetrics = !showAllDailyMetrics"
+            >
+              {{ showAllDailyMetrics ? '收起' : '展开全部' }}
+            </button>
+          </div>
+          <table class="data-table compact-metrics-table">
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>查询量</th>
+                <th>导入量</th>
+                <th>存储占用</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in displayedUsageMetrics" :key="item.date">
+                <td>{{ item.date }}</td>
+                <td>{{ Number(item.queryCount || 0).toLocaleString() }}</td>
+                <td>{{ Number(item.importCount || 0).toLocaleString() }}</td>
+                <td>{{ formatBytes(Number(item.databaseSize || 0)) }}</td>
+              </tr>
+              <tr v-if="usageMetrics.length === 0">
+                <td colspan="4" class="text-muted">暂无统计数据</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        <div class="glass-editor" style="margin-top: 20px;">
-          <h3>按索引维度统计（六个月汇总）</h3>
-          <table class="data-table">
+        <div class="glass-editor metric-detail-panel">
+          <div class="metric-detail-header">
+            <div>
+              <h3>按索引维度统计</h3>
+              <p>六个月汇总，默认显示前 {{ INDEX_METRIC_PREVIEW_LIMIT }} 个索引。</p>
+            </div>
+            <button
+              v-if="indexUsageMetrics.length > INDEX_METRIC_PREVIEW_LIMIT"
+              class="btn btn-secondary btn-sm"
+              @click="showAllIndexMetrics = !showAllIndexMetrics"
+            >
+              {{ showAllIndexMetrics ? '收起' : '展开全部' }}
+            </button>
+          </div>
+          <table class="data-table compact-metrics-table">
             <thead>
               <tr>
                 <th>索引</th>
@@ -552,7 +579,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in indexUsageMetrics" :key="item.indexUid">
+              <tr v-for="item in displayedIndexUsageMetrics" :key="item.indexUid">
                 <td>{{ item.indexUid }}</td>
                 <td>{{ Number(item.queryCount || 0).toLocaleString() }}</td>
                 <td>{{ Number(item.importCount || 0).toLocaleString() }}</td>
@@ -978,6 +1005,30 @@ const availableIndexes = ref<string[]>([])
 const tokenApplications = ref<any[]>([])
 const usageMetrics = ref<any[]>([])
 const indexUsageMetrics = ref<any[]>([])
+
+// NOTE: 用量监控预览数量限制及折叠控制
+const DAILY_METRIC_PREVIEW_LIMIT = 10
+const INDEX_METRIC_PREVIEW_LIMIT = 5
+
+const showAllDailyMetrics = ref(false)
+const showAllIndexMetrics = ref(false)
+
+// 计算每日明细显示数据（默认仅显示最近 DAILY_METRIC_PREVIEW_LIMIT 天的记录）
+const displayedUsageMetrics = computed(() => {
+  if (showAllDailyMetrics.value) {
+    return usageMetrics.value
+  }
+  return usageMetrics.value.slice(-DAILY_METRIC_PREVIEW_LIMIT)
+})
+
+// 计算索引维度显示数据（默认仅显示前 INDEX_METRIC_PREVIEW_LIMIT 个索引）
+const displayedIndexUsageMetrics = computed(() => {
+  if (showAllIndexMetrics.value) {
+    return indexUsageMetrics.value
+  }
+  return indexUsageMetrics.value.slice(0, INDEX_METRIC_PREVIEW_LIMIT)
+})
+
 const approveModalOpen = ref(false)
 const pendingApproveApp = ref<any | null>(null)
 const approveForm = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: 30 })
