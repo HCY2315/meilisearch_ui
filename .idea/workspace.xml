@@ -135,7 +135,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-WS-261.25134.101" />
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-WS-261.26222.58" />
       </set>
     </attachedChunks>
   </component>
@@ -164,6 +164,7 @@
       <workItem from="1782090906327" duration="4000" />
       <workItem from="1782898540660" duration="761000" />
       <workItem from="1782902343405" duration="6000" />
+      <workItem from="1783492722558" duration="6000" />
     </task>
     <task id="LOCAL-00001" summary="自动备份: 2026-05-08 12:40:07">
       <option name="closed" value="true" />
