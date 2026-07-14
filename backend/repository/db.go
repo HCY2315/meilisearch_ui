@@ -48,6 +48,7 @@ func InitDB() {
 	// 自动迁移模式
 	err = DB.AutoMigrate(
 		&model.User{},
+		&model.Tenant{},
 		&model.MeiliInstance{},
 		&model.Application{},
 		&model.IndexConfig{},
@@ -56,6 +57,8 @@ func InitDB() {
 		&model.EmailVerification{},
 		&model.UsageMetric{},
 		&model.UsageMetricIndex{},
+		&model.TokenUsageMetric{},
+		&model.AppUsageMetric{},
 	)
 	if err != nil {
 		log.Fatalf("failed to migrate database: %v", err)

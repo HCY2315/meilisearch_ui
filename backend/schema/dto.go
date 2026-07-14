@@ -8,10 +8,7 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-// AppUpdateRequest UI修改
-type AppUpdateRequest struct {
-	UIConfig string `json:"uiConfig"`
-}
+
 
 type IndexConfigRequest struct {
 	Uid                string `json:"uid" binding:"required"`
@@ -41,18 +38,22 @@ type TableConfigsUpdateRequest struct {
 
 // AccessTokenRequest 新建数据访问Token
 type AccessTokenRequest struct {
-	Token        string     `json:"token" binding:"required"`
-	AllowIndexes string     `json:"allowIndexes" binding:"required"` // '["docs", "finance"]'
-	Description  string     `json:"description"`
-	ExpiresAt    *time.Time `json:"expiresAt"`
+	Token            string     `json:"token" binding:"required"`
+	AllowIndexes     string     `json:"allowIndexes" binding:"required"` // '["docs", "finance"]'
+	Description      string     `json:"description"`
+	ExpiresAt        *time.Time `json:"expiresAt"`
+	MaxQueriesPerDay int64      `json:"maxQueriesPerDay"` // 每日最大查询次数，0表示不限制
+	MaxImportsPerDay int64      `json:"maxImportsPerDay"` // 每日最大导入次数，0表示不限制
 }
 
 type AccessTokenUpdateRequest struct {
-	ID           uint       `json:"id" binding:"required"`
-	Token        string     `json:"token"`
-	AllowIndexes string     `json:"allowIndexes"`
-	Description  string     `json:"description"`
-	ExpiresAt    *time.Time `json:"expiresAt"`
+	ID               uint       `json:"id" binding:"required"`
+	Token            string     `json:"token"`
+	AllowIndexes     string     `json:"allowIndexes"`
+	Description      string     `json:"description"`
+	ExpiresAt        *time.Time `json:"expiresAt"`
+	MaxQueriesPerDay *int64     `json:"maxQueriesPerDay"` // 指针类型以便于零值更新区分
+	MaxImportsPerDay *int64     `json:"maxImportsPerDay"`
 }
 
 // MeiliInstanceRequest 新建实例
@@ -103,12 +104,55 @@ type TokenApplicationSubmitRequest struct {
 }
 
 type ApproveApplicationRequest struct {
-	Token        string   `json:"token"`
-	AllowIndexes []string `json:"allowIndexes"`
-	Description  string   `json:"description"`
-	ValidDays    *int     `json:"validDays"`
+	Token            string   `json:"token"`
+	AllowIndexes     []string `json:"allowIndexes"`
+	Description      string   `json:"description"`
+	ValidDays        *int     `json:"validDays"`
+	MaxQueriesPerDay int64    `json:"maxQueriesPerDay"` // 每日最大查询次数
+	MaxImportsPerDay int64    `json:"maxImportsPerDay"` // 每日最大导入次数
 }
 
 type RejectApplicationRequest struct {
 	RejectMessage string `json:"rejectMessage"`
+}
+
+// AppCreateRequest 创建新应用请求
+type AppCreateRequest struct {
+	Name         string `json:"name" binding:"required"`
+	AppKey       string `json:"appKey" binding:"required"` // 前台调用凭证
+	InstanceID   uint   `json:"instanceId" binding:"required"`
+	TenantID     uint   `json:"tenantId"`                  // 绑定租户，0 表示无租户
+	UIConfig     string `json:"uiConfig"`
+	AllowIndexes string `json:"allowIndexes"` // JSON 数组
+}
+
+// AppUpdateRequest 更新应用请求
+type AppUpdateRequest struct {
+	UIConfig         string  `json:"uiConfig"`
+	Name             string  `json:"name"`
+	AllowIndexes     string  `json:"allowIndexes"`          // JSON 数组
+	InstanceID       uint    `json:"instanceId"`
+	TenantID         *uint   `json:"tenantId"`              // 指针类型，允许设置为 0
+	MaxQueriesPerDay *int64  `json:"maxQueriesPerDay"`
+	MaxImportsPerDay *int64  `json:"maxImportsPerDay"`
+}
+
+// TenantRequest 创建租户请求
+type TenantRequest struct {
+	Name         string `json:"name" binding:"required"`
+	Slug         string `json:"slug" binding:"required"`   // URL 安全标识符
+	Plan         string `json:"plan"`                      // free / pro / enterprise
+	MaxApps      int    `json:"maxApps"`
+	MaxIndexes   int    `json:"maxIndexes"`
+	ContactEmail string `json:"contactEmail"`
+}
+
+// TenantUpdateRequest 更新租户请求
+type TenantUpdateRequest struct {
+	Name         string `json:"name"`
+	Plan         string `json:"plan"`
+	Status       *int   `json:"status"`    // 指针类型，允许设置为 0（停用）
+	MaxApps      *int   `json:"maxApps"`
+	MaxIndexes   *int   `json:"maxIndexes"`
+	ContactEmail string `json:"contactEmail"`
 }

@@ -533,6 +533,74 @@ export async function updateApp(id: number, data: Record<string, unknown>): Prom
   return res.ok
 }
 
+export async function createApp(data: Record<string, unknown>): Promise<{ ok: boolean; data?: any }> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch('/api/v1/admin/apps', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(data)
+  })
+  const payload = await res.json().catch(() => ({}))
+  return { ok: res.ok, data: payload }
+}
+
+export async function deleteApp(id: number): Promise<boolean> {
+  const headers = getAuthHeaders()
+  const res = await fetch(`/api/v1/admin/apps/${id}`, {
+    method: 'DELETE',
+    headers
+  })
+  return res.ok
+}
+
+// ---- 租户管理 API ----
+
+export async function getAdminTenants(): Promise<any[]> {
+  const headers = getAuthHeaders()
+  const res = await fetch('/api/v1/admin/tenants', { headers })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function createTenant(data: Record<string, unknown>): Promise<{ ok: boolean; data?: any; error?: string }> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch('/api/v1/admin/tenants', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(data)
+  })
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok) return { ok: false, error: payload.error || '创建失败' }
+  return { ok: true, data: payload }
+}
+
+export async function updateTenant(id: number, data: Record<string, unknown>): Promise<boolean> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch(`/api/v1/admin/tenants/${id}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(data)
+  })
+  return res.ok
+}
+
+export async function deleteTenant(id: number): Promise<boolean> {
+  const headers = getAuthHeaders()
+  const res = await fetch(`/api/v1/admin/tenants/${id}`, {
+    method: 'DELETE',
+    headers
+  })
+  return res.ok
+}
+
+export async function getTenantApps(tenantId: number): Promise<any[]> {
+  const headers = getAuthHeaders()
+  const res = await fetch(`/api/v1/admin/tenants/${tenantId}/apps`, { headers })
+  if (!res.ok) return []
+  return res.json()
+}
+
+
 export async function updateAdminPassword(newPassword: string): Promise<boolean> {
   const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
   const res = await fetch('/api/v1/admin/password', {

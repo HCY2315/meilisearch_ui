@@ -28,8 +28,19 @@ func InitRouter() *gin.Engine {
 			adminGroup.POST("/instances", HandleCreateInstance)
 			adminGroup.PUT("/instances", HandleUpdateInstance)
 			adminGroup.DELETE("/instances/:id", HandleDeleteInstance)
+
+			// 应用管理 (Application CRUD)
 			adminGroup.GET("/apps", HandleGetApps)
+			adminGroup.POST("/apps", HandleCreateApp)
 			adminGroup.PUT("/apps/:id", HandleUpdateApp)
+			adminGroup.DELETE("/apps/:id", HandleDeleteApp)
+
+			// 租户管理 (Tenant CRUD)
+			adminGroup.GET("/tenants", HandleGetTenants)
+			adminGroup.POST("/tenants", HandleCreateTenant)
+			adminGroup.PUT("/tenants/:id", HandleUpdateTenant)
+			adminGroup.DELETE("/tenants/:id", HandleDeleteTenant)
+			adminGroup.GET("/tenants/:id/apps", HandleGetTenantApps)
 
 			adminGroup.GET("/index_configs", HandleGetIndexConfigs)
 			adminGroup.POST("/index_configs", HandleSaveIndexConfig)

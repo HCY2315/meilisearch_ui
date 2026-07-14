@@ -272,6 +272,14 @@
               <label>有效期 (天)</label>
               <input type="number" v-model="newToken.validDays" placeholder="留空永不过期" class="form-control">
             </div>
+            <div class="input-group">
+              <label>日查询限制 (次/天)</label>
+              <input type="number" v-model="newToken.maxQueriesPerDay" placeholder="0或留空不限制" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>日导入限制 (条/天)</label>
+              <input type="number" v-model="newToken.maxImportsPerDay" placeholder="0或留空不限制" class="form-control">
+            </div>
           </div>
           <div class="editor-actions">
             <button class="btn btn-primary" @click="handleSaveToken">确认派发</button>
@@ -293,6 +301,10 @@
               <div class="tok-meta">
                 <span>📂 授权: {{ tok.allowIndexes }}</span>
                 <span>⏳ 截止: {{ tok.expiresAt ? new Date(tok.expiresAt).toLocaleDateString() : '永久' }}</span>
+              </div>
+              <div class="tok-meta" style="margin-top: 4px;">
+                <span>🔍 查询限额: {{ tok.maxQueriesPerDay > 0 ? tok.maxQueriesPerDay + ' 次/天' : '无限制' }}</span>
+                <span>📥 导入限额: {{ tok.maxImportsPerDay > 0 ? tok.maxImportsPerDay + ' 条/天' : '无限制' }}</span>
               </div>
             </div>
             <div class="token-ops">
@@ -885,6 +897,14 @@
               <label>有效期 (天，默认30天)</label>
               <input type="number" v-model="approveForm.validDays" min="1" class="form-control">
             </div>
+            <div class="input-group">
+              <label>日查询限制 (次/天)</label>
+              <input type="number" v-model="approveForm.maxQueriesPerDay" placeholder="0或留空不限制" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>日导入限制 (条/天)</label>
+              <input type="number" v-model="approveForm.maxImportsPerDay" placeholder="0或留空不限制" class="form-control">
+            </div>
           </div>
           <div class="editor-actions">
             <button class="btn btn-primary" @click="submitApprove">保存并通过</button>
@@ -1046,7 +1066,7 @@ const displayedIndexUsageMetrics = computed(() => {
 
 const approveModalOpen = ref(false)
 const pendingApproveApp = ref<any | null>(null)
-const approveForm = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: 30 })
+const approveForm = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: 30, maxQueriesPerDay: 0, maxImportsPerDay: 0 })
 const rejectModalOpen = ref(false)
 const pendingRejectApp = ref<any | null>(null)
 const rejectForm = ref({ rejectMessage: '' })
@@ -1073,7 +1093,9 @@ function openApproveModal(app: any) {
     token: generateUUID(),
     allowIndexes: defaultAllowIndexes,
     description: `申请人: ${app.name} (${app.email}) 用途: ${app.purpose || '无'}`,
-    validDays: 30
+    validDays: 30,
+    maxQueriesPerDay: 0,
+    maxImportsPerDay: 0
   }
   approveModalOpen.value = true
 }
@@ -1101,7 +1123,9 @@ async function submitApprove() {
     token: approveForm.value.token,
     allowIndexes: approveForm.value.allowIndexes,
     description: approveForm.value.description,
-    validDays: validDays > 0 ? validDays : 30
+    validDays: validDays > 0 ? validDays : 30,
+    maxQueriesPerDay: Number(approveForm.value.maxQueriesPerDay || 0),
+    maxImportsPerDay: Number(approveForm.value.maxImportsPerDay || 0)
   })
   if (!result.ok) return alert(result.message)
   alert(result.message)
@@ -1205,7 +1229,7 @@ const newIndex = ref({ uid: '', alias: '', description: '', isVisible: true, isL
 
 const showAddToken = ref(false)
 const editingTokenId = ref<number | null>(null)
-const newToken = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: null as number | null })
+const newToken = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: null as number | null, maxQueriesPerDay: 0, maxImportsPerDay: 0 })
 
 const passwordForm = ref({ newPassword: '', confirmPassword: '' })
 
@@ -1408,7 +1432,7 @@ function clearChartHover() {
 function openAddToken() {
   showAddToken.value = true
   editingTokenId.value = null
-  newToken.value = { token: generateUUID(), allowIndexes: [], description: '', validDays: null }
+  newToken.value = { token: generateUUID(), allowIndexes: [], description: '', validDays: null, maxQueriesPerDay: 0, maxImportsPerDay: 0 }
 }
 
 function toggleAllIndexes(e: Event) {
@@ -1553,7 +1577,13 @@ async function createToken() {
   const expiresAt = newToken.value.validDays 
     ? new Date(Date.now() + newToken.value.validDays * 24 * 60 * 60 * 1000).toISOString()
     : null
-  const ok = await createAccessToken({ ...newToken.value, allowIndexes: JSON.stringify(newToken.value.allowIndexes), expiresAt })
+  const ok = await createAccessToken({
+    ...newToken.value,
+    allowIndexes: JSON.stringify(newToken.value.allowIndexes),
+    expiresAt,
+    maxQueriesPerDay: Number(newToken.value.maxQueriesPerDay || 0),
+    maxImportsPerDay: Number(newToken.value.maxImportsPerDay || 0)
+  })
   if (ok) {
       cancelTokenEdit()
       loadAdminData()
@@ -1564,7 +1594,14 @@ async function updateToken() {
   const expiresAt = newToken.value.validDays 
     ? new Date(Date.now() + newToken.value.validDays * 24 * 60 * 60 * 1000).toISOString()
     : null
-  const ok = await updateAccessToken({ id: editingTokenId.value, ...newToken.value, allowIndexes: JSON.stringify(newToken.value.allowIndexes), expiresAt })
+  const ok = await updateAccessToken({
+    id: editingTokenId.value,
+    ...newToken.value,
+    allowIndexes: JSON.stringify(newToken.value.allowIndexes),
+    expiresAt,
+    maxQueriesPerDay: Number(newToken.value.maxQueriesPerDay || 0),
+    maxImportsPerDay: Number(newToken.value.maxImportsPerDay || 0)
+  })
   if (ok) {
       cancelTokenEdit()
       loadAdminData()
@@ -1580,7 +1617,9 @@ function editToken(tok: any) {
     token: tok.token, 
     allowIndexes: allowed, 
     description: tok.description,
-    validDays: tok.expiresAt ? Math.round((new Date(tok.expiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null
+    validDays: tok.expiresAt ? Math.round((new Date(tok.expiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null,
+    maxQueriesPerDay: tok.maxQueriesPerDay || 0,
+    maxImportsPerDay: tok.maxImportsPerDay || 0
   }
   showAddToken.value = true
 }
@@ -1588,7 +1627,7 @@ function editToken(tok: any) {
 function cancelTokenEdit() {
   showAddToken.value = false
   editingTokenId.value = null
-  newToken.value = { token: '', allowIndexes: [], description: '', validDays: null }
+  newToken.value = { token: '', allowIndexes: [], description: '', validDays: null, maxQueriesPerDay: 0, maxImportsPerDay: 0 }
 }
 
 async function deleteIndex(uid: string) {

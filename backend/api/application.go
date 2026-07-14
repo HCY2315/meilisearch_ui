@@ -249,10 +249,12 @@ func HandleApproveApplication(c *gin.Context) {
 	}
 
 	accessToken := model.AccessToken{
-		Token:        newToken,
-		AllowIndexes: string(allowIndexesJSON),
-		Description:  description,
-		ExpiresAt:    &expiresAt,
+		Token:            newToken,
+		AllowIndexes:     string(allowIndexesJSON),
+		Description:      description,
+		ExpiresAt:        &expiresAt,
+		MaxQueriesPerDay: req.MaxQueriesPerDay,
+		MaxImportsPerDay: req.MaxImportsPerDay,
 	}
 	if err := repository.DB.Create(&accessToken).Error; err != nil {
 		app.Status = 0

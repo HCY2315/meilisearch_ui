@@ -108,10 +108,194 @@ func HandleUpdateApp(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "App not found"})
 		return
 	}
-	app.UIConfig = req.UIConfig
+	if req.UIConfig != "" {
+		app.UIConfig = req.UIConfig
+	}
+	if req.Name != "" {
+		app.Name = req.Name
+	}
+	if req.AllowIndexes != "" {
+		app.AllowIndexes = req.AllowIndexes
+	}
+	if req.InstanceID != 0 {
+		app.InstanceID = req.InstanceID
+	}
+	if req.TenantID != nil {
+		app.TenantID = *req.TenantID
+	}
+	if req.MaxQueriesPerDay != nil {
+		app.MaxQueriesPerDay = *req.MaxQueriesPerDay
+	}
+	if req.MaxImportsPerDay != nil {
+		app.MaxImportsPerDay = *req.MaxImportsPerDay
+	}
 	repository.DB.Save(&app)
 	c.JSON(http.StatusOK, app)
 }
+
+// HandleCreateApp 创建新的前台应用（租户隔离单元）
+func HandleCreateApp(c *gin.Context) {
+	var req schema.AppCreateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data: " + err.Error()})
+		return
+	}
+
+	// 检查 AppKey 唯一性
+	var existing model.Application
+	if err := repository.DB.Where("app_key = ?", req.AppKey).First(&existing).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "AppKey already exists"})
+		return
+	}
+
+	// 验证 Instance 存在
+	var instance model.MeiliInstance
+	if err := repository.DB.First(&instance, req.InstanceID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Specified instance not found"})
+		return
+	}
+
+	app := model.Application{
+		Name:         req.Name,
+		AppKey:       req.AppKey,
+		InstanceID:   req.InstanceID,
+		TenantID:     req.TenantID,
+		UIConfig:     req.UIConfig,
+		AllowIndexes: req.AllowIndexes,
+	}
+	if err := repository.DB.Create(&app).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create app"})
+		return
+	}
+	c.JSON(http.StatusOK, app)
+}
+
+// HandleDeleteApp 删除前台应用及其关联的 Token（级联软删除）
+func HandleDeleteApp(c *gin.Context) {
+	id := c.Param("id")
+	var app model.Application
+	if err := repository.DB.First(&app, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "App not found"})
+		return
+	}
+	// NOTE: 同步软删除归属该 App 的所有 AccessToken，防止悬空凭证
+	repository.DB.Where("app_id = ?", app.ID).Delete(&model.AccessToken{})
+	repository.DB.Delete(&app)
+	c.JSON(http.StatusOK, gin.H{"message": "App and associated tokens deleted"})
+}
+
+// ---- Tenant CRUD ----
+
+// HandleGetTenants 获取所有租户列表
+func HandleGetTenants(c *gin.Context) {
+	var tenants []model.Tenant
+	repository.DB.Find(&tenants)
+	c.JSON(http.StatusOK, tenants)
+}
+
+// HandleCreateTenant 创建新租户
+func HandleCreateTenant(c *gin.Context) {
+	var req schema.TenantRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data: " + err.Error()})
+		return
+	}
+
+	// Slug 格式校验（仅允许小写字母、数字、连字符）
+	if req.Slug == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Slug is required"})
+		return
+	}
+
+	// 检查 Slug 唯一性
+	var existing model.Tenant
+	if err := repository.DB.Where("slug = ?", req.Slug).First(&existing).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Slug already exists"})
+		return
+	}
+
+	tenant := model.Tenant{
+		Name:         req.Name,
+		Slug:         req.Slug,
+		Plan:         req.Plan,
+		Status:       1,
+		MaxApps:      req.MaxApps,
+		MaxIndexes:   req.MaxIndexes,
+		ContactEmail: req.ContactEmail,
+	}
+	if tenant.Plan == "" {
+		tenant.Plan = "free"
+	}
+	if tenant.MaxApps == 0 {
+		tenant.MaxApps = 3
+	}
+	if tenant.MaxIndexes == 0 {
+		tenant.MaxIndexes = 10
+	}
+	if err := repository.DB.Create(&tenant).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create tenant"})
+		return
+	}
+	c.JSON(http.StatusOK, tenant)
+}
+
+// HandleUpdateTenant 更新租户信息（Plan 升级/降级、状态变更等）
+func HandleUpdateTenant(c *gin.Context) {
+	id := c.Param("id")
+	var req schema.TenantUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
+		return
+	}
+	var tenant model.Tenant
+	if err := repository.DB.First(&tenant, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Tenant not found"})
+		return
+	}
+	if req.Name != "" {
+		tenant.Name = req.Name
+	}
+	if req.Plan != "" {
+		tenant.Plan = req.Plan
+	}
+	if req.Status != nil {
+		tenant.Status = *req.Status
+	}
+	if req.MaxApps != nil {
+		tenant.MaxApps = *req.MaxApps
+	}
+	if req.MaxIndexes != nil {
+		tenant.MaxIndexes = *req.MaxIndexes
+	}
+	if req.ContactEmail != "" {
+		tenant.ContactEmail = req.ContactEmail
+	}
+	repository.DB.Save(&tenant)
+	c.JSON(http.StatusOK, tenant)
+}
+
+// HandleDeleteTenant 删除租户（同步解绑关联 App 的 TenantID）
+func HandleDeleteTenant(c *gin.Context) {
+	id := c.Param("id")
+	var tenant model.Tenant
+	if err := repository.DB.First(&tenant, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Tenant not found"})
+		return
+	}
+	// NOTE: 仅解绑 App 的 TenantID，不级联删除 App（防止误操作）
+	repository.DB.Model(&model.Application{}).Where("tenant_id = ?", tenant.ID).Update("tenant_id", 0)
+	repository.DB.Delete(&tenant)
+	c.JSON(http.StatusOK, gin.H{"message": "Tenant deleted, apps unlinked"})
+}
+
+// HandleGetTenantApps 获取某租户下的所有应用
+func HandleGetTenantApps(c *gin.Context) {
+	id := c.Param("id")
+	var apps []model.Application
+	repository.DB.Where("tenant_id = ?", id).Find(&apps)
+	c.JSON(http.StatusOK, apps)
+}
+
 
 // ---- Index Settings ----
 func HandleGetIndexConfigs(c *gin.Context) {
@@ -172,10 +356,12 @@ func HandleCreateAccessToken(c *gin.Context) {
 		return
 	}
 	tok := model.AccessToken{
-		Token:        req.Token,
-		AllowIndexes: req.AllowIndexes,
-		Description:  req.Description,
-		ExpiresAt:    req.ExpiresAt,
+		Token:            req.Token,
+		AllowIndexes:     req.AllowIndexes,
+		Description:      req.Description,
+		ExpiresAt:        req.ExpiresAt,
+		MaxQueriesPerDay: req.MaxQueriesPerDay,
+		MaxImportsPerDay: req.MaxImportsPerDay,
 	}
 	if err := repository.DB.Create(&tok).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token already exists"})
@@ -199,6 +385,12 @@ func HandleUpdateAccessToken(c *gin.Context) {
 	tok.AllowIndexes = req.AllowIndexes
 	tok.Description = req.Description
 	tok.ExpiresAt = req.ExpiresAt
+	if req.MaxQueriesPerDay != nil {
+		tok.MaxQueriesPerDay = *req.MaxQueriesPerDay
+	}
+	if req.MaxImportsPerDay != nil {
+		tok.MaxImportsPerDay = *req.MaxImportsPerDay
+	}
 	repository.DB.Save(&tok)
 	c.JSON(http.StatusOK, tok)
 }

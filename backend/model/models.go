@@ -16,6 +16,21 @@ type User struct {
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
+// Tenant 租户表 - SaaS 多租户的核心实体
+// NOTE: 每个租户对应一个独立的前台应用与权限空间
+type Tenant struct {
+	ID         uint      `gorm:"primarykey" json:"id"`
+	Name       string    `gorm:"uniqueIndex;size:128;not null" json:"name"`   // 租户显示名
+	Slug       string    `gorm:"uniqueIndex;size:64;not null" json:"slug"`    // URL 安全标识符
+	Plan       string    `gorm:"size:32;default:'free'" json:"plan"`          // free / pro / enterprise
+	Status     int       `gorm:"default:1" json:"status"`                    // 1: 活跃, 0: 停用
+	MaxApps    int       `gorm:"default:3" json:"maxApps"`                   // 允许创建的 App 上限
+	MaxIndexes int       `gorm:"default:10" json:"maxIndexes"`               // 允许访问的索引上限
+	ContactEmail string  `gorm:"size:128" json:"contactEmail"`               // 租户联系邮件
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+}
+
 type IndexConfig struct {
 	ID                 uint   `gorm:"primarykey" json:"id"`
 	Uid                string `gorm:"uniqueIndex;not null" json:"uid"`
@@ -33,14 +48,18 @@ type IndexConfig struct {
 }
 
 // AccessToken 前台解锁用的专属凭证
+// NOTE: AppID 将 Token 与特定 Application 绑定，实现 Token 的租户级隔离
 type AccessToken struct {
-	ID           uint           `gorm:"primarykey" json:"id"`
-	Token        string         `gorm:"uniqueIndex;not null" json:"token"`
-	AllowIndexes string         `gorm:"type:text" json:"allowIndexes"` // JSON数组，例如 ["docs", "finance"]
-	Description  string         `gorm:"size:255" json:"description"`
-	ExpiresAt    *time.Time     `json:"expiresAt"` // 过期时间，nil 表示永不过期
-	CreatedAt    time.Time      `json:"createdAt"`
-	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+	ID               uint           `gorm:"primarykey" json:"id"`
+	Token            string         `gorm:"uniqueIndex;not null" json:"token"`
+	AllowIndexes     string         `gorm:"type:text" json:"allowIndexes"` // JSON数组，例如 ["docs", "finance"]
+	Description      string         `gorm:"size:255" json:"description"`
+	ExpiresAt        *time.Time     `json:"expiresAt"` // 过期时间，nil 表示永不过期
+	CreatedAt        time.Time      `json:"createdAt"`
+	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
+	AppID            uint           `gorm:"default:0;index" json:"appId"`              // 归属 Application ID，0 表示全局
+	MaxQueriesPerDay int64          `gorm:"default:0" json:"maxQueriesPerDay"`         // 每日最大查询次数，0表示不限制
+	MaxImportsPerDay int64          `gorm:"default:0" json:"maxImportsPerDay"`         // 每日最大导入次数，0表示不限制
 }
 
 // MeiliInstance Meilisearch 搜索引擎节点实例表
@@ -55,15 +74,19 @@ type MeiliInstance struct {
 }
 
 // Application 前台应用配置表
+// NOTE: 一个 Tenant 可拥有多个 App，每个 App 绑定一个 MeiliInstance，实现完整的数据隔离
 type Application struct {
-	ID           uint      `gorm:"primarykey" json:"id"`
-	Name         string    `gorm:"uniqueIndex;size:128;not null" json:"name"`
-	AppKey       string    `gorm:"uniqueIndex;size:64;not null" json:"appKey"` // 前台调用凭证
-	InstanceID   uint      `gorm:"not null" json:"instanceId"`
-	UIConfig     string    `gorm:"type:text" json:"uiConfig"`     // 存储前台 UI 相关的 JSON 配置
-	AllowIndexes string    `gorm:"type:text" json:"allowIndexes"` // JSON 数组，记录允许访问的 index 列表
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
+	ID               uint      `gorm:"primarykey" json:"id"`
+	Name             string    `gorm:"uniqueIndex;size:128;not null" json:"name"`
+	AppKey           string    `gorm:"uniqueIndex;size:64;not null" json:"appKey"` // 前台调用凭证
+	InstanceID       uint      `gorm:"not null" json:"instanceId"`
+	TenantID         uint      `gorm:"default:0;index" json:"tenantId"`            // 归属租户ID，0表示无租户(默认)
+	UIConfig         string    `gorm:"type:text" json:"uiConfig"`                 // 存储前台 UI 相关的 JSON 配置
+	AllowIndexes     string    `gorm:"type:text" json:"allowIndexes"`             // JSON 数组，记录允许访问的 index 列表
+	CreatedAt        time.Time `json:"createdAt"`
+	UpdatedAt        time.Time `json:"updatedAt"`
+	MaxQueriesPerDay int64     `gorm:"default:0" json:"maxQueriesPerDay"` // 每日最大查询次数，0表示不限制
+	MaxImportsPerDay int64     `gorm:"default:0" json:"maxImportsPerDay"` // 每日最大导入次数，0表示不限制
 }
 
 // TokenApplication 前台 Token 申请记录
@@ -100,6 +123,24 @@ type UsageMetric struct {
 type UsageMetricIndex struct {
 	Date        string `gorm:"primaryKey;size:20" json:"date"`      // 格式: YYYY-MM-DD
 	IndexUID    string `gorm:"primaryKey;size:255" json:"indexUid"` // 索引 UID
+	QueryCount  int64  `gorm:"default:0" json:"queryCount"`
+	ImportCount int64  `gorm:"default:0" json:"importCount"`
+}
+
+// TokenUsageMetric 访问凭证（Token）维度的每日使用统计
+type TokenUsageMetric struct {
+	ID          uint   `gorm:"primarykey" json:"id"`
+	Date        string `gorm:"index:idx_token_date;size:20" json:"date"` // 格式: YYYY-MM-DD
+	Token       string `gorm:"index:idx_token_date;size:128" json:"token"`
+	QueryCount  int64  `gorm:"default:0" json:"queryCount"`
+	ImportCount int64  `gorm:"default:0" json:"importCount"`
+}
+
+// AppUsageMetric 前台应用维度的每日使用统计
+type AppUsageMetric struct {
+	ID          uint   `gorm:"primarykey" json:"id"`
+	Date        string `gorm:"index:idx_app_date;size:20" json:"date"` // 格式: YYYY-MM-DD
+	AppKey      string `gorm:"index:idx_app_date;size:64" json:"appKey"`
 	QueryCount  int64  `gorm:"default:0" json:"queryCount"`
 	ImportCount int64  `gorm:"default:0" json:"importCount"`
 }
