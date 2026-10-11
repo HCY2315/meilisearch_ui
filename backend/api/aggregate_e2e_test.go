@@ -171,6 +171,52 @@ func TestHandleBroadcastWriteEndToEnd(t *testing.T) {
 	}
 }
 
+func mkTargetCtx(target string) *gin.Context {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
+	if target != "" {
+		c.Request.Header.Set("X-Target-Instance", target)
+	}
+	return c
+}
+
+func TestResolveRequestTargetInstance(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	instA := model.MeiliInstance{Name: "tgt-A", Host: "http://a:7700", APIKey: "k"}
+	instB := model.MeiliInstance{Name: "tgt-B", Host: "http://b:7700", APIKey: "k"}
+	instC := model.MeiliInstance{Name: "tgt-C", Host: "http://c:7700", APIKey: "k"}
+	for _, inst := range []*model.MeiliInstance{&instA, &instB, &instC} {
+		if err := repository.DB.Create(inst).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	defer func() {
+		repository.DB.Delete(&model.MeiliInstance{}, instA.ID)
+		repository.DB.Delete(&model.MeiliInstance{}, instB.ID)
+		repository.DB.Delete(&model.MeiliInstance{}, instC.ID)
+	}()
+
+	app := &model.Application{InstanceID: instA.ID, AggregateInstanceIDs: fmt.Sprintf("[%d]", instB.ID)}
+
+	// 命中允许集合中的实例 B
+	if inst, ok := resolveRequestTargetInstance(mkTargetCtx(fmt.Sprintf("%d", instB.ID)), app); !ok || inst.ID != instB.ID {
+		t.Errorf("应命中实例 B，实际 ok=%v id=%d", ok, inst.ID)
+	}
+	// 未授权的实例 C 应被拒绝
+	if _, ok := resolveRequestTargetInstance(mkTargetCtx(fmt.Sprintf("%d", instC.ID)), app); ok {
+		t.Errorf("不应命中未授权实例 C")
+	}
+	// 空头 / 非法头
+	if _, ok := resolveRequestTargetInstance(mkTargetCtx(""), app); ok {
+		t.Errorf("空头不应命中")
+	}
+	if _, ok := resolveRequestTargetInstance(mkTargetCtx("abc"), app); ok {
+		t.Errorf("非法头不应命中")
+	}
+}
+
 func TestHandleAggregatedMultiSearchEndToEnd(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	uid := "e2e_hotels_multi"
