@@ -18,7 +18,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        v1.2.0-pro
+        {{ APP_VERSION }}
       </div>
     </aside>
 
@@ -991,6 +991,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { generateUUID } from '@/utils'
+import { APP_VERSION } from '@/constants/branding'
 import {
   getAdminIndexConfigs,
   getAdminAccessTokens,
