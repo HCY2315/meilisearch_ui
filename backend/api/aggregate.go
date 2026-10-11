@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -297,6 +298,25 @@ func aggregateOneQuery(instances []model.MeiliInstance, query map[string]any) gi
 		result[k] = v
 	}
 	return result
+}
+
+// resolveRequestTargetInstance 解析请求头 X-Target-Instance，手动指定目标实例
+// 仅允许该应用有权访问的实例，防止越权跨租户
+func resolveRequestTargetInstance(c *gin.Context, app *model.Application) (model.MeiliInstance, bool) {
+	raw := strings.TrimSpace(c.GetHeader("X-Target-Instance"))
+	if raw == "" {
+		return model.MeiliInstance{}, false
+	}
+	id, err := strconv.ParseUint(raw, 10, 64)
+	if err != nil || id == 0 {
+		return model.MeiliInstance{}, false
+	}
+	for _, inst := range resolveInstancesForApp(app) {
+		if inst.ID == uint(id) {
+			return inst, true
+		}
+	}
+	return model.MeiliInstance{}, false
 }
 
 // isWriteMethod 判断是否为写操作
