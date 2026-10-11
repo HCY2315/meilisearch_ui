@@ -4,3 +4,5 @@ meilisearch-vue/backend/backend
 .gitnexus
 node_modules
 dist
+.env
+backend/data/jwt_secret

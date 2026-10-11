@@ -5,8 +5,10 @@ services:
       dockerfile: Dockerfile
     image: meilisearch-ui:latest
     environment:
-      - SMTP_USER=13832286642@163.com
-      - SMTP_PASS=DVbwcgpFwBmzuX3X
+      # 敏感配置从同目录 .env 读取（docker compose 自动加载），不要写死在这里
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - JWT_SECRET=${JWT_SECRET}
     ports:
       - "7701:8080"
     volumes:
