@@ -43,7 +43,7 @@ func HandleLogin(c *gin.Context) {
 		"exp":      time.Now().Add(time.Hour * 24).Unix(),
 	})
 
-	tokenString, _ := token.SignedString(JwtSecret)
+	tokenString, _ := token.SignedString(JwtSecret())
 
 	c.JSON(http.StatusOK, gin.H{
 		"token": tokenString,
@@ -86,7 +86,7 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 	authHdr := c.GetHeader("Authorization")
 	if strings.HasPrefix(authHdr, "Bearer ") {
 		tStr := strings.TrimPrefix(authHdr, "Bearer ")
-		t, _ := jwt.Parse(tStr, func(token *jwt.Token) (interface{}, error) { return JwtSecret, nil })
+		t, _ := jwt.Parse(tStr, func(token *jwt.Token) (interface{}, error) { return JwtSecret(), nil })
 		if t != nil && t.Valid {
 			if claims, ok := t.Claims.(jwt.MapClaims); ok {
 				if r, _ := claims["role"].(string); r == "admin" {

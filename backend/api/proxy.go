@@ -32,7 +32,7 @@ func HandleProxy(c *gin.Context) {
 	authHdr := c.GetHeader("Authorization")
 	if strings.HasPrefix(authHdr, "Bearer ") {
 		tokenStr := strings.TrimPrefix(authHdr, "Bearer ")
-		token, _ := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) { return JwtSecret, nil })
+		token, _ := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) { return JwtSecret(), nil })
 		if token != nil && token.Valid {
 			if claims, ok := token.Claims.(jwt.MapClaims); ok {
 				if role, _ := claims["role"].(string); role == "admin" {
