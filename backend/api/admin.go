@@ -26,12 +26,12 @@ func HandleDeleteIndex(c *gin.Context) {
 	// 1. 从数据库中删除配置
 	repository.DB.Where("uid = ?", uid).Delete(&model.IndexConfig{})
 
-	// 2. 尝试从 Meilisearch 中删除 (使用第一个实例)
-	var instance model.MeiliInstance
-	if err := repository.DB.First(&instance).Error; err == nil {
+	// 2. 尝试从 Meilisearch 中删除（路由到实际拥有该索引的实例）
+	if instance, ok := resolveInstanceForIndex(allInstances(), uid); ok {
 		client := meilisearch.New(instance.Host, meilisearch.WithAPIKey(instance.APIKey))
 		client.DeleteIndex(uid)
 	}
+	clearIndexRouteCache(uid)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Index deleted successfully from DB and Meilisearch"})
 }
@@ -129,6 +129,12 @@ func HandleUpdateApp(c *gin.Context) {
 	if req.MaxImportsPerDay != nil {
 		app.MaxImportsPerDay = *req.MaxImportsPerDay
 	}
+	if req.AggregateInstanceIDs != nil {
+		app.AggregateInstanceIDs = *req.AggregateInstanceIDs
+	}
+	if req.BroadcastWrites != nil {
+		app.BroadcastWrites = *req.BroadcastWrites
+	}
 	repository.DB.Save(&app)
 	c.JSON(http.StatusOK, app)
 }
@@ -156,12 +162,14 @@ func HandleCreateApp(c *gin.Context) {
 	}
 
 	app := model.Application{
-		Name:         req.Name,
-		AppKey:       req.AppKey,
-		InstanceID:   req.InstanceID,
-		TenantID:     req.TenantID,
-		UIConfig:     req.UIConfig,
-		AllowIndexes: req.AllowIndexes,
+		Name:                 req.Name,
+		AppKey:               req.AppKey,
+		InstanceID:           req.InstanceID,
+		TenantID:             req.TenantID,
+		UIConfig:             req.UIConfig,
+		AllowIndexes:         req.AllowIndexes,
+		AggregateInstanceIDs: req.AggregateInstanceIDs,
+		BroadcastWrites:      req.BroadcastWrites,
 	}
 	if err := repository.DB.Create(&app).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create app"})
@@ -295,7 +303,6 @@ func HandleGetTenantApps(c *gin.Context) {
 	repository.DB.Where("tenant_id = ?", id).Find(&apps)
 	c.JSON(http.StatusOK, apps)
 }
-
 
 // ---- Index Settings ----
 func HandleGetIndexConfigs(c *gin.Context) {
@@ -511,8 +518,8 @@ func HandleGetIndexSettings(c *gin.Context) {
 		return
 	}
 
-	var instance model.MeiliInstance
-	if err := repository.DB.First(&instance).Error; err != nil {
+	instance, ok := resolveInstanceForIndex(allInstances(), uid)
+	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Meilisearch instance not found"})
 		return
 	}
@@ -536,8 +543,8 @@ func HandleUpdateIndexSettings(c *gin.Context) {
 		return
 	}
 
-	var instance model.MeiliInstance
-	if err := repository.DB.First(&instance).Error; err != nil {
+	instance, ok := resolveInstanceForIndex(allInstances(), req.Uid)
+	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Meilisearch instance not found"})
 		return
 	}

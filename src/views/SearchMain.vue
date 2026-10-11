@@ -125,6 +125,12 @@ const isLoggedIn = ref(false)
 const initLoading = ref(true)
 const lockToken = ref(localStorage.getItem('App-Token') || '')
 
+// 支持通过 URL 指定前台应用：?appKey=xxx （多应用/多聚合配置时使用）
+const urlAppKey = new URLSearchParams(window.location.search).get('appKey')
+if (urlAppKey) {
+  localStorage.setItem('App-Key', urlAppKey)
+}
+
 function applyLockToken() {
   localStorage.setItem('App-Token', lockToken.value)
   window.location.reload()

@@ -19,16 +19,16 @@ type User struct {
 // Tenant 租户表 - SaaS 多租户的核心实体
 // NOTE: 每个租户对应一个独立的前台应用与权限空间
 type Tenant struct {
-	ID         uint      `gorm:"primarykey" json:"id"`
-	Name       string    `gorm:"uniqueIndex;size:128;not null" json:"name"`   // 租户显示名
-	Slug       string    `gorm:"uniqueIndex;size:64;not null" json:"slug"`    // URL 安全标识符
-	Plan       string    `gorm:"size:32;default:'free'" json:"plan"`          // free / pro / enterprise
-	Status     int       `gorm:"default:1" json:"status"`                    // 1: 活跃, 0: 停用
-	MaxApps    int       `gorm:"default:3" json:"maxApps"`                   // 允许创建的 App 上限
-	MaxIndexes int       `gorm:"default:10" json:"maxIndexes"`               // 允许访问的索引上限
-	ContactEmail string  `gorm:"size:128" json:"contactEmail"`               // 租户联系邮件
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
+	ID           uint      `gorm:"primarykey" json:"id"`
+	Name         string    `gorm:"uniqueIndex;size:128;not null" json:"name"` // 租户显示名
+	Slug         string    `gorm:"uniqueIndex;size:64;not null" json:"slug"`  // URL 安全标识符
+	Plan         string    `gorm:"size:32;default:'free'" json:"plan"`        // free / pro / enterprise
+	Status       int       `gorm:"default:1" json:"status"`                   // 1: 活跃, 0: 停用
+	MaxApps      int       `gorm:"default:3" json:"maxApps"`                  // 允许创建的 App 上限
+	MaxIndexes   int       `gorm:"default:10" json:"maxIndexes"`              // 允许访问的索引上限
+	ContactEmail string    `gorm:"size:128" json:"contactEmail"`              // 租户联系邮件
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 type IndexConfig struct {
@@ -57,9 +57,9 @@ type AccessToken struct {
 	ExpiresAt        *time.Time     `json:"expiresAt"` // 过期时间，nil 表示永不过期
 	CreatedAt        time.Time      `json:"createdAt"`
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
-	AppID            uint           `gorm:"default:0;index" json:"appId"`              // 归属 Application ID，0 表示全局
-	MaxQueriesPerDay int64          `gorm:"default:0" json:"maxQueriesPerDay"`         // 每日最大查询次数，0表示不限制
-	MaxImportsPerDay int64          `gorm:"default:0" json:"maxImportsPerDay"`         // 每日最大导入次数，0表示不限制
+	AppID            uint           `gorm:"default:0;index" json:"appId"`      // 归属 Application ID，0 表示全局
+	MaxQueriesPerDay int64          `gorm:"default:0" json:"maxQueriesPerDay"` // 每日最大查询次数，0表示不限制
+	MaxImportsPerDay int64          `gorm:"default:0" json:"maxImportsPerDay"` // 每日最大导入次数，0表示不限制
 }
 
 // MeiliInstance Meilisearch 搜索引擎节点实例表
@@ -76,17 +76,19 @@ type MeiliInstance struct {
 // Application 前台应用配置表
 // NOTE: 一个 Tenant 可拥有多个 App，每个 App 绑定一个 MeiliInstance，实现完整的数据隔离
 type Application struct {
-	ID               uint      `gorm:"primarykey" json:"id"`
-	Name             string    `gorm:"uniqueIndex;size:128;not null" json:"name"`
-	AppKey           string    `gorm:"uniqueIndex;size:64;not null" json:"appKey"` // 前台调用凭证
-	InstanceID       uint      `gorm:"not null" json:"instanceId"`
-	TenantID         uint      `gorm:"default:0;index" json:"tenantId"`            // 归属租户ID，0表示无租户(默认)
-	UIConfig         string    `gorm:"type:text" json:"uiConfig"`                 // 存储前台 UI 相关的 JSON 配置
-	AllowIndexes     string    `gorm:"type:text" json:"allowIndexes"`             // JSON 数组，记录允许访问的 index 列表
-	CreatedAt        time.Time `json:"createdAt"`
-	UpdatedAt        time.Time `json:"updatedAt"`
-	MaxQueriesPerDay int64     `gorm:"default:0" json:"maxQueriesPerDay"` // 每日最大查询次数，0表示不限制
-	MaxImportsPerDay int64     `gorm:"default:0" json:"maxImportsPerDay"` // 每日最大导入次数，0表示不限制
+	ID                   uint      `gorm:"primarykey" json:"id"`
+	Name                 string    `gorm:"uniqueIndex;size:128;not null" json:"name"`
+	AppKey               string    `gorm:"uniqueIndex;size:64;not null" json:"appKey"` // 前台调用凭证
+	InstanceID           uint      `gorm:"not null" json:"instanceId"`
+	TenantID             uint      `gorm:"default:0;index" json:"tenantId"`       // 归属租户ID，0表示无租户(默认)
+	UIConfig             string    `gorm:"type:text" json:"uiConfig"`             // 存储前台 UI 相关的 JSON 配置
+	AllowIndexes         string    `gorm:"type:text" json:"allowIndexes"`         // JSON 数组，记录允许访问的 index 列表
+	AggregateInstanceIDs string    `gorm:"type:text" json:"aggregateInstanceIds"` // JSON 数组，聚合搜索时额外参与的实例ID列表（与 InstanceID 一起扇出合并）
+	BroadcastWrites      bool      `gorm:"default:false" json:"broadcastWrites"`  // 写操作是否广播到所有拥有该索引的实例
+	CreatedAt            time.Time `json:"createdAt"`
+	UpdatedAt            time.Time `json:"updatedAt"`
+	MaxQueriesPerDay     int64     `gorm:"default:0" json:"maxQueriesPerDay"` // 每日最大查询次数，0表示不限制
+	MaxImportsPerDay     int64     `gorm:"default:0" json:"maxImportsPerDay"` // 每日最大导入次数，0表示不限制
 }
 
 // TokenApplication 前台 Token 申请记录

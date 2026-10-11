@@ -19,6 +19,11 @@ export function setGlobalErrorHandler(handler: (err: Error) => void) {
   errorHandler = handler
 }
 
+function getAppKeyHeader(): Record<string, string> {
+  const appKey = localStorage.getItem('App-Key')
+  return appKey ? { 'App-Key': appKey } : {}
+}
+
 function createClient(host: string, apiKey: string): AxiosInstance {
   const trimmed = host.trim().replace(/\/$/, '')
   const adminToken = localStorage.getItem('authToken')
@@ -27,6 +32,7 @@ function createClient(host: string, apiKey: string): AxiosInstance {
     headers: {
       'Content-Type': 'application/json',
       ...(apiKey.trim() ? { 'App-Token': apiKey.trim() } : {}),
+      ...getAppKeyHeader(),
       ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {}),
     },
   })
@@ -52,6 +58,7 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
   const resp = await axios.get<IndexListResponse>(fetchUrl, {
     headers: {
       'App-Token': apiKey,
+      ...getAppKeyHeader(),
       ...(localStorage.getItem('authToken') ? { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } : {})
     }
   })
@@ -364,7 +371,10 @@ function downloadBlob(content: string, filename: string, type: string): void {
 
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem('authToken')
-  return token ? { 'Authorization': `Bearer ${token}` } : {}
+  return {
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...getAppKeyHeader(),
+  }
 }
 
 export async function saveIndexConfig(config: Record<string, unknown>): Promise<{ ok: boolean; status: number }> {

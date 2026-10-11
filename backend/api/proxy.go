@@ -184,6 +184,35 @@ func HandleProxy(c *gin.Context) {
 		}
 	}
 
+	// 多实例聚合搜索：仅接管单索引发起的 POST /indexes/{uid}/search
+	if method == http.MethodPost && strings.HasSuffix(pathSuffix, "/search") && !strings.HasSuffix(pathSuffix, "/multi-search") {
+		if handleAggregatedSearch(c, currentApp, proxyPath) {
+			return
+		}
+	}
+
+	// 多实例聚合 multi-search
+	if method == http.MethodPost && strings.HasSuffix(pathSuffix, "/multi-search") {
+		if handleAggregatedMultiSearch(c, currentApp, proxyPath) {
+			return
+		}
+	}
+
+	// 写操作多实例广播（应用级开关）
+	if handleBroadcastWrite(c, currentApp, proxyPath, method) {
+		return
+	}
+
+	// 非搜索的索引级请求：路由到实际拥有该索引的实例（多实例场景）
+	if currentApp != nil && indexUID != "" {
+		candidates := resolveInstancesForApp(currentApp)
+		if len(candidates) > 1 {
+			if inst, ok := resolveInstanceForIndex(candidates, indexUID); ok {
+				instance = inst
+			}
+		}
+	}
+
 	target, _ := url.Parse(instance.Host)
 	proxy := httputil.NewSingleHostReverseProxy(target)
 

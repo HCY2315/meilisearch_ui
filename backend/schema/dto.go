@@ -8,8 +8,6 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-
-
 type IndexConfigRequest struct {
 	Uid                string `json:"uid" binding:"required"`
 	Alias              string `json:"alias"`
@@ -118,30 +116,34 @@ type RejectApplicationRequest struct {
 
 // AppCreateRequest 创建新应用请求
 type AppCreateRequest struct {
-	Name         string `json:"name" binding:"required"`
-	AppKey       string `json:"appKey" binding:"required"` // 前台调用凭证
-	InstanceID   uint   `json:"instanceId" binding:"required"`
-	TenantID     uint   `json:"tenantId"`                  // 绑定租户，0 表示无租户
-	UIConfig     string `json:"uiConfig"`
-	AllowIndexes string `json:"allowIndexes"` // JSON 数组
+	Name                 string `json:"name" binding:"required"`
+	AppKey               string `json:"appKey" binding:"required"` // 前台调用凭证
+	InstanceID           uint   `json:"instanceId" binding:"required"`
+	TenantID             uint   `json:"tenantId"` // 绑定租户，0 表示无租户
+	UIConfig             string `json:"uiConfig"`
+	AllowIndexes         string `json:"allowIndexes"`         // JSON 数组
+	AggregateInstanceIDs string `json:"aggregateInstanceIds"` // JSON 数组，聚合搜索额外参与的实例ID
+	BroadcastWrites      bool   `json:"broadcastWrites"`      // 写操作是否广播到所有拥有该索引的实例
 }
 
 // AppUpdateRequest 更新应用请求
 type AppUpdateRequest struct {
-	UIConfig         string  `json:"uiConfig"`
-	Name             string  `json:"name"`
-	AllowIndexes     string  `json:"allowIndexes"`          // JSON 数组
-	InstanceID       uint    `json:"instanceId"`
-	TenantID         *uint   `json:"tenantId"`              // 指针类型，允许设置为 0
-	MaxQueriesPerDay *int64  `json:"maxQueriesPerDay"`
-	MaxImportsPerDay *int64  `json:"maxImportsPerDay"`
+	UIConfig             string  `json:"uiConfig"`
+	Name                 string  `json:"name"`
+	AllowIndexes         string  `json:"allowIndexes"` // JSON 数组
+	InstanceID           uint    `json:"instanceId"`
+	TenantID             *uint   `json:"tenantId"` // 指针类型，允许设置为 0
+	MaxQueriesPerDay     *int64  `json:"maxQueriesPerDay"`
+	MaxImportsPerDay     *int64  `json:"maxImportsPerDay"`
+	AggregateInstanceIDs *string `json:"aggregateInstanceIds"` // 指针类型，允许清空为 ""
+	BroadcastWrites      *bool   `json:"broadcastWrites"`      // 指针类型，允许关闭
 }
 
 // TenantRequest 创建租户请求
 type TenantRequest struct {
 	Name         string `json:"name" binding:"required"`
-	Slug         string `json:"slug" binding:"required"`   // URL 安全标识符
-	Plan         string `json:"plan"`                      // free / pro / enterprise
+	Slug         string `json:"slug" binding:"required"` // URL 安全标识符
+	Plan         string `json:"plan"`                    // free / pro / enterprise
 	MaxApps      int    `json:"maxApps"`
 	MaxIndexes   int    `json:"maxIndexes"`
 	ContactEmail string `json:"contactEmail"`
@@ -151,7 +153,7 @@ type TenantRequest struct {
 type TenantUpdateRequest struct {
 	Name         string `json:"name"`
 	Plan         string `json:"plan"`
-	Status       *int   `json:"status"`    // 指针类型，允许设置为 0（停用）
+	Status       *int   `json:"status"` // 指针类型，允许设置为 0（停用）
 	MaxApps      *int   `json:"maxApps"`
 	MaxIndexes   *int   `json:"maxIndexes"`
 	ContactEmail string `json:"contactEmail"`

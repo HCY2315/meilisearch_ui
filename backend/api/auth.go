@@ -78,9 +78,6 @@ func HandleAppConfig(c *gin.Context) {
 
 // HandleGetVisibleIndexes 代理请求 Meilisearch，然后根据后台的 lock 以及前端传来的 token 过滤数据
 func HandleGetVisibleIndexes(c *gin.Context) {
-	var instance model.MeiliInstance
-	repository.DB.First(&instance)
-
 	userToken := c.GetHeader("App-Token")
 	var allowedByToken []string
 
@@ -119,24 +116,51 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 	}
 	log.Printf("[DEBUG] configMap keys: %v", configMap)
 
-	// 1. 直连 Meilisearch 获取真实全部的 indexes
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET", instance.Host+"/indexes", nil)
-	req.Header.Set("Authorization", "Bearer "+instance.APIKey)
-	res, err := client.Do(req)
-	if err != nil {
-		log.Printf("[Proxy Error] Failed to connect to Meilisearch: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法连接到底层 Meilisearch"})
-		return
+	// 解析当前 App 参与聚合的实例列表（未配置聚合时即为主实例）
+	_, currentApp := resolveInstanceByAppKey(c)
+	instances := resolveInstancesForApp(currentApp)
+	if len(instances) == 0 {
+		var fallback model.MeiliInstance
+		if err := repository.DB.First(&fallback).Error; err == nil {
+			instances = []model.MeiliInstance{fallback}
+		}
 	}
-	defer res.Body.Close()
 
+	// 1. 直连各个 Meilisearch 获取 indexes 并按 uid 去重合并
+	client := &http.Client{Timeout: 15 * time.Second}
 	var payload struct {
 		Results []map[string]interface{} `json:"results"`
 		Total   int                      `json:"total"`
 	}
-	bodyBytes, _ := io.ReadAll(res.Body)
-	json.Unmarshal(bodyBytes, &payload)
+	seenUID := map[string]bool{}
+	for _, inst := range instances {
+		req, _ := http.NewRequest("GET", inst.Host+"/indexes?limit=1000", nil)
+		req.Header.Set("Authorization", "Bearer "+inst.APIKey)
+		res, err := client.Do(req)
+		if err != nil {
+			log.Printf("[Proxy Error] Failed to connect to Meilisearch %s: %v", inst.Name, err)
+			continue
+		}
+		var page struct {
+			Results []map[string]interface{} `json:"results"`
+		}
+		bodyBytes, _ := io.ReadAll(res.Body)
+		res.Body.Close()
+		json.Unmarshal(bodyBytes, &page)
+		for _, idx := range page.Results {
+			uid, _ := idx["uid"].(string)
+			if uid == "" || seenUID[uid] {
+				continue
+			}
+			seenUID[uid] = true
+			payload.Results = append(payload.Results, idx)
+		}
+	}
+
+	if len(payload.Results) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法连接到底层 Meilisearch"})
+		return
+	}
 
 	// 2. 增强逻辑：合并配置，标记锁定状态
 	enhancedResults := []map[string]interface{}{}
@@ -183,25 +207,25 @@ func HandleGetVisibleIndexes(c *gin.Context) {
 		idx["isVisible"] = isVisible
 		idx["displayName"] = alias
 
-        if exists {
-            idx["fieldConfigs"] = dbConf.FieldConfigs
-            idx["viewConfigs"] = dbConf.ViewConfigs
-            idx["tableConfigs"] = dbConf.TableConfigs
-            idx["canEdit"] = dbConf.CanEdit
-            idx["nestedFieldConfigs"] = dbConf.NestedFieldConfigs
-            if dbConf.DrawerFieldOrder != "" {
-                idx["drawerFieldOrder"] = dbConf.DrawerFieldOrder
-            } else {
-                idx["drawerFieldOrder"] = "{}"
-            }
-        } else {
-            idx["fieldConfigs"] = ""
-            idx["viewConfigs"] = ""
-            idx["tableConfigs"] = ""
-            idx["canEdit"] = false
-            idx["nestedFieldConfigs"] = ""
-            idx["drawerFieldOrder"] = "{}"
-        }
+		if exists {
+			idx["fieldConfigs"] = dbConf.FieldConfigs
+			idx["viewConfigs"] = dbConf.ViewConfigs
+			idx["tableConfigs"] = dbConf.TableConfigs
+			idx["canEdit"] = dbConf.CanEdit
+			idx["nestedFieldConfigs"] = dbConf.NestedFieldConfigs
+			if dbConf.DrawerFieldOrder != "" {
+				idx["drawerFieldOrder"] = dbConf.DrawerFieldOrder
+			} else {
+				idx["drawerFieldOrder"] = "{}"
+			}
+		} else {
+			idx["fieldConfigs"] = ""
+			idx["viewConfigs"] = ""
+			idx["tableConfigs"] = ""
+			idx["canEdit"] = false
+			idx["nestedFieldConfigs"] = ""
+			idx["drawerFieldOrder"] = "{}"
+		}
 
 		enhancedResults = append(enhancedResults, idx)
 	}

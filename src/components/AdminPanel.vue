@@ -829,6 +829,46 @@
               <button class="btn btn-primary btn-sm" @click="editApp(app)">更新配置</button>
             </div>
           </div>
+          <div class="settings-row">
+            <div class="row-label">
+              <h4>聚合搜索实例</h4>
+              <p>勾选的实例会与主实例一起参与前台合并搜索（按主键去重）。</p>
+            </div>
+            <div class="row-val">
+              <div v-if="instances.length" class="index-chips">
+                <label
+                  v-for="ins in instances"
+                  :key="`agg-${app.id}-${ins.id}`"
+                  :class="['chip', { selected: ins.id === app.instanceId || (aggSelections[app.id] || []).includes(ins.id) }]"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="ins.id === app.instanceId || (aggSelections[app.id] || []).includes(ins.id)"
+                    :disabled="ins.id === app.instanceId"
+                    @change="toggleAggregateInstance(app, ins.id, ($event.target as HTMLInputElement).checked)"
+                  >
+                  {{ ins.name }}<span v-if="ins.id === app.instanceId"> (主)</span>
+                </label>
+              </div>
+              <span v-else class="muted">暂无实例，请先在「节点管理」添加</span>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="row-label">
+              <h4>写操作多实例广播</h4>
+              <p>开启后，对同名索引的写入（导入/更新/删除文档、改设置、删索引）会同步到所有拥有该索引的实例。</p>
+            </div>
+            <div class="row-val">
+              <label class="inline-check">
+                <input
+                  type="checkbox"
+                  :checked="!!app.broadcastWrites"
+                  @change="toggleBroadcastWrites(app, ($event.target as HTMLInputElement).checked)"
+                >
+                启用广播写入
+              </label>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1031,6 +1071,7 @@ const indexConfigs = ref<any[]>([])
 const accessTokens = ref<any[]>([])
 const apps = ref<any[]>([])
 const instances = ref<any[]>([])
+const aggSelections = ref<Record<number, number[]>>({})
 const availableIndexes = ref<string[]>([])
 const tokenApplications = ref<any[]>([])
 const usageMetrics = ref<any[]>([])
@@ -1476,6 +1517,9 @@ async function loadAdminData() {
     accessTokens.value = tokData as any[]
     apps.value = appsData as any[]
     instances.value = insData as any[]
+    const sel: Record<number, number[]> = {}
+    for (const a of apps.value) sel[a.id] = parseAggInstanceIds(a)
+    aggSelections.value = sel
     tokenApplications.value = applicationData as any[]
     usageMetrics.value = (metricsData as any).results || []
     indexUsageMetrics.value = (metricsData as any).indexResults || []
@@ -1651,6 +1695,37 @@ function editApp(app: any) {
 
 async function updateAppConfig(id: number, uiConfig: string) {
   await updateApp(id, { uiConfig })
+  loadAdminData()
+}
+
+function parseAggInstanceIds(app: any): number[] {
+  try {
+    const arr = JSON.parse(app.aggregateInstanceIds || '[]')
+    if (Array.isArray(arr)) {
+      return arr.map((x: any) => Number(x)).filter((n: number) => !isNaN(n))
+    }
+  } catch {}
+  return []
+}
+
+async function toggleAggregateInstance(app: any, instanceId: number, checked: boolean) {
+  const current = new Set<number>(aggSelections.value[app.id] || [])
+  if (checked) current.add(instanceId)
+  else current.delete(instanceId)
+  const list = Array.from(current)
+  aggSelections.value = { ...aggSelections.value, [app.id]: list }
+  const ok = await updateApp(app.id, { aggregateInstanceIds: JSON.stringify(list) })
+  if (!ok) {
+    alert('保存聚合实例失败')
+  }
+  loadAdminData()
+}
+
+async function toggleBroadcastWrites(app: any, checked: boolean) {
+  const ok = await updateApp(app.id, { broadcastWrites: checked })
+  if (!ok) {
+    alert('保存广播写入开关失败')
+  }
   loadAdminData()
 }
 

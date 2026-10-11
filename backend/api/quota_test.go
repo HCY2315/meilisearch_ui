@@ -22,6 +22,7 @@ func TestMain(m *testing.M) {
 	err = repository.DB.AutoMigrate(
 		&model.AccessToken{},
 		&model.Application{},
+		&model.MeiliInstance{},
 		&model.TokenUsageMetric{},
 		&model.AppUsageMetric{},
 	)

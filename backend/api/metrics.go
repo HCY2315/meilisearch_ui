@@ -86,53 +86,22 @@ func increaseImportMetric(count int64, indexUID string) {
 	})
 }
 
+// refreshTodayStorageMetric 汇总所有实例的存储占用写入当日用量
 func refreshTodayStorageMetric() {
-	var instance model.MeiliInstance
-	if err := repository.DB.First(&instance).Error; err != nil {
+	instances := allInstances()
+	if len(instances) == 0 {
 		return
 	}
 
-	statsURL, err := url.JoinPath(instance.Host, "stats")
-	if err != nil {
-		return
-	}
-	req, err := http.NewRequest(http.MethodGet, statsURL, nil)
-	if err != nil {
-		return
-	}
-	req.Header.Set("Authorization", "Bearer "+instance.APIKey)
-	req.Header.Set("X-Meili-API-Key", instance.APIKey)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return
-	}
-
-	var payload map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return
-	}
-
-	rawSize, ok := payload["databaseSize"]
-	if !ok {
-		return
-	}
-	var dbSize int64
-	switch v := rawSize.(type) {
-	case float64:
-		dbSize = int64(v)
-	case string:
-		n, convErr := strconv.ParseInt(v, 10, 64)
-		if convErr != nil {
-			return
+	var totalSize int64
+	hasAny := false
+	for _, instance := range instances {
+		if size, ok := fetchInstanceDatabaseSize(instance); ok {
+			totalSize += size
+			hasAny = true
 		}
-		dbSize = n
-	default:
+	}
+	if !hasAny {
 		return
 	}
 
@@ -141,11 +110,54 @@ func refreshTodayStorageMetric() {
 		if err := tx.Where("date = ?", date).FirstOrCreate(&model.UsageMetric{Date: date}).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&model.UsageMetric{}).Where("date = ?", date).Update("database_size", dbSize).Error; err != nil {
+		if err := tx.Model(&model.UsageMetric{}).Where("date = ?", date).Update("database_size", totalSize).Error; err != nil {
 			return err
 		}
 		return tx.Where("date < ?", sixMonthsAgoDate()).Delete(&model.UsageMetric{}).Error
 	})
+}
+
+// fetchInstanceDatabaseSize 读取单个实例的 databaseSize
+func fetchInstanceDatabaseSize(instance model.MeiliInstance) (int64, bool) {
+	statsURL, err := url.JoinPath(instance.Host, "stats")
+	if err != nil {
+		return 0, false
+	}
+	req, err := http.NewRequest(http.MethodGet, statsURL, nil)
+	if err != nil {
+		return 0, false
+	}
+	req.Header.Set("Authorization", "Bearer "+instance.APIKey)
+	req.Header.Set("X-Meili-API-Key", instance.APIKey)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return 0, false
+	}
+
+	var payload map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return 0, false
+	}
+
+	rawSize, ok := payload["databaseSize"]
+	if !ok {
+		return 0, false
+	}
+	switch v := rawSize.(type) {
+	case float64:
+		return int64(v), true
+	case string:
+		if n, convErr := strconv.ParseInt(v, 10, 64); convErr == nil {
+			return n, true
+		}
+	}
+	return 0, false
 }
 
 func HandleGetUsageMetrics(c *gin.Context) {
