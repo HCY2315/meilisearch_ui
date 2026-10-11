@@ -171,6 +171,74 @@ func TestHandleBroadcastWriteEndToEnd(t *testing.T) {
 	}
 }
 
+func TestAggregatedSearchPaginationEndToEnd(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	uid := "e2e_hotels_page"
+
+	// A: [1,2,3]  B: [2,4,5]（2 重复）→ 去重合并轮询后 [1,4,2,5,3]
+	serverA := newFakeMeili(t, []map[string]any{{"id": "1"}, {"id": "2"}, {"id": "3"}})
+	serverB := newFakeMeili(t, []map[string]any{{"id": "2"}, {"id": "4"}, {"id": "5"}})
+	defer serverA.Close()
+	defer serverB.Close()
+
+	instA := model.MeiliInstance{Name: "pg-A", Host: serverA.URL, APIKey: "k"}
+	instB := model.MeiliInstance{Name: "pg-B", Host: serverB.URL, APIKey: "k"}
+	if err := repository.DB.Create(&instA).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.DB.Create(&instB).Error; err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		repository.DB.Delete(&model.MeiliInstance{}, instA.ID)
+		repository.DB.Delete(&model.MeiliInstance{}, instB.ID)
+	}()
+
+	pkCacheMu.Lock()
+	delete(pkCache, uid)
+	pkCacheMu.Unlock()
+
+	app := model.Application{
+		Name:                 "pg-app",
+		AppKey:               "pg-key-e2e",
+		InstanceID:           instA.ID,
+		AggregateInstanceIDs: fmt.Sprintf("[%d]", instB.ID),
+	}
+
+	// 取第 2 页：offset=1, limit=2
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/proxy/indexes/"+uid+"/search", strings.NewReader(`{"q":"","offset":1,"limit":2}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	if !handleAggregatedSearch(c, &app, "/indexes/"+uid+"/search") {
+		t.Fatal("期望聚合搜索被接管")
+	}
+
+	var resp struct {
+		Hits               []map[string]any `json:"hits"`
+		Offset             int              `json:"offset"`
+		Limit              int              `json:"limit"`
+		EstimatedTotalHits int              `json:"estimatedTotalHits"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Hits) != 2 {
+		t.Fatalf("第 2 页应返回 2 条，实际 %d", len(resp.Hits))
+	}
+	if idOf(resp.Hits[0]) != "4" || idOf(resp.Hits[1]) != "2" {
+		t.Fatalf("分页结果错误: %v %v（期望 4,2）", idOf(resp.Hits[0]), idOf(resp.Hits[1]))
+	}
+	if resp.Offset != 1 || resp.Limit != 2 {
+		t.Errorf("offset/limit 回写错误: %d/%d", resp.Offset, resp.Limit)
+	}
+	// 各实例之和 6，取回 6 条去重后 5 条 → 缩放估算 = 6*5/6 = 5
+	if resp.EstimatedTotalHits != 5 {
+		t.Errorf("estimatedTotalHits 去重缩放后应为 5，实际 %d", resp.EstimatedTotalHits)
+	}
+}
+
 func mkTargetCtx(target string) *gin.Context {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)

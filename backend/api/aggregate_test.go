@@ -41,8 +41,9 @@ func TestMergeSearchResponsesDedupeRoundRobin(t *testing.T) {
 	if idOf(hits[0]) != "1" || idOf(hits[1]) != "3" || idOf(hits[2]) != "2" {
 		t.Fatalf("轮询顺序错误: %v %v %v", idOf(hits[0]), idOf(hits[1]), idOf(hits[2]))
 	}
-	if merged["estimatedTotalHits"].(int) != 4 {
-		t.Errorf("estimatedTotalHits 应为各实例之和 4，实际 %v", merged["estimatedTotalHits"])
+	// 各实例之和为 4，取回窗口 4 条去重后 3 条 → 缩放估算 = 4*3/4 = 3
+	if merged["estimatedTotalHits"].(int) != 3 {
+		t.Errorf("estimatedTotalHits 去重缩放后应为 3，实际 %v", merged["estimatedTotalHits"])
 	}
 	if merged["processingTimeMs"].(int) != 9 {
 		t.Errorf("processingTimeMs 应取最大值 9，实际 %v", merged["processingTimeMs"])

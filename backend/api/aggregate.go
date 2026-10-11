@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -173,26 +174,33 @@ func handleAggregatedSearch(c *gin.Context, app *model.Application, proxyPath st
 	params["offset"] = 0
 
 	type fanoutResult struct {
+		idx  int
 		resp map[string]any
 		err  error
 	}
 	ch := make(chan fanoutResult, len(instances))
-	for _, inst := range instances {
-		go func(inst model.MeiliInstance) {
+	for i, inst := range instances {
+		go func(i int, inst model.MeiliInstance) {
 			resp, err := doInstanceSearch(inst, proxyPath, params)
-			ch <- fanoutResult{resp: resp, err: err}
-		}(inst)
+			ch <- fanoutResult{idx: i, resp: resp, err: err}
+		}(i, inst)
 	}
 
-	var responses []map[string]any
+	// NOTE: 按实例顺序回填，保证合并/交错顺序确定，避免翻页时结果顺序抖动
+	ordered := make([]map[string]any, len(instances))
 	for range instances {
 		r := <-ch
 		if r.err != nil {
 			fmt.Printf("[AggregateSearch] instance query failed: %v\n", r.err)
 			continue
 		}
-		if r.resp != nil {
-			responses = append(responses, r.resp)
+		ordered[r.idx] = r.resp
+	}
+
+	var responses []map[string]any
+	for _, resp := range ordered {
+		if resp != nil {
+			responses = append(responses, resp)
 		}
 	}
 
@@ -270,22 +278,30 @@ func aggregateOneQuery(instances []model.MeiliInstance, query map[string]any) gi
 	path := "/indexes/" + url.PathEscape(uid) + "/search"
 
 	type fanoutResult struct {
+		idx  int
 		resp map[string]any
 		err  error
 	}
 	ch := make(chan fanoutResult, len(instances))
-	for _, inst := range instances {
-		go func(inst model.MeiliInstance) {
+	for i, inst := range instances {
+		go func(i int, inst model.MeiliInstance) {
 			resp, err := doInstanceSearch(inst, path, params)
-			ch <- fanoutResult{resp: resp, err: err}
-		}(inst)
+			ch <- fanoutResult{idx: i, resp: resp, err: err}
+		}(i, inst)
 	}
 
-	var responses []map[string]any
+	// NOTE: 按实例顺序回填，保证合并顺序确定
+	ordered := make([]map[string]any, len(instances))
 	for range instances {
 		r := <-ch
 		if r.err == nil && r.resp != nil {
-			responses = append(responses, r.resp)
+			ordered[r.idx] = r.resp
+		}
+	}
+	var responses []map[string]any
+	for _, resp := range ordered {
+		if resp != nil {
+			responses = append(responses, resp)
 		}
 	}
 	if len(responses) == 0 {
@@ -551,6 +567,7 @@ func mergeSearchResponses(responses []map[string]any, offset, limit int, pk stri
 	perSrc := make([][]aggregatedHit, len(responses))
 	seen := map[string]bool{}
 	total := 0
+	fetchedCount := 0
 	maxMs := 0
 	facets := map[string]map[string]int{}
 	var first map[string]any
@@ -561,8 +578,12 @@ func mergeSearchResponses(responses []map[string]any, offset, limit int, pk stri
 		if first == nil {
 			first = resp
 		}
+		hitsAny, _ := resp["hits"].([]any)
+		fetchedCount += len(hitsAny)
 		if v, ok := resp["estimatedTotalHits"].(float64); ok {
 			total += int(v)
+		} else {
+			total += len(hitsAny)
 		}
 		if v, ok := resp["processingTimeMs"].(float64); ok && int(v) > maxMs {
 			maxMs = int(v)
@@ -584,7 +605,6 @@ func mergeSearchResponses(responses []map[string]any, offset, limit int, pk stri
 			}
 		}
 
-		hitsAny, _ := resp["hits"].([]any)
 		for _, h := range hitsAny {
 			hm, ok := h.(map[string]any)
 			if !ok {
@@ -632,6 +652,16 @@ func mergeSearchResponses(responses []map[string]any, offset, limit int, pk stri
 		}
 	}
 
+	// 估算去重后的总条数：各实例估计之和按"取回窗口内的去重比例"缩放
+	uniqueCount := len(ordered)
+	estimatedTotal := total
+	if fetchedCount > 0 && uniqueCount < fetchedCount {
+		estimatedTotal = int(math.Round(float64(total) * float64(uniqueCount) / float64(fetchedCount)))
+	}
+	if estimatedTotal < uniqueCount {
+		estimatedTotal = uniqueCount
+	}
+
 	start := offset
 	if start > len(ordered) {
 		start = len(ordered)
@@ -651,7 +681,7 @@ func mergeSearchResponses(responses []map[string]any, offset, limit int, pk stri
 		"hits":               hits,
 		"offset":             offset,
 		"limit":              limit,
-		"estimatedTotalHits": total,
+		"estimatedTotalHits": estimatedTotal,
 		"processingTimeMs":   maxMs,
 	}
 	if len(facets) > 0 {

@@ -7,7 +7,7 @@ ARG APP_COMMIT_MSG=
 ENV APP_VERSION=$APP_VERSION
 ENV APP_COMMIT_MSG=$APP_COMMIT_MSG
 COPY package*.json ./
-RUN npm install
+RUN npm install --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 COPY . .
 RUN npm run build
 

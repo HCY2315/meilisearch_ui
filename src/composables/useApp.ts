@@ -766,7 +766,15 @@ async function connect() {
   }
 
   function updateStats(res: SearchResponseType) {
-    resultsCount.value = res.estimatedTotalHits ?? 0
+    const limit = Math.min(pageSize.value, maxResultsPerPage.value)
+    const offset = Math.max(currentPage.value - 1, 0) * limit
+    const hits = res.hits?.length ?? 0
+    let total = res.estimatedTotalHits ?? 0
+    // 兜底：本页不足一页说明已到底，收敛总数，避免出现空的尾页
+    if (hits < limit) {
+      total = total > 0 ? Math.min(total, offset + hits) : offset + hits
+    }
+    resultsCount.value = total
     processingTimeMs.value = res.processingTimeMs ?? null
   }
 
