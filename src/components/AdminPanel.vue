@@ -17,8 +17,9 @@
           <span class="nav-label">{{ tab.label }}</span>
         </button>
       </nav>
-      <div class="sidebar-footer">
-        {{ APP_VERSION }}
+      <div class="sidebar-footer" :title="APP_COMMIT_MSG">
+        <span class="ver-hash">{{ APP_VERSION }}</span>
+        <span v-if="APP_COMMIT_MSG" class="ver-msg">{{ APP_COMMIT_MSG }}</span>
       </div>
     </aside>
 
@@ -991,7 +992,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { generateUUID } from '@/utils'
-import { APP_VERSION } from '@/constants/branding'
+import { APP_VERSION, APP_COMMIT_MSG } from '@/constants/branding'
 import {
   getAdminIndexConfigs,
   getAdminAccessTokens,
@@ -2042,6 +2043,16 @@ onMounted(() => {
 }
 
 .sidebar-footer { padding: 0 32px; font-size: 11px; color: var(--text-muted); }
+.sidebar-footer .ver-hash { display: block; font-weight: 600; letter-spacing: .3px; }
+.sidebar-footer .ver-msg {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  opacity: .65;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* 主内容区 */
 .admin-main { flex: 1; margin-left: 260px; padding: 48px 64px; }

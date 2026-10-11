@@ -1,6 +1,11 @@
 # Step 1: Build the Vue frontend
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app
+# 版本号由构建参数注入（来自 git commit），会编译进前端
+ARG APP_VERSION=dev
+ARG APP_COMMIT_MSG=
+ENV APP_VERSION=$APP_VERSION
+ENV APP_COMMIT_MSG=$APP_COMMIT_MSG
 COPY package*.json ./
 RUN npm install
 COPY . .

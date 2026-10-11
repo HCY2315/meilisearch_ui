@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # 版本号来自 git commit（start.sh 会自动注入；直接 up 时回退 dev）
+        APP_VERSION: ${APP_VERSION:-dev}
+        APP_COMMIT_MSG: ${APP_COMMIT_MSG:-}
     image: meilisearch-ui:latest
     environment:
       # 敏感配置从同目录 .env 读取（docker compose 自动加载），不要写死在这里
