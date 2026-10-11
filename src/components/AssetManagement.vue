@@ -4,6 +4,21 @@
       <h2>📦 批量新增</h2>
     </div>
 
+    <!-- 目标实例选择 -->
+    <div class="section-card">
+      <h3>目标实例</h3>
+      <div class="row-flex">
+        <div class="form-group">
+          <label>写入实例</label>
+          <select class="form-control" v-model.number="store.targetInstanceId">
+            <option :value="0">自动（按索引归属 / 广播规则）</option>
+            <option v-for="ins in store.availableInstances" :key="ins.id" :value="ins.id">{{ ins.name }}</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint">「创建索引」与「批量新增」将写入所选实例；选「自动」时按应用的聚合 / 广播规则决定。</p>
+    </div>
+
     <!-- 创建新索引 -->
     <div class="section-card">
       <h3>创建新索引</h3>

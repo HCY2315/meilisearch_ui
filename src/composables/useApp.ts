@@ -46,6 +46,8 @@ export const useAppStore = defineStore('app', () => {
   const hostInput = ref('http://localhost:7700')
   const apiKeyInput = ref('123456')
   const indexes = ref<IndexInfo[]>([])
+  const availableInstances = ref<api.InstanceOption[]>([])
+  const targetInstanceId = ref<number>(0)
   const currentIndex = ref(storage.storageGet('currentIndex') || '')
   const searchInput = ref('')
   const queryRows = ref<QueryRow[]>([createQueryRow()])
@@ -414,6 +416,8 @@ async function connect() {
     try {
       const data = await api.connectIndexes(getHost(), getApiKey())
       indexes.value = data.indexes
+      // 拉取当前应用可访问的实例列表，用于导入时选择目标实例
+      api.getPublicInstances().then(list => { availableInstances.value = list }).catch(() => {})
       if (currentIndex.value && indexes.value.some(i => i.uid === currentIndex.value)) {
         await selectIndex(currentIndex.value)
       } else if (currentIndex.value) {
@@ -1050,7 +1054,7 @@ async function connect() {
     if (!newIndexUid.value.trim()) { pushToast('请提供索引 UID', 'error'); return }
     loading.value = true
     try {
-      await api.createIndex(getHost(), getApiKey(), newIndexUid.value.trim(), newIndexPk.value.trim() || undefined)
+      await api.createIndex(getHost(), getApiKey(), newIndexUid.value.trim(), newIndexPk.value.trim() || undefined, targetInstanceId.value || undefined)
       pushToast('索引创建成功', 'success')
       if (newIndexPk.value.trim()) primaryKeyField.value = newIndexPk.value.trim()
       newIndexUid.value = ''
@@ -1091,7 +1095,7 @@ async function connect() {
     loading.value = true
     uploadProgress.value = 40
     try {
-      const msg = await api.batchImportDocuments(getHost(), getApiKey(), currentIndex.value, rawJson)
+      const msg = await api.batchImportDocuments(getHost(), getApiKey(), currentIndex.value, rawJson, targetInstanceId.value || undefined)
       uploadProgress.value = 100
       pushToast(msg, 'success')
       // 清理对应模式的数据
@@ -1321,7 +1325,7 @@ async function connect() {
   }
 
   return {
-    hostInput, apiKeyInput, indexes, currentIndex, currentIndexDisplayName, searchInput, queryRows,
+    hostInput, apiKeyInput, indexes, availableInstances, targetInstanceId, currentIndex, currentIndexDisplayName, searchInput, queryRows,
     searchFields, searchFieldWeights, filterableFields, availableFields,
     highlightFields, displayFields, facets, searchHistory, fieldLabels,
     popularSearches, popularSearchField, currentPage, pageSize, maxResultsPerPage,
