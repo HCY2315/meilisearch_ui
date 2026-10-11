@@ -184,33 +184,40 @@ func HandleProxy(c *gin.Context) {
 		}
 	}
 
-	// 多实例聚合搜索：仅接管单索引发起的 POST /indexes/{uid}/search
-	if method == http.MethodPost && strings.HasSuffix(pathSuffix, "/search") && !strings.HasSuffix(pathSuffix, "/multi-search") {
-		if handleAggregatedSearch(c, currentApp, proxyPath) {
-			return
-		}
-	}
+	// 手动指定目标实例（导入/建索引等场景），命中则直接转发，跳过聚合/广播/归属路由
+	targetInstance, hasTarget := resolveRequestTargetInstance(c, currentApp)
 
-	// 多实例聚合 multi-search
-	if method == http.MethodPost && strings.HasSuffix(pathSuffix, "/multi-search") {
-		if handleAggregatedMultiSearch(c, currentApp, proxyPath) {
-			return
-		}
-	}
-
-	// 写操作多实例广播（应用级开关）
-	if handleBroadcastWrite(c, currentApp, proxyPath, method) {
-		return
-	}
-
-	// 非搜索的索引级请求：路由到实际拥有该索引的实例（多实例场景）
-	if currentApp != nil && indexUID != "" {
-		candidates := resolveInstancesForApp(currentApp)
-		if len(candidates) > 1 {
-			if inst, ok := resolveInstanceForIndex(candidates, indexUID); ok {
-				instance = inst
+	if !hasTarget {
+		// 多实例聚合搜索：仅接管单索引发起的 POST /indexes/{uid}/search
+		if method == http.MethodPost && strings.HasSuffix(pathSuffix, "/search") && !strings.HasSuffix(pathSuffix, "/multi-search") {
+			if handleAggregatedSearch(c, currentApp, proxyPath) {
+				return
 			}
 		}
+
+		// 多实例聚合 multi-search
+		if method == http.MethodPost && strings.HasSuffix(pathSuffix, "/multi-search") {
+			if handleAggregatedMultiSearch(c, currentApp, proxyPath) {
+				return
+			}
+		}
+
+		// 写操作多实例广播（应用级开关）
+		if handleBroadcastWrite(c, currentApp, proxyPath, method) {
+			return
+		}
+
+		// 非搜索的索引级请求：路由到实际拥有该索引的实例（多实例场景）
+		if currentApp != nil && indexUID != "" {
+			candidates := resolveInstancesForApp(currentApp)
+			if len(candidates) > 1 {
+				if inst, ok := resolveInstanceForIndex(candidates, indexUID); ok {
+					instance = inst
+				}
+			}
+		}
+	} else {
+		instance = targetInstance
 	}
 
 	target, _ := url.Parse(instance.Host)
@@ -223,9 +230,10 @@ func HandleProxy(c *gin.Context) {
 		req.URL.Path = proxyPath
 		req.Header.Set("Authorization", "Bearer "+instance.APIKey)
 		req.Header.Set("X-Meili-API-Key", instance.APIKey)
-		// 清除客户端传入的 App-Key / App-Token，不应将内部凭证泄漏给 Meilisearch
+		// 清除客户端传入的 App-Key / App-Token / 目标实例头，不应泄漏给 Meilisearch
 		req.Header.Del("App-Key")
 		req.Header.Del("App-Token")
+		req.Header.Del("X-Target-Instance")
 	}
 
 	proxy.ServeHTTP(c.Writer, c.Request)

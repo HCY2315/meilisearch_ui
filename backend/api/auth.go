@@ -76,6 +76,16 @@ func HandleAppConfig(c *gin.Context) {
 	})
 }
 
+// HandleGetPublicInstances 返回当前应用可访问的实例列表（id + 名称，不含密钥）
+func HandleGetPublicInstances(c *gin.Context) {
+	_, currentApp := resolveInstanceByAppKey(c)
+	results := []gin.H{}
+	for _, inst := range resolveInstancesForApp(currentApp) {
+		results = append(results, gin.H{"id": inst.ID, "name": inst.Name})
+	}
+	c.JSON(http.StatusOK, gin.H{"results": results})
+}
+
 // HandleGetVisibleIndexes 代理请求 Meilisearch，然后根据后台的 lock 以及前端传来的 token 过滤数据
 func HandleGetVisibleIndexes(c *gin.Context) {
 	userToken := c.GetHeader("App-Token")

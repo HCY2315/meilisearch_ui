@@ -17,6 +17,9 @@ func InitRouter() *gin.Engine {
 		// 公开索引列表
 		v1.GET("/public/indexes", HandleGetVisibleIndexes)
 
+		// 公开实例列表（当前应用可访问的实例，用于前台选择导入目标）
+		v1.GET("/public/instances", HandleGetPublicInstances)
+
 		// Token 申请相关 (公开)
 		v1.POST("/application/send-code", HandleSendCode)
 		v1.POST("/application/submit", HandleSubmitApplication)
