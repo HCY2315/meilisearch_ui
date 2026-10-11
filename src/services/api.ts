@@ -272,10 +272,23 @@ export async function createIndex(
   host: string,
   apiKey: string,
   uid: string,
-  primaryKey?: string
+  primaryKey?: string,
+  targetInstanceId?: number
 ): Promise<void> {
   const client = createClient(host, apiKey)
-  await client.post('/indexes', primaryKey ? { uid, primaryKey } : { uid })
+  await client.post('/indexes', primaryKey ? { uid, primaryKey } : { uid }, { headers: targetHeader(targetInstanceId) })
+}
+
+export interface InstanceOption {
+  id: number
+  name: string
+}
+
+export async function getPublicInstances(): Promise<InstanceOption[]> {
+  const res = await fetch('/api/v1/public/instances', { headers: { ...getAppKeyHeader() } })
+  if (!res.ok) return []
+  const payload = await res.json().catch(() => ({ results: [] }))
+  return Array.isArray(payload.results) ? payload.results : []
 }
 
 export async function setIndexPrimaryKey(
@@ -288,16 +301,21 @@ export async function setIndexPrimaryKey(
   await client.put(`/indexes/${uid}/primaryKey`, { primaryKey })
 }
 
+function targetHeader(instanceId?: number): Record<string, string> {
+  return instanceId ? { 'X-Target-Instance': String(instanceId) } : {}
+}
+
 export async function batchImportDocuments(
   host: string,
   apiKey: string,
   index: string,
-  jsonData: string
+  jsonData: string,
+  targetInstanceId?: number
 ): Promise<string> {
   const client = createClient(host, apiKey)
   const docs = JSON.parse(jsonData)
   if (!Array.isArray(docs) || !docs.length) throw new Error('JSON数组为空')
-  await client.post(`/indexes/${index}/documents`, docs)
+  await client.post(`/indexes/${index}/documents`, docs, { headers: targetHeader(targetInstanceId) })
   return `成功导入 ${docs.length} 条数据到索引 ${index}`
 }
 
