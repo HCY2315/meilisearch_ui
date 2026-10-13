@@ -67,6 +67,7 @@ export const useAppStore = defineStore('app', () => {
   const currentPage = ref(1)
   const pageSize = ref(10)
   const maxResultsPerPage = ref(1000)
+  const allowSelfApplication = ref(true)
   const resultsCount = ref(0)
   const processingTimeMs = ref<number | null>(null)
   const facetDistribution = ref<FacetDistribution | null>(null)
@@ -1336,7 +1337,7 @@ async function connect() {
     hostInput, apiKeyInput, indexes, availableInstances, targetInstanceId, currentIndex, currentIndexDisplayName, searchInput, queryRows,
     searchFields, searchFieldWeights, filterableFields, availableFields,
     highlightFields, displayFields, facets, searchHistory, fieldLabels,
-    popularSearches, popularSearchField, currentPage, pageSize, maxResultsPerPage,
+    popularSearches, popularSearchField, currentPage, pageSize, maxResultsPerPage, allowSelfApplication,
     resultsCount, processingTimeMs, facetDistribution, sortableAttributes,
     lastHits, lastResults, lastBaseColumns, tableSortField, tableSortDir,
     columnOrder, hiddenColumns, columnWidths, drawerFieldOrder, aiConfig, aiDropdownOpen,

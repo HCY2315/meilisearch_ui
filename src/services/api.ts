@@ -629,6 +629,46 @@ export async function getTenantApps(tenantId: number): Promise<any[]> {
 }
 
 
+// 邮件（SMTP）配置
+export async function getSmtpConfig(): Promise<Record<string, any>> {
+  const headers = getAuthHeaders()
+  const res = await fetch('/api/v1/admin/settings/smtp', { headers })
+  if (!res.ok) return {}
+  return res.json()
+}
+
+export async function updateSmtpConfig(data: Record<string, unknown>): Promise<{ ok: boolean; message: string }> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch('/api/v1/admin/settings/smtp', { method: 'PUT', headers, body: JSON.stringify(data) })
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok) return { ok: false, message: payload.error || '保存失败' }
+  return { ok: true, message: payload.message || '已保存' }
+}
+
+export async function testSmtp(to: string): Promise<{ ok: boolean; message: string }> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch('/api/v1/admin/settings/smtp/test', { method: 'POST', headers, body: JSON.stringify({ to }) })
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok) return { ok: false, message: payload.error || '发送失败' }
+  return { ok: true, message: payload.message || '测试邮件已发送' }
+}
+
+// 系统设置
+export async function getSystemSettings(): Promise<Record<string, any>> {
+  const headers = getAuthHeaders()
+  const res = await fetch('/api/v1/admin/settings/system', { headers })
+  if (!res.ok) return {}
+  return res.json()
+}
+
+export async function updateSystemSettings(data: Record<string, unknown>): Promise<{ ok: boolean; message: string }> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch('/api/v1/admin/settings/system', { method: 'PUT', headers, body: JSON.stringify(data) })
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok) return { ok: false, message: payload.error || '保存失败' }
+  return { ok: true, message: payload.message || '已保存' }
+}
+
 export async function updateAdminPassword(newPassword: string): Promise<boolean> {
   const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
   const res = await fetch('/api/v1/admin/password', {

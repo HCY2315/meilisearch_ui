@@ -897,6 +897,153 @@
           </div>
         </div>
       </section>
+
+      <!-- 邮件配置 -->
+      <section v-if="activeTab === 'smtp'" class="content-section">
+        <header class="section-header">
+          <h1>邮件配置 <span>SMTP</span></h1>
+          <p>用于发送 Token 申请验证码与审批通知。此处配置优先于环境变量。</p>
+        </header>
+
+        <div class="glass-editor">
+          <h3>📧 SMTP 服务器
+            <span v-if="smtpInfo.configured" style="font-size:12px;font-weight:400;margin-left:8px;opacity:.7">
+              （当前来源：{{ smtpInfo.source === 'db' ? '后台配置' : '环境变量' }}）
+            </span>
+            <span v-else style="font-size:12px;font-weight:400;margin-left:8px;color:var(--error-color,#ef4444)">（未配置）</span>
+          </h3>
+          <div class="grid-inputs" style="max-width: 720px;">
+            <div class="input-group">
+              <label>SMTP 服务器</label>
+              <input v-model="smtpForm.host" class="form-control" placeholder="smtp.163.com">
+            </div>
+            <div class="input-group">
+              <label>端口</label>
+              <input type="number" v-model.number="smtpForm.port" class="form-control" placeholder="465">
+            </div>
+            <div class="input-group">
+              <label>发件账号 (邮箱)</label>
+              <input v-model="smtpForm.username" class="form-control" placeholder="example@163.com">
+            </div>
+            <div class="input-group">
+              <label>授权码 / 密码</label>
+              <input type="password" v-model="smtpForm.password" class="form-control"
+                :placeholder="smtpInfo.hasPassword ? '留空表示不修改' : '请输入授权码'">
+            </div>
+            <div class="input-group">
+              <label>加密方式</label>
+              <select v-model="smtpForm.encryption" class="form-control">
+                <option value="ssl">SSL / 隐式 TLS（465）</option>
+                <option value="starttls">STARTTLS（587）</option>
+                <option value="none">无加密（25）</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>发件人显示名（可选）</label>
+              <input v-model="smtpForm.fromName" class="form-control" placeholder="多维搜索引擎">
+            </div>
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" :disabled="smtpSaving" @click="saveSmtpConfig">
+              {{ smtpSaving ? '保存中...' : '保存配置' }}
+            </button>
+          </div>
+
+          <h3 style="margin-top:24px">📨 发送测试邮件</h3>
+          <div class="grid-inputs" style="max-width: 520px;">
+            <div class="input-group">
+              <label>收件邮箱</label>
+              <input v-model="smtpTestTo" class="form-control" placeholder="接收测试邮件的邮箱">
+            </div>
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-secondary" :disabled="smtpTesting" @click="sendSmtpTest">
+              {{ smtpTesting ? '发送中...' : '发送测试邮件' }}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 系统设置 -->
+      <section v-if="activeTab === 'system'" class="content-section">
+        <header class="section-header">
+          <h1>系统设置 <span>System Settings</span></h1>
+          <p>品牌文案、Token 与申请规则、前台分页等全局配置。</p>
+        </header>
+
+        <div class="glass-editor">
+          <h3>🏷️ 品牌与文案</h3>
+          <div class="grid-inputs" style="max-width: 760px;">
+            <div class="input-group">
+              <label>系统标题（邮件/页面）</label>
+              <input v-model="systemForm.systemTitle" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>前台默认标题（未被应用覆盖时）</label>
+              <input v-model="systemForm.defaultSearchTitle" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>前台副标题</label>
+              <input v-model="systemForm.frontendSubtitle" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>页脚版权信息</label>
+              <input v-model="systemForm.copyright" class="form-control">
+            </div>
+          </div>
+
+          <h3 style="margin-top:24px">🎫 Token 与申请规则</h3>
+          <div class="grid-inputs" style="max-width: 760px;">
+            <div class="input-group">
+              <label>Token 默认有效期 (天)</label>
+              <input type="number" min="1" v-model.number="systemForm.tokenValidDays" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>申请频率限制 (天)</label>
+              <input type="number" min="0" v-model.number="systemForm.applicationIntervalDays" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>验证码有效期 (分钟)</label>
+              <input type="number" min="1" v-model.number="systemForm.verificationTtlMinutes" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>新申请通知管理员邮箱（可空）</label>
+              <input v-model="systemForm.adminNotifyEmail" class="form-control" placeholder="admin@example.com">
+            </div>
+          </div>
+
+          <h3 style="margin-top:24px">📄 前台分页</h3>
+          <div class="grid-inputs" style="max-width: 760px;">
+            <div class="input-group">
+              <label>默认每页条数</label>
+              <input type="number" min="1" v-model.number="systemForm.defaultPageSize" class="form-control">
+            </div>
+            <div class="input-group">
+              <label>最大每页条数</label>
+              <input type="number" min="1" v-model.number="systemForm.maxResultsPerPage" class="form-control">
+            </div>
+          </div>
+
+          <div class="settings-row" style="margin-top:16px">
+            <div class="row-label">
+              <h4>开放自助申请</h4>
+              <p>关闭后，前台将隐藏「申请访问凭证」入口，且后端拒绝自助申请。</p>
+            </div>
+            <div class="row-val">
+              <label class="inline-check">
+                <input type="checkbox" v-model="systemForm.allowSelfApplication">
+                允许用户自助申请 Token
+              </label>
+            </div>
+          </div>
+
+          <div class="editor-actions">
+            <button class="btn btn-primary" :disabled="systemSaving" @click="saveSystemSettings">
+              {{ systemSaving ? '保存中...' : '保存系统设置' }}
+            </button>
+          </div>
+        </div>
+      </section>
     </main>
 
     <div v-if="approveModalOpen" class="tasks-modal-overlay animate-fade-in" @click.self="closeApproveModal">
@@ -1019,7 +1166,12 @@ import {
   getApplications,
   approveApplication,
   rejectApplication,
-  getAdminUsageMetrics
+  getAdminUsageMetrics,
+  getSmtpConfig,
+  updateSmtpConfig,
+  testSmtp,
+  getSystemSettings,
+  updateSystemSettings
 } from '@/services/api'
 
 function formatDuration(isoDuration: string | undefined): string {
@@ -1066,6 +1218,8 @@ const tabs = [
   { id: 'metrics', label: '用量监控', icon: '📊' },
   { id: 'search', label: '搜索配置', icon: '🔍' },
   { id: 'settings', label: '应用设置', icon: '⚙️' },
+  { id: 'smtp', label: '邮件配置', icon: '📧' },
+  { id: 'system', label: '系统设置', icon: '🧩' },
   { id: 'password', label: '账户安全', icon: '🔐' },
 ]
 
@@ -1275,6 +1429,97 @@ const editingTokenId = ref<number | null>(null)
 const newToken = ref({ token: '', allowIndexes: [] as string[], description: '', validDays: null as number | null, maxQueriesPerDay: 0, maxImportsPerDay: 0 })
 
 const passwordForm = ref({ newPassword: '', confirmPassword: '' })
+
+// 邮件配置
+const smtpForm = ref({ host: '', port: 465, username: '', password: '', encryption: 'ssl', fromName: '' })
+const smtpInfo = ref<Record<string, any>>({ configured: false, source: '', hasPassword: false })
+const smtpTestTo = ref('')
+const smtpSaving = ref(false)
+const smtpTesting = ref(false)
+
+async function loadSmtpConfig() {
+  try {
+    const data = await getSmtpConfig()
+    smtpInfo.value = data || {}
+    smtpForm.value = {
+      host: data.host || '',
+      port: data.port || 465,
+      username: data.username || '',
+      password: '',
+      encryption: data.encryption || 'ssl',
+      fromName: data.fromName || '',
+    }
+  } catch (e) {
+    console.error('加载邮件配置失败', e)
+  }
+}
+
+async function saveSmtpConfig() {
+  if (!smtpForm.value.host || !smtpForm.value.username) {
+    alert('请填写 SMTP 服务器与发件账号')
+    return
+  }
+  smtpSaving.value = true
+  try {
+    const res = await updateSmtpConfig({ ...smtpForm.value })
+    alert(res.message)
+    if (res.ok) await loadSmtpConfig()
+  } finally {
+    smtpSaving.value = false
+  }
+}
+
+async function sendSmtpTest() {
+  if (!smtpTestTo.value.trim()) {
+    alert('请输入收件邮箱')
+    return
+  }
+  smtpTesting.value = true
+  try {
+    const res = await testSmtp(smtpTestTo.value.trim())
+    alert(res.message)
+  } finally {
+    smtpTesting.value = false
+  }
+}
+
+// 系统设置
+const systemForm = ref({
+  systemTitle: '',
+  copyright: '',
+  frontendSubtitle: '',
+  defaultSearchTitle: '',
+  tokenValidDays: 30,
+  applicationIntervalDays: 30,
+  verificationTtlMinutes: 180,
+  defaultPageSize: 10,
+  maxResultsPerPage: 1000,
+  allowSelfApplication: true,
+  adminNotifyEmail: '',
+})
+const systemSaving = ref(false)
+
+async function loadSystemSettings() {
+  try {
+    const data = await getSystemSettings()
+    if (data && Object.keys(data).length) {
+      systemForm.value = { ...systemForm.value, ...data }
+    }
+  } catch (e) {
+    console.error('加载系统设置失败', e)
+  }
+}
+
+async function saveSystemSettings() {
+  systemSaving.value = true
+  try {
+    const res = await updateSystemSettings({ ...systemForm.value })
+    alert(res.message)
+    if (res.ok) await loadSystemSettings()
+  } finally {
+    systemSaving.value = false
+  }
+}
 
 // 搜索配置相关
 const selectedSearchIndex = ref('')
@@ -1529,6 +1774,8 @@ async function loadAdminData() {
     if (proxyData.results) {
       availableIndexes.value = proxyData.results.map(r => r.uid)
     }
+    loadSmtpConfig()
+    loadSystemSettings()
   } catch (e) {
     console.error('Admin Data Load Error:', e)
   }

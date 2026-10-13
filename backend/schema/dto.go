@@ -85,6 +85,21 @@ type ValidateEmbedderRequest struct {
 	Embedder any    `json:"embedder" binding:"required"`
 }
 
+// SmtpConfigRequest 保存邮件配置请求
+type SmtpConfigRequest struct {
+	Host       string `json:"host"`
+	Port       int    `json:"port"`
+	Username   string `json:"username"`
+	Password   string `json:"password"` // 留空表示不修改已有密码
+	Encryption string `json:"encryption"`
+	FromName   string `json:"fromName"`
+}
+
+// SmtpTestRequest 发送测试邮件请求
+type SmtpTestRequest struct {
+	To string `json:"to" binding:"required,email"`
+}
+
 // SendCodeRequest 发送验证码请求
 type SendCodeRequest struct {
 	Email string `json:"email" binding:"required,email"`

@@ -1,24 +1,18 @@
 package api
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
-	"net/smtp"
-	"os"
 	"time"
 
 	"backend/model"
 	"backend/repository"
 	"backend/schema"
-	"backend/util"
 
 	"github.com/gin-gonic/gin"
 )
-
-const defaultTokenValidDays = 30
 
 // HandleSendCode 发送邮箱验证码
 func HandleSendCode(c *gin.Context) {
@@ -28,20 +22,30 @@ func HandleSendCode(c *gin.Context) {
 		return
 	}
 
-	// 频率检查：30天内只能申请一次
+	setting := getSystemSetting()
+	if !setting.AllowSelfApplication {
+		c.JSON(http.StatusForbidden, gin.H{"error": "系统当前未开放自助申请，请联系管理员"})
+		return
+	}
+
+	// 频率检查：N 天内只能申请一次（N 可在后台配置）
+	intervalDays := setting.ApplicationIntervalDays
+	if intervalDays <= 0 {
+		intervalDays = 30
+	}
 	var lastApp model.TokenApplication
 	if err := repository.DB.Unscoped().Where("email = ?", req.Email).Order("created_at desc").First(&lastApp).Error; err == nil {
-		nextAvailableTime := lastApp.CreatedAt.Add(30 * 24 * time.Hour)
+		nextAvailableTime := lastApp.CreatedAt.Add(time.Duration(intervalDays) * 24 * time.Hour)
 		if time.Now().Before(nextAvailableTime) {
 			remainingDays := int(time.Until(nextAvailableTime).Hours()/24) + 1
-			c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("该邮箱 30 天内只能申请一次，请在 %d 天后再次尝试", remainingDays)})
+			c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("该邮箱 %d 天内只能申请一次，请在 %d 天后再次尝试", intervalDays, remainingDays)})
 			return
 		}
 	}
 
 	// 生成 6 位验证码
 	code := fmt.Sprintf("%06d", rand.Intn(1000000))
-	expiresAt := time.Now().Add(180 * time.Minute)
+	expiresAt := time.Now().Add(time.Duration(setting.VerificationTTLMinutes) * time.Minute)
 
 	// 保存到数据库 (覆盖旧的)
 	verification := model.EmailVerification{
@@ -65,79 +69,19 @@ func HandleSendCode(c *gin.Context) {
 }
 
 func sendEmailVia163(to, code string) error {
-	subject := "验证码 - " + util.SysTitle + " Token 申请"
-	body := fmt.Sprintf("您的验证码是：<b style='color:#4f46e5;font-size:24px;'>%s</b><br><br>有效期为 180 分钟。请勿告诉他人。", code)
-	return sendEmailVia163HTML(to, subject, body)
+	setting := getSystemSetting()
+	subject := "验证码 - " + setting.SystemTitle + " Token 申请"
+	body := fmt.Sprintf("您的验证码是：<b style='color:#4f46e5;font-size:24px;'>%s</b><br><br>有效期为 %d 分钟。请勿告诉他人。", code, setting.VerificationTTLMinutes)
+	return sendSystemMail(to, subject, body)
 }
 
-func sendEmailVia163HTML(to, subject, body string) error {
-	user := os.Getenv("SMTP_USER")
-	pass := os.Getenv("SMTP_PASS") // 163 授权码
-	host := "smtp.163.com"
-	port := "465"
-
-	if user == "" || pass == "" {
-		return fmt.Errorf("SMTP 配置缺失 (请在环境变量中设置 SMTP_USER 和 SMTP_PASS)")
+// sendSystemMail 使用后台配置的 SMTP 发送邮件（未配置时回退环境变量）
+func sendSystemMail(to, subject, body string) error {
+	cfg, ok := getSmtpConfig()
+	if !ok {
+		return fmt.Errorf("SMTP 邮件服务未配置，请在后台「邮件配置」中设置")
 	}
-
-	header := make(map[string]string)
-	header["From"] = user
-	header["To"] = to
-	header["Subject"] = subject
-	header["Content-Type"] = "text/html; charset=UTF-8"
-
-	message := ""
-	for k, v := range header {
-		message += fmt.Sprintf("%s: %s\r\n", k, v)
-	}
-	message += "\r\n" + body
-
-	auth := smtp.PlainAuth("", user, pass, host)
-
-	tlsconfig := &tls.Config{
-		InsecureSkipVerify: true,
-		ServerName:         host,
-	}
-
-	conn, err := tls.Dial("tcp", host+":"+port, tlsconfig)
-	if err != nil {
-		return err
-	}
-
-	client, err := smtp.NewClient(conn, host)
-	if err != nil {
-		return err
-	}
-
-	if err = client.Auth(auth); err != nil {
-		return err
-	}
-
-	if err = client.Mail(user); err != nil {
-		return err
-	}
-
-	if err = client.Rcpt(to); err != nil {
-		return err
-	}
-
-	w, err := client.Data()
-	if err != nil {
-		return err
-	}
-
-	_, err = w.Write([]byte(message))
-	if err != nil {
-		return err
-	}
-
-	err = w.Close()
-	if err != nil {
-		return err
-	}
-
-	client.Quit()
-	return nil
+	return sendMailHTML(cfg, to, subject, body)
 }
 
 // HandleSubmitApplication 提交申请
@@ -148,11 +92,21 @@ func HandleSubmitApplication(c *gin.Context) {
 		return
 	}
 
-	// 频率检查：30天内只能申请一次 (二次校验)
+	setting := getSystemSetting()
+	if !setting.AllowSelfApplication {
+		c.JSON(http.StatusForbidden, gin.H{"error": "系统当前未开放自助申请，请联系管理员"})
+		return
+	}
+
+	// 频率检查：N 天内只能申请一次 (二次校验)
+	intervalDays := setting.ApplicationIntervalDays
+	if intervalDays <= 0 {
+		intervalDays = 30
+	}
 	var lastApp model.TokenApplication
 	if err := repository.DB.Unscoped().Where("email = ?", req.Email).Order("created_at desc").First(&lastApp).Error; err == nil {
-		if time.Since(lastApp.CreatedAt) < 30*24*time.Hour {
-			c.JSON(http.StatusForbidden, gin.H{"error": "申请过于频繁，请 30 天后再试"})
+		if time.Since(lastApp.CreatedAt) < time.Duration(intervalDays)*24*time.Hour {
+			c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("申请过于频繁，请 %d 天后再试", intervalDays)})
 			return
 		}
 	}
@@ -190,6 +144,19 @@ func HandleSubmitApplication(c *gin.Context) {
 
 	// 验证码用完即毁
 	repository.DB.Delete(&verification)
+
+	// 通知管理员（若配置了通知邮箱）
+	if adminEmail := setting.AdminNotifyEmail; adminEmail != "" {
+		body := fmt.Sprintf(
+			"收到新的 Token 申请：<br><br>姓名：%s<br>邮箱：%s<br>用途：%s<br>申请索引：%s",
+			req.Name, req.Email, req.Purpose, string(indexesJSON),
+		)
+		go func() {
+			if err := sendSystemMail(adminEmail, setting.SystemTitle+" 新的 Token 申请", body); err != nil {
+				fmt.Printf("[Notify] 管理员通知邮件发送失败: %v\n", err)
+			}
+		}()
+	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "申请已提交，请等待管理员审批"})
 }
@@ -237,7 +204,7 @@ func HandleApproveApplication(c *gin.Context) {
 	}
 	allowIndexesJSON, _ := json.Marshal(allowIndexes)
 
-	validDays := defaultTokenValidDays
+	validDays := getSystemSetting().TokenValidDays
 	if req.ValidDays != nil && *req.ValidDays > 0 {
 		validDays = *req.ValidDays
 	}
@@ -271,7 +238,7 @@ func HandleApproveApplication(c *gin.Context) {
 		expireDate,
 		allowIndexesText,
 	)
-	if err := sendEmailVia163HTML(app.Email, util.SysTitle+" 申请审批通过通知", mailBody); err != nil {
+	if err := sendSystemMail(app.Email, getSystemSetting().SystemTitle+" 申请审批通过通知", mailBody); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "申请已通过并生成凭证，但邮件发送失败",
 			"token":   newToken,
@@ -308,7 +275,7 @@ func HandleRejectApplication(c *gin.Context) {
 	if req.RejectMessage != "" {
 		mailBody = req.RejectMessage
 	}
-	if err := sendEmailVia163HTML(app.Email, util.SysTitle+" 申请审批驳回通知", mailBody); err != nil {
+	if err := sendSystemMail(app.Email, getSystemSetting().SystemTitle+" 申请审批驳回通知", mailBody); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "已驳回该申请，但邮件发送失败",
 			"warning": err.Error(),

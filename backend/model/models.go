@@ -113,6 +113,37 @@ type EmailVerification struct {
 	ExpiresAt time.Time `gorm:"index" json:"expiresAt"`
 }
 
+// SmtpConfig 邮件发送配置（后台可配置，单行）
+// NOTE: 优先于环境变量 SMTP_USER / SMTP_PASS 生效
+type SmtpConfig struct {
+	ID         uint      `gorm:"primarykey" json:"id"`
+	Host       string    `gorm:"size:128" json:"host"`
+	Port       int       `gorm:"default:465" json:"port"`
+	Username   string    `gorm:"size:128" json:"username"`
+	Password   string    `gorm:"size:256" json:"-"`                       // 授权码/密码，不对外暴露
+	Encryption string    `gorm:"size:16;default:'ssl'" json:"encryption"` // ssl / starttls / none
+	FromName   string    `gorm:"size:128" json:"fromName"`                // 发件人显示名（可选）
+	UpdatedAt  time.Time `json:"updatedAt"`
+}
+
+// SystemSetting 系统级设置（单行，后台可配置）
+// NOTE: 未写入数据库时使用代码内默认值
+type SystemSetting struct {
+	ID                      uint      `gorm:"primarykey" json:"id"`
+	SystemTitle             string    `gorm:"size:128" json:"systemTitle"`        // 系统标题（邮件/页面）
+	Copyright               string    `gorm:"size:256" json:"copyright"`          // 页脚版权
+	FrontendSubtitle        string    `gorm:"size:128" json:"frontendSubtitle"`   // 前台副标题
+	DefaultSearchTitle      string    `gorm:"size:128" json:"defaultSearchTitle"` // 前台默认标题（未被应用覆盖时）
+	TokenValidDays          int       `json:"tokenValidDays"`                     // Token 默认有效期(天)
+	ApplicationIntervalDays int       `json:"applicationIntervalDays"`            // 申请频率限制(天)
+	VerificationTTLMinutes  int       `json:"verificationTtlMinutes"`             // 验证码有效期(分钟)
+	DefaultPageSize         int       `json:"defaultPageSize"`                    // 前台默认每页条数
+	MaxResultsPerPage       int       `json:"maxResultsPerPage"`                  // 前台最大每页条数
+	AllowSelfApplication    bool      `json:"allowSelfApplication"`               // 是否开放自助申请 Token
+	AdminNotifyEmail        string    `gorm:"size:128" json:"adminNotifyEmail"`   // 新申请通知管理员邮箱
+	UpdatedAt               time.Time `json:"updatedAt"`
+}
+
 // UsageMetric 每日使用统计
 type UsageMetric struct {
 	Date         string `gorm:"primaryKey;size:20" json:"date"` // 格式: YYYY-MM-DD

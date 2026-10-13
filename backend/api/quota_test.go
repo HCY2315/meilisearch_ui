@@ -23,6 +23,8 @@ func TestMain(m *testing.M) {
 		&model.AccessToken{},
 		&model.Application{},
 		&model.MeiliInstance{},
+		&model.SmtpConfig{},
+		&model.SystemSetting{},
 		&model.TokenUsageMetric{},
 		&model.AppUsageMetric{},
 	)

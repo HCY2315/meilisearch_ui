@@ -67,8 +67,18 @@ func HandleAppConfig(c *gin.Context) {
 		return
 	}
 
+	sys := getSystemSetting()
 	c.JSON(http.StatusOK, gin.H{
 		"uiConfig": app.UIConfig,
+		"system": gin.H{
+			"systemTitle":          sys.SystemTitle,
+			"copyright":            sys.Copyright,
+			"frontendSubtitle":     sys.FrontendSubtitle,
+			"defaultSearchTitle":   sys.DefaultSearchTitle,
+			"defaultPageSize":      sys.DefaultPageSize,
+			"maxResultsPerPage":    sys.MaxResultsPerPage,
+			"allowSelfApplication": sys.AllowSelfApplication,
+		},
 		"meili": gin.H{
 			"host":        "/api/v1/proxy",
 			"searchToken": c.GetHeader("Authorization"),

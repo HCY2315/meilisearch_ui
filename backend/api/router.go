@@ -61,6 +61,15 @@ func InitRouter() *gin.Engine {
 			adminGroup.DELETE("/access_tokens/:id", HandleDeleteAccessToken)
 			adminGroup.PUT("/password", HandleUpdateAdminPassword)
 
+			// 邮件配置
+			adminGroup.GET("/settings/smtp", HandleGetSmtpConfig)
+			adminGroup.PUT("/settings/smtp", HandleUpdateSmtpConfig)
+			adminGroup.POST("/settings/smtp/test", HandleTestSmtp)
+
+			// 系统设置
+			adminGroup.GET("/settings/system", HandleGetSystemSetting)
+			adminGroup.PUT("/settings/system", HandleUpdateSystemSetting)
+
 			// Token 申请管理
 			adminGroup.GET("/applications", HandleGetApplications)
 			adminGroup.POST("/applications/:id/approve", HandleApproveApplication)

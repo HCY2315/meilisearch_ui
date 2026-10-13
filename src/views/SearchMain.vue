@@ -9,8 +9,8 @@
         <div class="header-left">
           <div class="brand-logo">🔍</div>
           <div class="brand-text">
-            <h1>{{ uiConfig.title || '搜索引擎 Pro' }}</h1>
-            <p>高性能多维数据检索引擎</p>
+            <h1>{{ uiConfig.title || systemConfig.defaultSearchTitle || '搜索引擎 Pro' }}</h1>
+            <p>{{ systemConfig.frontendSubtitle || '高性能多维数据检索引擎' }}</p>
           </div>
         </div>
 
@@ -84,7 +84,7 @@
 
     <footer class="app-footer">
       <div class="footer-divider"></div>
-      <p>{{ APP_COPYRIGHT }}</p>
+      <p>{{ systemConfig.copyright || APP_COPYRIGHT }}</p>
     </footer>
 
     <!-- 全局挂载组件 -->
@@ -120,6 +120,7 @@ if (savedTheme) {
   document.documentElement.setAttribute('data-theme', savedTheme)
 }
 const uiConfig = ref<any>({})
+const systemConfig = ref<any>({})
 const userRole = ref('user')
 const isLoggedIn = ref(false)
 const initLoading = ref(true)
@@ -171,6 +172,14 @@ onMounted(async () => {
             document.documentElement.setAttribute('data-theme', theme.value)
           }
         } catch {}
+      }
+
+      const sys = (data as any).system
+      if (sys) {
+        systemConfig.value = sys
+        if (sys.defaultPageSize > 0) store.pageSize = sys.defaultPageSize
+        if (sys.maxResultsPerPage > 0) store.maxResultsPerPage = sys.maxResultsPerPage
+        store.allowSelfApplication = sys.allowSelfApplication !== false
       }
       
       if (data.meili && (data.meili as any).host) {
