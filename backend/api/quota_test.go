@@ -25,6 +25,7 @@ func TestMain(m *testing.M) {
 		&model.MeiliInstance{},
 		&model.SmtpConfig{},
 		&model.SystemSetting{},
+		&model.TokenApplication{},
 		&model.TokenUsageMetric{},
 		&model.AppUsageMetric{},
 	)

@@ -63,39 +63,31 @@ export async function connectIndexes(host: string, apiKey: string): Promise<Conn
     }
   })
   const results: IndexInfo[] = []
+  const baseMeta = (idx: any): IndexInfo => ({
+    uid: idx.uid,
+    isVisible: idx.isVisible,
+    isLocked: idx.isLocked,
+    isUnlocked: idx.isUnlocked,
+    displayName: idx.displayName,
+    fieldConfigs: idx.fieldConfigs,
+    viewConfigs: idx.viewConfigs,
+    tableConfigs: idx.tableConfigs,
+    nestedFieldConfigs: idx.nestedFieldConfigs,
+    canEdit: idx.canEdit,
+    drawerFieldOrder: idx.drawerFieldOrder,
+    primaryKey: idx.primaryKey
+  })
   for (const idx of resp.data.results as any[]) {
+    // 锁定且未解锁的索引无权读取统计，直接跳过，避免 403 噪音
+    if (idx.isLocked && !idx.isUnlocked) {
+      results.push(baseMeta(idx))
+      continue
+    }
     try {
       const statsResp = await client.get<IndexStats>(`/indexes/${idx.uid}/stats`)
-      results.push({ 
-        uid: idx.uid, 
-        count: statsResp.data.numberOfDocuments,
-        isVisible: idx.isVisible,
-        isLocked: idx.isLocked,
-        isUnlocked: idx.isUnlocked,
-        displayName: idx.displayName,
-        fieldConfigs: idx.fieldConfigs,
-        viewConfigs: idx.viewConfigs,
-        tableConfigs: idx.tableConfigs,
-        nestedFieldConfigs: idx.nestedFieldConfigs,
-        canEdit: idx.canEdit,
-        drawerFieldOrder: idx.drawerFieldOrder,
-        primaryKey: idx.primaryKey
-      })
+      results.push({ ...baseMeta(idx), count: statsResp.data.numberOfDocuments })
     } catch {
-      results.push({ 
-        uid: idx.uid,
-        isVisible: idx.isVisible,
-        isLocked: idx.isLocked,
-        isUnlocked: idx.isUnlocked,
-        displayName: idx.displayName,
-        fieldConfigs: idx.fieldConfigs,
-        viewConfigs: idx.viewConfigs,
-        tableConfigs: idx.tableConfigs,
-        nestedFieldConfigs: idx.nestedFieldConfigs,
-        canEdit: idx.canEdit,
-        drawerFieldOrder: idx.drawerFieldOrder,
-        primaryKey: idx.primaryKey
-      })
+      results.push(baseMeta(idx))
     }
   }
   return { indexes: results }

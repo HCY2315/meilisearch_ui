@@ -109,9 +109,6 @@ type SendCodeRequest struct {
 type TokenApplicationSubmitRequest struct {
 	Email        string   `json:"email" binding:"required,email"`
 	Code         string   `json:"code" binding:"required"`
-	Name         string   `json:"name" binding:"required"`
-	Birthday     string   `json:"birthday"`
-	Gender       string   `json:"gender"`
 	Purpose      string   `json:"purpose"`
 	AllowIndexes []string `json:"allowIndexes"`
 }

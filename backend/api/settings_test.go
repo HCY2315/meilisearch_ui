@@ -120,3 +120,22 @@ func TestSystemSettingPersistence(t *testing.T) {
 		t.Fatalf("非法值应回退默认: %+v", got2)
 	}
 }
+
+func TestTokenApplicationInsertWithoutLegacyFields(t *testing.T) {
+	repository.DB.Where("1 = 1").Delete(&model.TokenApplication{})
+	t.Cleanup(func() { repository.DB.Where("1 = 1").Delete(&model.TokenApplication{}) })
+
+	// 不再收集 Name/Birthday/Gender，插入仍需成功（旧列 NOT NULL 由空串满足）
+	app := model.TokenApplication{Email: "a@b.com", Purpose: "test", AllowIndexes: "[]", Status: 0}
+	if err := repository.DB.Create(&app).Error; err != nil {
+		t.Fatalf("插入申请记录失败: %v", err)
+	}
+
+	var got model.TokenApplication
+	if err := repository.DB.First(&got, app.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if got.Email != "a@b.com" || got.Purpose != "test" {
+		t.Fatalf("读取错误: %+v", got)
+	}
+}

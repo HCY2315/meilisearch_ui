@@ -129,9 +129,6 @@ func HandleSubmitApplication(c *gin.Context) {
 	// 创建申请记录
 	app := model.TokenApplication{
 		Email:        req.Email,
-		Name:         req.Name,
-		Birthday:     req.Birthday,
-		Gender:       req.Gender,
 		Purpose:      req.Purpose,
 		AllowIndexes: string(indexesJSON),
 		Status:       0, // 待审批
@@ -148,8 +145,8 @@ func HandleSubmitApplication(c *gin.Context) {
 	// 通知管理员（若配置了通知邮箱）
 	if adminEmail := setting.AdminNotifyEmail; adminEmail != "" {
 		body := fmt.Sprintf(
-			"收到新的 Token 申请：<br><br>姓名：%s<br>邮箱：%s<br>用途：%s<br>申请索引：%s",
-			req.Name, req.Email, req.Purpose, string(indexesJSON),
+			"收到新的 Token 申请：<br><br>邮箱：%s<br>用途：%s<br>申请索引：%s",
+			req.Email, req.Purpose, string(indexesJSON),
 		)
 		go func() {
 			if err := sendSystemMail(adminEmail, setting.SystemTitle+" 新的 Token 申请", body); err != nil {
@@ -212,7 +209,7 @@ func HandleApproveApplication(c *gin.Context) {
 
 	description := req.Description
 	if description == "" {
-		description = fmt.Sprintf("申请人: %s (%s) 用途: %s", app.Name, app.Email, app.Purpose)
+		description = fmt.Sprintf("申请人邮箱: %s 用途: %s", app.Email, app.Purpose)
 	}
 
 	accessToken := model.AccessToken{

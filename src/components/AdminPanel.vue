@@ -328,7 +328,6 @@
             <thead>
               <tr>
                 <th>申请人</th>
-                <th>联系方式</th>
                 <th>详细信息</th>
                 <th>申请索引</th>
                 <th>状态</th>
@@ -339,11 +338,9 @@
               <tr v-for="app in tokenApplications" :key="app.id">
                 <td>
                   <div class="user-info">
-                    <strong>{{ app.name }}</strong>
-                    <span class="meta">{{ app.gender }} | {{ app.birthday }}</span>
+                    <strong>{{ app.email }}</strong>
                   </div>
                 </td>
-                <td><code>{{ app.email }}</code></td>
                 <td>
                   <div class="purpose-info" :title="app.purpose">
                     {{ app.purpose || '无说明' }}
@@ -376,16 +373,11 @@
           <div v-for="app in tokenApplications" :key="`mobile-${app.id}`" class="application-card">
             <div class="application-card-header">
               <div class="user-info">
-                <strong>{{ app.name }}</strong>
-                <span class="meta">{{ app.gender }} | {{ app.birthday }}</span>
+                <strong>{{ app.email }}</strong>
               </div>
               <span :class="['status-badge', app.status === 1 ? 'status-ok' : (app.status === 2 ? 'status-err' : 'status-warn')]">
                 {{ app.status === 1 ? '已通过' : (app.status === 2 ? '已驳回' : '待审批') }}
               </span>
-            </div>
-            <div class="application-field">
-              <label>联系方式</label>
-              <code>{{ app.email }}</code>
             </div>
             <div class="application-field">
               <label>用途说明</label>
@@ -1054,11 +1046,7 @@
         </div>
         <div class="modal-body">
           <div class="input-group">
-            <label>申请人</label>
-            <input class="form-control" :value="pendingApproveApp?.name || '-'" disabled>
-          </div>
-          <div class="input-group" style="margin-top: 12px;">
-            <label>邮箱</label>
+            <label>申请人邮箱</label>
             <input class="form-control" :value="pendingApproveApp?.email || '-'" disabled>
           </div>
           <div class="token-generator" style="margin-top: 16px;">
@@ -1110,11 +1098,7 @@
         </div>
         <div class="modal-body">
           <div class="input-group">
-            <label>申请人</label>
-            <input class="form-control" :value="pendingRejectApp?.name || '-'" disabled>
-          </div>
-          <div class="input-group" style="margin-top: 12px;">
-            <label>邮箱</label>
+            <label>申请人邮箱</label>
             <input class="form-control" :value="pendingRejectApp?.email || '-'" disabled>
           </div>
           <div class="input-group" style="margin-top: 16px;">
@@ -1289,7 +1273,7 @@ function openApproveModal(app: any) {
   approveForm.value = {
     token: generateUUID(),
     allowIndexes: defaultAllowIndexes,
-    description: `申请人: ${app.name} (${app.email}) 用途: ${app.purpose || '无'}`,
+    description: `申请人邮箱: ${app.email} 用途: ${app.purpose || '无'}`,
     validDays: 30,
     maxQueriesPerDay: 0,
     maxImportsPerDay: 0

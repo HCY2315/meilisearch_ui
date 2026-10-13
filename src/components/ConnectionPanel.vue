@@ -30,7 +30,7 @@
         </select>
       </div>
     </div>
-    <div v-if="store.indexes.length > 0 && store.allowSelfApplication" class="apply-section">
+    <div v-if="store.allowSelfApplication" class="apply-section">
       <a href="#" class="apply-link" @click.prevent="store.tokenApplicationOpen = true">还没有权限？申请访问凭证 (Token)</a>
     </div>
   </div>

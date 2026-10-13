@@ -163,9 +163,6 @@ export const useAppStore = defineStore('app', () => {
   const applicationForm = ref({
     email: '',
     code: '',
-    name: '',
-    birthday: '',
-    gender: '男',
     purpose: '',
     allowIndexes: [] as string[]
   })
@@ -348,10 +345,14 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function pushToast(message: string, kind: ToastTypeEnum) {
-    toasts.value.push({ id: nextToastId++, message, kind })
-    setTimeout(() => {
-      toasts.value.shift()
-    }, 3000)
+    const id = nextToastId++
+    toasts.value.push({ id, message, kind })
+    setTimeout(() => removeToast(id), kind === 'error' ? 6000 : 3500)
+  }
+
+  function removeToast(id: number) {
+    const i = toasts.value.findIndex(t => t.id === id)
+    if (i !== -1) toasts.value.splice(i, 1)
   }
 
   async function sendVerificationCode(email: string) {
@@ -376,8 +377,8 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function submitApplication() {
-    if (!applicationForm.value.email || !applicationForm.value.code || !applicationForm.value.name) {
-      pushToast('请填写完整信息及验证码', 'warning')
+    if (!applicationForm.value.email || !applicationForm.value.code) {
+      pushToast('请填写邮箱与验证码', 'warning')
       return
     }
     applicationLoading.value = true
@@ -389,9 +390,6 @@ export const useAppStore = defineStore('app', () => {
       applicationForm.value = {
         email: '',
         code: '',
-        name: '',
-        birthday: '',
-        gender: '男',
         purpose: '',
         allowIndexes: []
       }
@@ -420,7 +418,13 @@ async function connect() {
       // 拉取当前应用可访问的实例列表，用于导入时选择目标实例
       api.getPublicInstances().then(list => { availableInstances.value = list }).catch(() => {})
       if (currentIndex.value && indexes.value.some(i => i.uid === currentIndex.value)) {
-        await selectIndex(currentIndex.value)
+        const meta = indexes.value.find(i => i.uid === currentIndex.value)
+        if (meta && meta.isLocked && !meta.isUnlocked) {
+          // 恢复的索引已被锁定且当前无凭证，不自动加载，避免 403
+          currentIndex.value = ''
+        } else {
+          await selectIndex(currentIndex.value)
+        }
       } else if (currentIndex.value) {
         currentIndex.value = ''
       }
@@ -1344,7 +1348,7 @@ async function connect() {
     highlightEnabled, showRankingScore, cropLength, sortValue,
     filtersDrawerOpen, columnConfigOpen, fieldConfigOpen, viewModalOpen, advancedSettingsOpen,
     viewMode, viewNameInput, viewConfigs, exportDownloading, exportProgress,
-    exportTotal, loading, searchLoading, toasts, resultModalOpen, resultDetail, editLocked,
+    exportTotal, loading, searchLoading, toasts, removeToast, resultModalOpen, resultDetail, editLocked,
     primaryKeyField, pendingEdits, imagePreviewEnabled, imagePreviewLinksOnly,
     imagePreviewSize, currentTab, assetForm, assetList, assetModalOpen,
     assetDetail, assetsLoading, uploadModalOpen, uploadData, uploadFileName,

@@ -92,6 +92,8 @@ type Application struct {
 }
 
 // TokenApplication 前台 Token 申请记录
+// NOTE: Name/Birthday/Gender 为历史遗留列，已不再从申请表单收集，
+// 保留字段以确保 INSERT 仍写入空串，避免旧库上的 NOT NULL 约束报错。
 type TokenApplication struct {
 	ID           uint           `gorm:"primarykey" json:"id"`
 	Email        string         `gorm:"size:128;not null" json:"email"`
