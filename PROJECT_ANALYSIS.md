@@ -351,7 +351,7 @@ graph TD
 
 ## 📄 许可证
 
-MIT License - 详见 LICENSE 文件
+专有 / 商业（付费）许可 - 详见 LICENSE 文件（非开源，商业使用需授权）
 
 ---
 
