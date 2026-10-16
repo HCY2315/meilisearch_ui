@@ -661,6 +661,55 @@ export async function updateSystemSettings(data: Record<string, unknown>): Promi
   return { ok: true, message: payload.message || '已保存' }
 }
 
+// ---- 数据同步（MySQL binlog -> Meilisearch）----
+async function jsonReq(url: string, method: string, body?: unknown): Promise<{ ok: boolean; data: any; message: string }> {
+  const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
+  const res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
+  const payload = await res.json().catch(() => ({}))
+  return { ok: res.ok, data: payload, message: payload.error || payload.message || (res.ok ? '成功' : '请求失败') }
+}
+
+export async function getSyncSources(): Promise<any[]> {
+  const res = await fetch('/api/v1/admin/sync/sources', { headers: getAuthHeaders() })
+  if (!res.ok) return []
+  return res.json()
+}
+export async function createSyncSource(data: Record<string, unknown>) {
+  return jsonReq('/api/v1/admin/sync/sources', 'POST', data)
+}
+export async function updateSyncSource(id: number, data: Record<string, unknown>) {
+  return jsonReq(`/api/v1/admin/sync/sources/${id}`, 'PUT', data)
+}
+export async function deleteSyncSource(id: number): Promise<boolean> {
+  const res = await fetch(`/api/v1/admin/sync/sources/${id}`, { method: 'DELETE', headers: getAuthHeaders() })
+  return res.ok
+}
+
+export async function getSyncTasks(): Promise<any[]> {
+  const res = await fetch('/api/v1/admin/sync/tasks', { headers: getAuthHeaders() })
+  if (!res.ok) return []
+  return res.json()
+}
+export async function createSyncTask(data: Record<string, unknown>) {
+  return jsonReq('/api/v1/admin/sync/tasks', 'POST', data)
+}
+export async function updateSyncTask(id: number, data: Record<string, unknown>) {
+  return jsonReq(`/api/v1/admin/sync/tasks/${id}`, 'PUT', data)
+}
+export async function deleteSyncTask(id: number): Promise<boolean> {
+  const res = await fetch(`/api/v1/admin/sync/tasks/${id}`, { method: 'DELETE', headers: getAuthHeaders() })
+  return res.ok
+}
+export async function startSyncTask(id: number) {
+  return jsonReq(`/api/v1/admin/sync/tasks/${id}/start`, 'POST')
+}
+export async function stopSyncTask(id: number) {
+  return jsonReq(`/api/v1/admin/sync/tasks/${id}/stop`, 'POST')
+}
+export async function fullSyncTask(id: number) {
+  return jsonReq(`/api/v1/admin/sync/tasks/${id}/fullsync`, 'POST')
+}
+
 export async function updateAdminPassword(newPassword: string): Promise<boolean> {
   const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
   const res = await fetch('/api/v1/admin/password', {
