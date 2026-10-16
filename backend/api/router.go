@@ -70,6 +70,20 @@ func InitRouter() *gin.Engine {
 			adminGroup.GET("/settings/system", HandleGetSystemSetting)
 			adminGroup.PUT("/settings/system", HandleUpdateSystemSetting)
 
+			// 数据同步（MySQL binlog -> Meilisearch）
+			adminGroup.GET("/sync/sources", HandleGetSyncSources)
+			adminGroup.POST("/sync/sources", HandleCreateSyncSource)
+			adminGroup.PUT("/sync/sources/:id", HandleUpdateSyncSource)
+			adminGroup.DELETE("/sync/sources/:id", HandleDeleteSyncSource)
+
+			adminGroup.GET("/sync/tasks", HandleGetSyncTasks)
+			adminGroup.POST("/sync/tasks", HandleCreateSyncTask)
+			adminGroup.PUT("/sync/tasks/:id", HandleUpdateSyncTask)
+			adminGroup.DELETE("/sync/tasks/:id", HandleDeleteSyncTask)
+			adminGroup.POST("/sync/tasks/:id/start", HandleStartSyncTask)
+			adminGroup.POST("/sync/tasks/:id/stop", HandleStopSyncTask)
+			adminGroup.POST("/sync/tasks/:id/fullsync", HandleFullSyncTask)
+
 			// Token 申请管理
 			adminGroup.GET("/applications", HandleGetApplications)
 			adminGroup.POST("/applications/:id/approve", HandleApproveApplication)
