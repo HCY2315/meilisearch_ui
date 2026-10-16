@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -116,6 +117,76 @@ func (m *Manager) StopAll() {
 	}
 }
 
+// ---- 死信 ----
+
+// DeadLetters 查询死信（taskID=0 返回全部，按时间倒序）
+func (m *Manager) DeadLetters(taskID uint, limit int) []model.SyncDeadLetter {
+	if limit <= 0 {
+		limit = 200
+	}
+	var list []model.SyncDeadLetter
+	q := repository.DB.Order("id desc").Limit(limit)
+	if taskID > 0 {
+		q = q.Where("task_id = ?", taskID)
+	}
+	q.Find(&list)
+	return list
+}
+
+// DeadLetterCounts 各任务的死信数量
+func DeadLetterCounts() map[uint]int64 {
+	type row struct {
+		TaskID uint
+		Cnt    int64
+	}
+	var rows []row
+	repository.DB.Model(&model.SyncDeadLetter{}).
+		Select("task_id, count(*) as cnt").Group("task_id").Scan(&rows)
+	out := map[uint]int64{}
+	for _, r := range rows {
+		out[r.TaskID] = r.Cnt
+	}
+	return out
+}
+
+// ReplayDeadLetter 重放一条死信（成功则删除该死信记录）
+func (m *Manager) ReplayDeadLetter(id uint) error {
+	var dl model.SyncDeadLetter
+	if err := repository.DB.First(&dl, id).Error; err != nil {
+		return fmt.Errorf("死信不存在")
+	}
+	var payload struct {
+		Upserts []string `json:"upserts"`
+		Deletes []string `json:"deletes"`
+	}
+	if err := json.Unmarshal([]byte(dl.Payload), &payload); err != nil {
+		return fmt.Errorf("死信 payload 解析失败: %w", err)
+	}
+
+	task, source, instance, err := loadConfig(dl.TaskID)
+	if err != nil {
+		return err
+	}
+	db, err := openMySQL(source)
+	if err != nil {
+		return fmt.Errorf("连接 MySQL 失败: %w", err)
+	}
+	defer db.Close()
+
+	r := &Runner{task: task, source: source, instance: instance, db: db}
+	if err := r.writeBatch(&pendingBatch{upserts: payload.Upserts, deletes: payload.Deletes}); err != nil {
+		repository.DB.Model(&model.SyncDeadLetter{}).Where("id = ?", id).Update("error", err.Error())
+		return err
+	}
+	repository.DB.Delete(&model.SyncDeadLetter{}, id)
+	return nil
+}
+
+// DeleteDeadLetter 删除一条死信
+func (m *Manager) DeleteDeadLetter(id uint) {
+	repository.DB.Delete(&model.SyncDeadLetter{}, id)
+}
+
 func loadConfig(taskID uint) (model.SyncTask, model.SyncSource, model.MeiliInstance, error) {
 	var task model.SyncTask
 	if err := repository.DB.First(&task, taskID).Error; err != nil {
@@ -146,8 +217,31 @@ type Runner struct {
 	deleteIDs []string
 	lastGTID  string
 
+	// 待写入队列（失败重试用），按顺序处理
+	pending       []*pendingBatch
+	committedGTID string
+
 	stopCh chan struct{}
 	done   chan struct{}
+}
+
+// pendingBatch 一批待写入 Meilisearch 的变更
+type pendingBatch struct {
+	upserts  []string
+	deletes  []string
+	gtid     string // 该批次对应的 binlog 位点
+	attempts int
+	nextAt   time.Time
+}
+
+const maxFlushAttempts = 8
+
+func backoffDelay(attempts int) time.Duration {
+	d := time.Second * time.Duration(1<<uint(attempts-1)) // 1s,2s,4s,...
+	if d > 30*time.Second {
+		d = 30 * time.Second
+	}
+	return d
 }
 
 func (r *Runner) start() error {
@@ -287,37 +381,94 @@ func (r *Runner) flush() error {
 	gtid := r.lastGTID
 	r.upsertIDs = nil
 	r.deleteIDs = nil
+	if len(upserts) > 0 || len(deletes) > 0 {
+		r.pending = append(r.pending, &pendingBatch{
+			upserts: unique(upserts),
+			deletes: unique(deletes),
+			gtid:    gtid,
+		})
+	}
 	r.mu.Unlock()
 
-	if len(upserts) == 0 && len(deletes) == 0 {
-		return nil
-	}
+	return r.processQueue()
+}
 
-	var firstErr error
-	if len(deletes) > 0 {
-		if err := r.meiliDelete(unique(deletes)); err != nil {
-			firstErr = err
+// processQueue 按顺序写入队列：成功则推进位点；失败按退避重试；
+// 可重试错误(网络/5xx)无限重试不丢数据，永久错误(4xx)重试上限后进死信。
+func (r *Runner) processQueue() error {
+	for {
+		r.mu.Lock()
+		if len(r.pending) == 0 {
+			r.mu.Unlock()
+			return nil
+		}
+		b := r.pending[0]
+		if time.Now().Before(b.nextAt) {
+			r.mu.Unlock()
+			return nil // 等待退避时间
+		}
+		r.mu.Unlock()
+
+		err := r.writeBatch(b)
+		if err == nil {
+			r.markCommitted(b)
+			continue
+		}
+
+		b.attempts++
+		if !isTransient(err) && b.attempts >= maxFlushAttempts {
+			r.deadLetter(b, err)
+			r.markCommitted(b)
+			continue
+		}
+		b.nextAt = time.Now().Add(backoffDelay(b.attempts))
+		r.recordError(fmt.Errorf("写入失败(第 %d 次，%s)：%w", b.attempts, backoffDelay(b.attempts), err))
+		return err
+	}
+}
+
+func (r *Runner) writeBatch(b *pendingBatch) error {
+	if len(b.deletes) > 0 {
+		if err := r.meiliDelete(b.deletes); err != nil {
+			return err
 		}
 	}
-	if len(upserts) > 0 {
-		if err := r.upsertByIDs(unique(upserts)); err != nil && firstErr == nil {
-			firstErr = err
+	if len(b.upserts) > 0 {
+		if err := r.upsertByIDs(b.upserts); err != nil {
+			return err
 		}
 	}
+	return nil
+}
 
-	if firstErr != nil {
-		r.recordError(firstErr)
-		return firstErr
+// markCommitted 批次写入成功（或已进死信）后，推进已提交位点并持久化
+func (r *Runner) markCommitted(b *pendingBatch) {
+	r.mu.Lock()
+	if len(r.pending) > 0 && r.pending[0] == b {
+		r.pending = r.pending[1:]
 	}
+	if b.gtid != "" {
+		r.committedGTID = b.gtid
+	}
+	gtid := r.committedGTID
+	r.mu.Unlock()
 
-	now := time.Now()
-	updates := map[string]any{"last_sync_at": &now, "last_error": ""}
 	if gtid != "" {
-		updates["position"] = gtid
 		r.task.Position = gtid
 	}
-	repository.DB.Model(&model.SyncTask{}).Where("id = ?", r.task.ID).Updates(updates)
-	return nil
+	now := time.Now()
+	repository.DB.Model(&model.SyncTask{}).Where("id = ?", r.task.ID).
+		Updates(map[string]any{"position": gtid, "last_sync_at": &now, "last_error": ""})
+}
+
+func (r *Runner) deadLetter(b *pendingBatch, err error) {
+	payload, _ := json.Marshal(map[string]any{"upserts": b.upserts, "deletes": b.deletes})
+	repository.DB.Create(&model.SyncDeadLetter{
+		TaskID:  r.task.ID,
+		Payload: string(payload),
+		Error:   err.Error(),
+	})
+	r.recordError(fmt.Errorf("批次重试 %d 次仍失败，已进死信: %w", maxFlushAttempts, err))
 }
 
 func (r *Runner) upsertByIDs(ids []string) error {
@@ -328,7 +479,47 @@ func (r *Runner) upsertByIDs(ids []string) error {
 	if len(docs) == 0 {
 		return nil
 	}
-	return r.meiliPost("/indexes/"+r.task.IndexUID+"/documents", docs)
+
+	// 软删除规则：命中则删除文档，否则 upsert
+	var upserts []map[string]any
+	var delIDs []string
+	for _, d := range docs {
+		if r.softDeleted(d) {
+			if v, ok := d[r.pkField()]; ok {
+				delIDs = append(delIDs, valueToString(v))
+			}
+			continue
+		}
+		upserts = append(upserts, d)
+	}
+
+	if len(delIDs) > 0 {
+		if err := r.meiliDelete(unique(delIDs)); err != nil {
+			return err
+		}
+	}
+	if len(upserts) > 0 {
+		return r.meiliPost("/indexes/"+r.task.IndexUID+"/documents", upserts)
+	}
+	return nil
+}
+
+func (r *Runner) pkField() string {
+	if r.task.PrimaryKey != "" {
+		return r.task.PrimaryKey
+	}
+	return "id"
+}
+
+func (r *Runner) softDeleted(doc map[string]any) bool {
+	if r.task.SoftDeleteField == "" {
+		return false
+	}
+	v, ok := doc[r.task.SoftDeleteField]
+	if !ok {
+		return false
+	}
+	return valueToString(v) == r.task.SoftDeleteValue
 }
 
 func (r *Runner) queryDocs(ids []string) ([]map[string]any, error) {
@@ -396,14 +587,38 @@ func (r *Runner) meiliPost(path string, payload any) error {
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		// 网络层错误 -> 可重试
+		return &meiliRequestError{status: 0, message: err.Error(), transient: true}
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("Meilisearch 返回 %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
+		return &meiliRequestError{
+			status:    resp.StatusCode,
+			message:   strings.TrimSpace(string(b)),
+			transient: resp.StatusCode >= 500 || resp.StatusCode == 429, // 5xx/限流可重试
+		}
 	}
 	return nil
+}
+
+type meiliRequestError struct {
+	status    int
+	message   string
+	transient bool
+}
+
+func (e *meiliRequestError) Error() string {
+	return fmt.Sprintf("Meilisearch 返回 %d: %s", e.status, e.message)
+}
+
+// isTransient 判断错误是否可重试（网络/5xx 视为可重试并无限重试，避免丢数据）
+func isTransient(err error) bool {
+	var me *meiliRequestError
+	if errors.As(err, &me) {
+		return me.transient
+	}
+	return true
 }
 
 // FullSync 全量初始化：先记录 GTID 起点，再按主键分页把整表（经联表）灌入 Meilisearch

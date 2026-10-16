@@ -59,6 +59,7 @@ func InitDB() {
 		&model.SystemSetting{},
 		&model.SyncSource{},
 		&model.SyncTask{},
+		&model.SyncDeadLetter{},
 		&model.UsageMetric{},
 		&model.UsageMetricIndex{},
 		&model.TokenUsageMetric{},

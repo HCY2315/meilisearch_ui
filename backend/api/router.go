@@ -84,6 +84,10 @@ func InitRouter() *gin.Engine {
 			adminGroup.POST("/sync/tasks/:id/stop", HandleStopSyncTask)
 			adminGroup.POST("/sync/tasks/:id/fullsync", HandleFullSyncTask)
 
+			adminGroup.GET("/sync/deadletters", HandleGetDeadLetters)
+			adminGroup.POST("/sync/deadletters/:id/replay", HandleReplayDeadLetter)
+			adminGroup.DELETE("/sync/deadletters/:id", HandleDeleteDeadLetter)
+
 			// Token 申请管理
 			adminGroup.GET("/applications", HandleGetApplications)
 			adminGroup.POST("/applications/:id/approve", HandleApproveApplication)

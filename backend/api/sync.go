@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strconv"
 
 	"backend/model"
 	"backend/repository"
@@ -104,11 +105,36 @@ func HandleDeleteSyncSource(c *gin.Context) {
 func HandleGetSyncTasks(c *gin.Context) {
 	var list []model.SyncTask
 	repository.DB.Order("id asc").Find(&list)
+	counts := syncer.DeadLetterCounts()
 	// 以运行时为准修正 running 状态
 	for i := range list {
 		list[i].Running = syncer.Default.IsRunning(list[i].ID)
+		list[i].DeadLetterCount = counts[list[i].ID]
 	}
 	c.JSON(http.StatusOK, list)
+}
+
+// ---- 死信 ----
+
+func HandleGetDeadLetters(c *gin.Context) {
+	taskID, _ := strconv.Atoi(c.Query("taskId"))
+	list := syncer.Default.DeadLetters(uint(taskID), 200)
+	c.JSON(http.StatusOK, list)
+}
+
+func HandleReplayDeadLetter(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	if err := syncer.Default.ReplayDeadLetter(uint(id)); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "重放成功，该死信已清除"})
+}
+
+func HandleDeleteDeadLetter(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	syncer.Default.DeleteDeadLetter(uint(id))
+	c.JSON(http.StatusOK, gin.H{"message": "已删除"})
 }
 
 func HandleCreateSyncTask(c *gin.Context) {

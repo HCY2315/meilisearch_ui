@@ -1046,23 +1046,33 @@
 
         <!-- MySQL 数据源 -->
         <div class="glass-editor">
-          <h3>🗄️ MySQL 数据源</h3>
-          <div class="grid-inputs" style="max-width: 820px;">
-            <div class="input-group"><label>名称</label><input v-model="sourceForm.name" class="form-control" placeholder="生产库"></div>
-            <div class="input-group"><label>主机</label><input v-model="sourceForm.host" class="form-control" placeholder="127.0.0.1"></div>
-            <div class="input-group"><label>端口</label><input type="number" v-model.number="sourceForm.port" class="form-control" placeholder="3306"></div>
-            <div class="input-group"><label>用户名</label><input v-model="sourceForm.user" class="form-control"></div>
-            <div class="input-group">
-              <label>密码 / 授权码</label>
-              <input type="password" v-model="sourceForm.password" class="form-control"
-                :placeholder="editingSourceId ? '留空表示不修改' : ''">
+          <div class="sync-editor-head">
+            <h3 style="margin:0">🗄️ MySQL 数据源
+              <span v-if="syncSources.length" class="sync-count">（{{ syncSources.length }} 个）</span>
+            </h3>
+            <button class="btn btn-primary btn-sm" @click="newSource">＋ 新建数据源</button>
+          </div>
+
+          <div v-if="showSourceForm" class="task-form-box">
+            <h4>{{ editingSourceId ? `编辑数据源 #${editingSourceId}` : '新建数据源' }}</h4>
+            <div class="grid-inputs" style="max-width: 820px;">
+              <div class="input-group"><label>名称</label><input v-model="sourceForm.name" class="form-control" placeholder="生产库"></div>
+              <div class="input-group"><label>主机</label><input v-model="sourceForm.host" class="form-control" placeholder="127.0.0.1"></div>
+              <div class="input-group"><label>端口</label><input type="number" v-model.number="sourceForm.port" class="form-control" placeholder="3306"></div>
+              <div class="input-group"><label>用户名</label><input v-model="sourceForm.user" class="form-control"></div>
+              <div class="input-group">
+                <label>密码 / 授权码</label>
+                <input type="password" v-model="sourceForm.password" class="form-control"
+                  :placeholder="editingSourceId ? '留空表示不修改' : ''">
+              </div>
+            </div>
+            <div class="editor-actions">
+              <button class="btn btn-primary" @click="saveSource">{{ editingSourceId ? '保存修改' : '创建数据源' }}</button>
+              <button class="btn btn-secondary" @click="cancelSourceForm">取消</button>
             </div>
           </div>
-          <div class="editor-actions">
-            <button class="btn btn-primary" @click="saveSource">{{ editingSourceId ? '保存数据源' : '添加数据源' }}</button>
-            <button v-if="editingSourceId" class="btn btn-secondary" @click="resetSourceForm">取消</button>
-          </div>
-          <div v-if="syncSources.length" class="sync-list">
+
+          <div v-if="syncSources.length" class="sync-list" style="margin-top:16px">
             <div v-for="s in syncSources" :key="s.id" class="sync-item">
               <span><strong>{{ s.name }}</strong> · {{ s.host }}:{{ s.port }} · {{ s.user }}</span>
               <span>
@@ -1071,54 +1081,74 @@
               </span>
             </div>
           </div>
+          <div v-else-if="!showSourceForm" class="sync-empty">暂无数据源，点击右上角「＋ 新建数据源」添加（可配置多个）。</div>
         </div>
 
         <!-- 同步任务 -->
         <div class="glass-editor">
-          <h3>🔁 同步任务</h3>
-          <div class="grid-inputs" style="max-width: 900px;">
-            <div class="input-group"><label>任务名</label><input v-model="taskForm.name" class="form-control"></div>
-            <div class="input-group">
-              <label>数据源</label>
-              <select v-model.number="taskForm.sourceId" class="form-control">
-                <option :value="0">-- 选择 --</option>
-                <option v-for="s in syncSources" :key="s.id" :value="s.id">{{ s.name }}</option>
-              </select>
+          <div class="sync-editor-head">
+            <h3 style="margin:0">🔁 同步任务
+              <span v-if="syncTasks.length" class="sync-count">（{{ syncTasks.length }} 个）</span>
+            </h3>
+            <div class="sync-head-actions">
+              <button class="btn btn-secondary btn-sm" :disabled="!syncTasks.length" @click="startAllTasks">全部启动</button>
+              <button class="btn btn-secondary btn-sm" :disabled="!syncTasks.length" @click="stopAllTasks">全部停止</button>
+              <button class="btn btn-primary btn-sm" @click="newTask">＋ 新建任务</button>
             </div>
-            <div class="input-group"><label>数据库名</label><input v-model="taskForm.dbName" class="form-control" placeholder="hotel_distribution"></div>
-            <div class="input-group"><label>主表</label><input v-model="taskForm.tableName" class="form-control" placeholder="hd_hotel_group_orders"></div>
-            <div class="input-group"><label>主键列</label><input v-model="taskForm.primaryKey" class="form-control" placeholder="id"></div>
-            <div class="input-group">
-              <label>目标实例</label>
-              <select v-model.number="taskForm.instanceId" class="form-control">
-                <option :value="0">-- 选择 --</option>
-                <option v-for="ins in instances" :key="ins.id" :value="ins.id">{{ ins.name }}</option>
-              </select>
-            </div>
-            <div class="input-group"><label>目标索引</label><input v-model="taskForm.indexUid" class="form-control" placeholder="hotel_orders"></div>
-            <div class="input-group"><label>批量条数</label><input type="number" v-model.number="taskForm.batchSize" class="form-control"></div>
-            <div class="input-group"><label>攒批间隔(ms)</label><input type="number" v-model.number="taskForm.flushIntervalMs" class="form-control"></div>
-          </div>
-          <div class="input-group" style="max-width:900px">
-            <label>联表查询 SQL（用 <code>:ids</code> 作为主键 IN 占位符）</label>
-            <textarea v-model="taskForm.joinSql" class="form-control" rows="4"
-              placeholder="SELECT o.id, o.hotel_name, h.brand_name FROM hd_hotel_group_orders o LEFT JOIN hd_static_hotel_tc h ON o.hotel_id = h.hotel_id WHERE o.id IN (:ids)"></textarea>
-          </div>
-          <div class="settings-row" style="margin-top:12px">
-            <div class="row-label"><h4>随服务自动启动</h4><p>开启后，后端重启会自动恢复该任务的 binlog 监听。</p></div>
-            <div class="row-val"><label class="inline-check"><input type="checkbox" v-model="taskForm.enabled"> 启用</label></div>
-          </div>
-          <div class="editor-actions">
-            <button class="btn btn-primary" @click="saveTask">{{ editingTaskId ? '保存任务' : '添加任务' }}</button>
-            <button v-if="editingTaskId" class="btn btn-secondary" @click="resetTaskForm">取消</button>
           </div>
 
+          <!-- 任务表单：新建 / 编辑时展开 -->
+          <div v-if="showTaskForm" class="task-form-box">
+            <h4>{{ editingTaskId ? `编辑任务 #${editingTaskId}` : '新建任务' }}</h4>
+            <div class="grid-inputs" style="max-width: 900px;">
+              <div class="input-group"><label>任务名</label><input v-model="taskForm.name" class="form-control"></div>
+              <div class="input-group">
+                <label>数据源</label>
+                <select v-model.number="taskForm.sourceId" class="form-control">
+                  <option :value="0">-- 选择 --</option>
+                  <option v-for="s in syncSources" :key="s.id" :value="s.id">{{ s.name }}</option>
+                </select>
+              </div>
+              <div class="input-group"><label>数据库名</label><input v-model="taskForm.dbName" class="form-control" placeholder="hotel_distribution"></div>
+              <div class="input-group"><label>主表</label><input v-model="taskForm.tableName" class="form-control" placeholder="hd_hotel_group_orders"></div>
+              <div class="input-group"><label>主键列</label><input v-model="taskForm.primaryKey" class="form-control" placeholder="id"></div>
+              <div class="input-group">
+                <label>目标实例</label>
+                <select v-model.number="taskForm.instanceId" class="form-control">
+                  <option :value="0">-- 选择 --</option>
+                  <option v-for="ins in instances" :key="ins.id" :value="ins.id">{{ ins.name }}</option>
+                </select>
+              </div>
+              <div class="input-group"><label>目标索引</label><input v-model="taskForm.indexUid" class="form-control" placeholder="hotel_orders"></div>
+              <div class="input-group"><label>批量条数</label><input type="number" v-model.number="taskForm.batchSize" class="form-control"></div>
+              <div class="input-group"><label>攒批间隔(ms)</label><input type="number" v-model.number="taskForm.flushIntervalMs" class="form-control"></div>
+              <div class="input-group"><label>软删除字段(可选)</label><input v-model="taskForm.softDeleteField" class="form-control" placeholder="如 status"></div>
+              <div class="input-group"><label>软删除值(可选)</label><input v-model="taskForm.softDeleteValue" class="form-control" placeholder="如 2（等于则删文档）"></div>
+            </div>
+            <div class="input-group" style="max-width:900px">
+              <label>联表查询 SQL（用 <code>:ids</code> 作为主键 IN 占位符）</label>
+              <textarea v-model="taskForm.joinSql" class="form-control" rows="4"
+                placeholder="SELECT o.id, o.hotel_name, h.brand_name FROM hd_hotel_group_orders o LEFT JOIN hd_static_hotel_tc h ON o.hotel_id = h.hotel_id WHERE o.id IN (:ids)"></textarea>
+            </div>
+            <div class="settings-row" style="margin-top:12px">
+              <div class="row-label"><h4>随服务自动启动</h4><p>开启后，后端重启会自动恢复该任务的 binlog 监听。</p></div>
+              <div class="row-val"><label class="inline-check"><input type="checkbox" v-model="taskForm.enabled"> 启用</label></div>
+            </div>
+            <div class="editor-actions">
+              <button class="btn btn-primary" @click="saveTask">{{ editingTaskId ? '保存修改' : '创建任务' }}</button>
+              <button class="btn btn-secondary" @click="cancelTaskForm">取消</button>
+            </div>
+          </div>
+
+          <!-- 任务列表 -->
           <div v-if="syncTasks.length" class="sync-list" style="margin-top:16px">
             <div v-for="t in syncTasks" :key="t.id" class="sync-item sync-task">
               <div class="sync-task-main">
                 <div>
-                  <strong>{{ t.name }}</strong>
+                  <strong>{{ t.name || `任务 #${t.id}` }}</strong>
                   <span :class="['status-badge', t.running ? 'status-ok' : 'status-warn']">{{ t.running ? '运行中' : '已停止' }}</span>
+                  <span v-if="t.enabled" class="status-badge status-ok" style="margin-left:6px">自动启动</span>
+                  <span v-if="t.deadLetterCount" class="status-badge status-err" style="margin-left:6px">死信 {{ t.deadLetterCount }}</span>
                 </div>
                 <div class="sync-meta">{{ t.dbName }}.{{ t.tableName }} → {{ t.indexUid }}</div>
                 <div v-if="t.lastSyncAt" class="sync-meta">最近同步: {{ new Date(t.lastSyncAt).toLocaleString() }}</div>
@@ -1128,11 +1158,13 @@
                 <button v-if="!t.running" class="btn btn-primary btn-sm" @click="startTask(t.id)">启动</button>
                 <button v-else class="btn btn-secondary btn-sm" @click="stopTask(t.id)">停止</button>
                 <button class="btn btn-secondary btn-sm" @click="runFullSync(t.id)">全量</button>
+                <button class="btn btn-secondary btn-sm" @click="openDeadLetters(t)">死信</button>
                 <button class="btn btn-secondary btn-sm" :disabled="t.running" @click="editTask(t)">编辑</button>
                 <button class="btn btn-danger btn-sm" @click="removeTask(t.id)">删除</button>
               </div>
             </div>
           </div>
+          <div v-else-if="!showTaskForm" class="sync-empty">暂无同步任务，点击右上角「＋ 新建任务」添加，可同时配置多个任务并行同步。</div>
         </div>
       </section>
     </main>
@@ -1216,6 +1248,31 @@
         </div>
       </div>
     </div>
+
+    <!-- 死信列表 -->
+    <div v-if="deadLetterOpen" class="tasks-modal-overlay animate-fade-in" @click.self="closeDeadLetters">
+      <div class="tasks-modal approve-modal">
+        <div class="modal-header">
+          <h3>死信队列 · {{ deadLetterTask?.name || `任务 #${deadLetterTask?.id}` }}</h3>
+          <button class="close-btn" @click="closeDeadLetters">×</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="!deadLetters.length" class="empty-state">暂无死信，说明同步正常。</div>
+          <div v-else class="deadletter-list">
+            <div v-for="d in deadLetters" :key="d.id" class="deadletter-item">
+              <div class="deadletter-main">
+                <div class="sync-err">#{{ d.id }} · {{ d.error }}</div>
+                <div class="sync-meta">时间: {{ new Date(d.createdAt).toLocaleString() }}</div>
+              </div>
+              <div class="sync-actions">
+                <button class="btn btn-primary btn-sm" @click="replayDL(d.id)">重放</button>
+                <button class="btn btn-danger btn-sm" @click="deleteDL(d.id)">删除</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1265,7 +1322,10 @@ import {
   deleteSyncTask,
   startSyncTask,
   stopSyncTask,
-  fullSyncTask
+  fullSyncTask,
+  getDeadLetters,
+  replayDeadLetter,
+  deleteDeadLetter
 } from '@/services/api'
 
 function formatDuration(isoDuration: string | undefined): string {
@@ -1625,6 +1685,7 @@ const editingTaskId = ref<number | null>(null)
 const taskForm = ref({
   name: '', sourceId: 0, dbName: '', tableName: '', primaryKey: 'id',
   joinSql: '', instanceId: 0, indexUid: '', batchSize: 500, flushIntervalMs: 300, enabled: false,
+  softDeleteField: '', softDeleteValue: '',
 })
 
 async function loadSyncData() {
@@ -1637,14 +1698,27 @@ async function loadSyncData() {
   }
 }
 
+const showSourceForm = ref(false)
+
 function resetSourceForm() {
   editingSourceId.value = null
   sourceForm.value = { name: '', host: '', port: 3306, user: '', password: '' }
 }
 
+function newSource() {
+  resetSourceForm()
+  showSourceForm.value = true
+}
+
+function cancelSourceForm() {
+  resetSourceForm()
+  showSourceForm.value = false
+}
+
 function editSource(s: any) {
   editingSourceId.value = s.id
   sourceForm.value = { name: s.name, host: s.host, port: s.port, user: s.user, password: '' }
+  showSourceForm.value = true
 }
 
 async function saveSource() {
@@ -1656,7 +1730,7 @@ async function saveSource() {
     ? await updateSyncSource(editingSourceId.value, { ...sourceForm.value })
     : await createSyncSource({ ...sourceForm.value })
   alert(res.message)
-  if (res.ok) { resetSourceForm(); await loadSyncData() }
+  if (res.ok) { resetSourceForm(); showSourceForm.value = false; await loadSyncData() }
 }
 
 async function removeSource(id: number) {
@@ -1664,12 +1738,25 @@ async function removeSource(id: number) {
   if (await deleteSyncSource(id)) { await loadSyncData() }
 }
 
+const showTaskForm = ref(false)
+
 function resetTaskForm() {
   editingTaskId.value = null
   taskForm.value = {
     name: '', sourceId: 0, dbName: '', tableName: '', primaryKey: 'id',
     joinSql: '', instanceId: 0, indexUid: '', batchSize: 500, flushIntervalMs: 300, enabled: false,
+    softDeleteField: '', softDeleteValue: '',
   }
+}
+
+function newTask() {
+  resetTaskForm()
+  showTaskForm.value = true
+}
+
+function cancelTaskForm() {
+  resetTaskForm()
+  showTaskForm.value = false
 }
 
 function editTask(t: any) {
@@ -1679,7 +1766,9 @@ function editTask(t: any) {
     primaryKey: t.primaryKey || 'id', joinSql: t.joinSql, instanceId: t.instanceId,
     indexUid: t.indexUid, batchSize: t.batchSize || 500, flushIntervalMs: t.flushIntervalMs || 300,
     enabled: !!t.enabled,
+    softDeleteField: t.softDeleteField || '', softDeleteValue: t.softDeleteValue || '',
   }
+  showTaskForm.value = true
 }
 
 async function saveTask() {
@@ -1691,7 +1780,7 @@ async function saveTask() {
     ? await updateSyncTask(editingTaskId.value, { ...taskForm.value })
     : await createSyncTask({ ...taskForm.value })
   alert(res.message)
-  if (res.ok) { resetTaskForm(); await loadSyncData() }
+  if (res.ok) { resetTaskForm(); showTaskForm.value = false; await loadSyncData() }
 }
 
 async function removeTask(id: number) {
@@ -1715,6 +1804,55 @@ async function runFullSync(id: number) {
   if (!confirm('全量初始化会把整表（经联表）写入索引，可能较慢，确定继续？')) return
   const res = await fullSyncTask(id)
   alert(res.ok ? `完成，共 ${res.data?.count ?? 0} 条` : res.message)
+  await loadSyncData()
+}
+
+async function startAllTasks() {
+  const stopped = syncTasks.value.filter(t => !t.running)
+  if (!stopped.length) { alert('没有已停止的任务'); return }
+  for (const t of stopped) {
+    await startSyncTask(t.id)
+  }
+  await loadSyncData()
+}
+
+async function stopAllTasks() {
+  const running = syncTasks.value.filter(t => t.running)
+  if (!running.length) { alert('没有运行中的任务'); return }
+  for (const t of running) {
+    await stopSyncTask(t.id)
+  }
+  await loadSyncData()
+}
+
+// 死信
+const deadLetterOpen = ref(false)
+const deadLetters = ref<any[]>([])
+const deadLetterTask = ref<any>(null)
+
+async function openDeadLetters(t: any) {
+  deadLetterTask.value = t
+  deadLetterOpen.value = true
+  deadLetters.value = await getDeadLetters(t.id)
+}
+
+function closeDeadLetters() {
+  deadLetterOpen.value = false
+  deadLetters.value = []
+  deadLetterTask.value = null
+}
+
+async function replayDL(id: number) {
+  const res = await replayDeadLetter(id)
+  if (!res.ok) { alert(res.message); return }
+  deadLetters.value = await getDeadLetters(deadLetterTask.value?.id || 0)
+  await loadSyncData()
+}
+
+async function deleteDL(id: number) {
+  if (!confirm('确定删除该死信？')) return
+  await deleteDeadLetter(id)
+  deadLetters.value = await getDeadLetters(deadLetterTask.value?.id || 0)
   await loadSyncData()
 }
 
@@ -2519,6 +2657,24 @@ onMounted(() => {
 .sync-err { color: #f87171; font-size: 12px; word-break: break-all; }
 .sync-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .sync-item .status-badge { margin-left: 8px; }
+.sync-editor-head { display: flex; justify-content: space-between; align-items: center; }
+.sync-count { font-size: 13px; opacity: .7; font-weight: 400; }
+.sync-empty { margin-top: 14px; padding: 16px; text-align: center; color: var(--text-muted, #94a3b8); font-size: 13px; border: 1px dashed rgba(255,255,255,0.15); border-radius: 8px; }
+.task-form-box { margin-top: 14px; padding: 16px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; background: rgba(255,255,255,0.02); }
+.task-form-box h4 { margin: 0 0 12px; font-size: 14px; }
+.sync-head-actions { display: flex; gap: 8px; }
+.deadletter-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+.deadletter-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-secondary, rgba(0,0,0,0.2));
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+.deadletter-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 
 /* 主内容区 */
 .admin-main { flex: 1; margin-left: 260px; padding: 48px 64px; }

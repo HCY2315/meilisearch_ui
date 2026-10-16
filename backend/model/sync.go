@@ -14,6 +14,15 @@ type SyncSource struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+// SyncDeadLetter 重试多次仍失败的批次（保存原始 payload 以便人工重放，保证不静默丢数据）
+type SyncDeadLetter struct {
+	ID        uint      `gorm:"primarykey" json:"id"`
+	TaskID    uint      `gorm:"index" json:"taskId"`
+	Payload   string    `gorm:"type:text" json:"payload"` // JSON: {"upserts":[...],"deletes":[...]}
+	Error     string    `gorm:"size:512" json:"error"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 // SyncTask 一条「MySQL 表 -> Meilisearch 索引」的实时同步任务
 // NOTE: 监听 TableName 的 binlog，INSERT/UPDATE 时按 PrimaryKey 回查 JoinSQL 取整条文档 upsert；
 //
@@ -31,6 +40,11 @@ type SyncTask struct {
 	BatchSize       int    `gorm:"default:500" json:"batchSize"`           // 批量条数
 	FlushIntervalMs int    `gorm:"default:300" json:"flushIntervalMs"`     // 攒批时间(ms)
 	Enabled         bool   `json:"enabled"`                                // 是否随服务启动自动运行
+	SoftDeleteField string `gorm:"size:64" json:"softDeleteField"`         // 软删除判定字段（联表结果中的列名）
+	SoftDeleteValue string `gorm:"size:128" json:"softDeleteValue"`        // 当该字段等于此值时，从索引删除文档
+
+	// 运行时统计（不入库）
+	DeadLetterCount int64 `gorm:"-" json:"deadLetterCount"`
 
 	// 运行状态
 	Running    bool       `gorm:"default:false" json:"running"`

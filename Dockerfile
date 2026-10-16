@@ -14,6 +14,9 @@ RUN npm run build
 # Step 2: Build the Golang backend
 FROM golang:1.26-alpine AS backend-builder
 WORKDIR /app
+# 使用国内可访问的 Go 模块代理（默认 proxy.golang.org 在部分网络下不可达）
+ENV GOPROXY=https://goproxy.cn,direct
+ENV GOSUMDB=off
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ .

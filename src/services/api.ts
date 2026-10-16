@@ -710,6 +710,19 @@ export async function fullSyncTask(id: number) {
   return jsonReq(`/api/v1/admin/sync/tasks/${id}/fullsync`, 'POST')
 }
 
+export async function getDeadLetters(taskId: number): Promise<any[]> {
+  const res = await fetch(`/api/v1/admin/sync/deadletters?taskId=${taskId}`, { headers: getAuthHeaders() })
+  if (!res.ok) return []
+  return res.json()
+}
+export async function replayDeadLetter(id: number) {
+  return jsonReq(`/api/v1/admin/sync/deadletters/${id}/replay`, 'POST')
+}
+export async function deleteDeadLetter(id: number): Promise<boolean> {
+  const res = await fetch(`/api/v1/admin/sync/deadletters/${id}`, { method: 'DELETE', headers: getAuthHeaders() })
+  return res.ok
+}
+
 export async function updateAdminPassword(newPassword: string): Promise<boolean> {
   const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' }
   const res = await fetch('/api/v1/admin/password', {
