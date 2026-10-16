@@ -57,6 +57,8 @@ func InitDB() {
 		&model.EmailVerification{},
 		&model.SmtpConfig{},
 		&model.SystemSetting{},
+		&model.SyncSource{},
+		&model.SyncTask{},
 		&model.UsageMetric{},
 		&model.UsageMetricIndex{},
 		&model.TokenUsageMetric{},
