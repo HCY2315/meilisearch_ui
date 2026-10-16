@@ -7,6 +7,7 @@ import (
 	"backend/api"
 	"backend/model"
 	"backend/repository"
+	"backend/syncer"
 )
 
 func main() {
@@ -22,6 +23,9 @@ func main() {
 			repository.DB.Where("expires_at IS NOT NULL AND expires_at < ?", time.Now()).Delete(&model.AccessToken{})
 		}
 	}()
+
+	// 启动已启用的数据同步任务（MySQL binlog -> Meilisearch）
+	go syncer.Default.StartEnabled()
 
 	// 初始化 Gin 路由
 	r := api.InitRouter()
