@@ -1036,6 +1036,105 @@
           </div>
         </div>
       </section>
+
+      <!-- 数据同步 -->
+      <section v-if="activeTab === 'sync'" class="content-section">
+        <header class="section-header">
+          <h1>数据同步 <span>MySQL → Meilisearch</span></h1>
+          <p>监听 MySQL binlog：INSERT/UPDATE 回查联表结果写入索引，DELETE 删除对应文档。</p>
+        </header>
+
+        <!-- MySQL 数据源 -->
+        <div class="glass-editor">
+          <h3>🗄️ MySQL 数据源</h3>
+          <div class="grid-inputs" style="max-width: 820px;">
+            <div class="input-group"><label>名称</label><input v-model="sourceForm.name" class="form-control" placeholder="生产库"></div>
+            <div class="input-group"><label>主机</label><input v-model="sourceForm.host" class="form-control" placeholder="127.0.0.1"></div>
+            <div class="input-group"><label>端口</label><input type="number" v-model.number="sourceForm.port" class="form-control" placeholder="3306"></div>
+            <div class="input-group"><label>用户名</label><input v-model="sourceForm.user" class="form-control"></div>
+            <div class="input-group">
+              <label>密码 / 授权码</label>
+              <input type="password" v-model="sourceForm.password" class="form-control"
+                :placeholder="editingSourceId ? '留空表示不修改' : ''">
+            </div>
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" @click="saveSource">{{ editingSourceId ? '保存数据源' : '添加数据源' }}</button>
+            <button v-if="editingSourceId" class="btn btn-secondary" @click="resetSourceForm">取消</button>
+          </div>
+          <div v-if="syncSources.length" class="sync-list">
+            <div v-for="s in syncSources" :key="s.id" class="sync-item">
+              <span><strong>{{ s.name }}</strong> · {{ s.host }}:{{ s.port }} · {{ s.user }}</span>
+              <span>
+                <button class="btn btn-secondary btn-sm" @click="editSource(s)">编辑</button>
+                <button class="btn btn-danger btn-sm" @click="removeSource(s.id)">删除</button>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 同步任务 -->
+        <div class="glass-editor">
+          <h3>🔁 同步任务</h3>
+          <div class="grid-inputs" style="max-width: 900px;">
+            <div class="input-group"><label>任务名</label><input v-model="taskForm.name" class="form-control"></div>
+            <div class="input-group">
+              <label>数据源</label>
+              <select v-model.number="taskForm.sourceId" class="form-control">
+                <option :value="0">-- 选择 --</option>
+                <option v-for="s in syncSources" :key="s.id" :value="s.id">{{ s.name }}</option>
+              </select>
+            </div>
+            <div class="input-group"><label>数据库名</label><input v-model="taskForm.dbName" class="form-control" placeholder="hotel_distribution"></div>
+            <div class="input-group"><label>主表</label><input v-model="taskForm.tableName" class="form-control" placeholder="hd_hotel_group_orders"></div>
+            <div class="input-group"><label>主键列</label><input v-model="taskForm.primaryKey" class="form-control" placeholder="id"></div>
+            <div class="input-group">
+              <label>目标实例</label>
+              <select v-model.number="taskForm.instanceId" class="form-control">
+                <option :value="0">-- 选择 --</option>
+                <option v-for="ins in instances" :key="ins.id" :value="ins.id">{{ ins.name }}</option>
+              </select>
+            </div>
+            <div class="input-group"><label>目标索引</label><input v-model="taskForm.indexUid" class="form-control" placeholder="hotel_orders"></div>
+            <div class="input-group"><label>批量条数</label><input type="number" v-model.number="taskForm.batchSize" class="form-control"></div>
+            <div class="input-group"><label>攒批间隔(ms)</label><input type="number" v-model.number="taskForm.flushIntervalMs" class="form-control"></div>
+          </div>
+          <div class="input-group" style="max-width:900px">
+            <label>联表查询 SQL（用 <code>:ids</code> 作为主键 IN 占位符）</label>
+            <textarea v-model="taskForm.joinSql" class="form-control" rows="4"
+              placeholder="SELECT o.id, o.hotel_name, h.brand_name FROM hd_hotel_group_orders o LEFT JOIN hd_static_hotel_tc h ON o.hotel_id = h.hotel_id WHERE o.id IN (:ids)"></textarea>
+          </div>
+          <div class="settings-row" style="margin-top:12px">
+            <div class="row-label"><h4>随服务自动启动</h4><p>开启后，后端重启会自动恢复该任务的 binlog 监听。</p></div>
+            <div class="row-val"><label class="inline-check"><input type="checkbox" v-model="taskForm.enabled"> 启用</label></div>
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" @click="saveTask">{{ editingTaskId ? '保存任务' : '添加任务' }}</button>
+            <button v-if="editingTaskId" class="btn btn-secondary" @click="resetTaskForm">取消</button>
+          </div>
+
+          <div v-if="syncTasks.length" class="sync-list" style="margin-top:16px">
+            <div v-for="t in syncTasks" :key="t.id" class="sync-item sync-task">
+              <div class="sync-task-main">
+                <div>
+                  <strong>{{ t.name }}</strong>
+                  <span :class="['status-badge', t.running ? 'status-ok' : 'status-warn']">{{ t.running ? '运行中' : '已停止' }}</span>
+                </div>
+                <div class="sync-meta">{{ t.dbName }}.{{ t.tableName }} → {{ t.indexUid }}</div>
+                <div v-if="t.lastSyncAt" class="sync-meta">最近同步: {{ new Date(t.lastSyncAt).toLocaleString() }}</div>
+                <div v-if="t.lastError" class="sync-err">错误: {{ t.lastError }}</div>
+              </div>
+              <div class="sync-actions">
+                <button v-if="!t.running" class="btn btn-primary btn-sm" @click="startTask(t.id)">启动</button>
+                <button v-else class="btn btn-secondary btn-sm" @click="stopTask(t.id)">停止</button>
+                <button class="btn btn-secondary btn-sm" @click="runFullSync(t.id)">全量</button>
+                <button class="btn btn-secondary btn-sm" :disabled="t.running" @click="editTask(t)">编辑</button>
+                <button class="btn btn-danger btn-sm" @click="removeTask(t.id)">删除</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <div v-if="approveModalOpen" class="tasks-modal-overlay animate-fade-in" @click.self="closeApproveModal">
@@ -1204,6 +1303,7 @@ const tabs = [
   { id: 'settings', label: '应用设置', icon: '⚙️' },
   { id: 'smtp', label: '邮件配置', icon: '📧' },
   { id: 'system', label: '系统设置', icon: '🧩' },
+  { id: 'sync', label: '数据同步', icon: '🔁' },
   { id: 'password', label: '账户安全', icon: '🔐' },
 ]
 
