@@ -1254,7 +1254,18 @@ import {
   updateSmtpConfig,
   testSmtp,
   getSystemSettings,
-  updateSystemSettings
+  updateSystemSettings,
+  getSyncSources,
+  createSyncSource,
+  updateSyncSource,
+  deleteSyncSource,
+  getSyncTasks,
+  createSyncTask,
+  updateSyncTask,
+  deleteSyncTask,
+  startSyncTask,
+  stopSyncTask,
+  fullSyncTask
 } from '@/services/api'
 
 function formatDuration(isoDuration: string | undefined): string {
@@ -1605,6 +1616,108 @@ async function saveSystemSettings() {
   }
 }
 
+// ---- 数据同步 ----
+const syncSources = ref<any[]>([])
+const syncTasks = ref<any[]>([])
+const editingSourceId = ref<number | null>(null)
+const sourceForm = ref({ name: '', host: '', port: 3306, user: '', password: '' })
+const editingTaskId = ref<number | null>(null)
+const taskForm = ref({
+  name: '', sourceId: 0, dbName: '', tableName: '', primaryKey: 'id',
+  joinSql: '', instanceId: 0, indexUid: '', batchSize: 500, flushIntervalMs: 300, enabled: false,
+})
+
+async function loadSyncData() {
+  try {
+    const [src, task] = await Promise.all([getSyncSources(), getSyncTasks()])
+    syncSources.value = src
+    syncTasks.value = task
+  } catch (e) {
+    console.error('加载同步配置失败', e)
+  }
+}
+
+function resetSourceForm() {
+  editingSourceId.value = null
+  sourceForm.value = { name: '', host: '', port: 3306, user: '', password: '' }
+}
+
+function editSource(s: any) {
+  editingSourceId.value = s.id
+  sourceForm.value = { name: s.name, host: s.host, port: s.port, user: s.user, password: '' }
+}
+
+async function saveSource() {
+  if (!sourceForm.value.name || !sourceForm.value.host || !sourceForm.value.user) {
+    alert('请填写名称、主机、用户名')
+    return
+  }
+  const res = editingSourceId.value
+    ? await updateSyncSource(editingSourceId.value, { ...sourceForm.value })
+    : await createSyncSource({ ...sourceForm.value })
+  alert(res.message)
+  if (res.ok) { resetSourceForm(); await loadSyncData() }
+}
+
+async function removeSource(id: number) {
+  if (!confirm('确定删除该数据源？')) return
+  if (await deleteSyncSource(id)) { await loadSyncData() }
+}
+
+function resetTaskForm() {
+  editingTaskId.value = null
+  taskForm.value = {
+    name: '', sourceId: 0, dbName: '', tableName: '', primaryKey: 'id',
+    joinSql: '', instanceId: 0, indexUid: '', batchSize: 500, flushIntervalMs: 300, enabled: false,
+  }
+}
+
+function editTask(t: any) {
+  editingTaskId.value = t.id
+  taskForm.value = {
+    name: t.name, sourceId: t.sourceId, dbName: t.dbName, tableName: t.tableName,
+    primaryKey: t.primaryKey || 'id', joinSql: t.joinSql, instanceId: t.instanceId,
+    indexUid: t.indexUid, batchSize: t.batchSize || 500, flushIntervalMs: t.flushIntervalMs || 300,
+    enabled: !!t.enabled,
+  }
+}
+
+async function saveTask() {
+  if (!taskForm.value.tableName || !taskForm.value.joinSql || !taskForm.value.indexUid) {
+    alert('请填写主表、联表 SQL、目标索引')
+    return
+  }
+  const res = editingTaskId.value
+    ? await updateSyncTask(editingTaskId.value, { ...taskForm.value })
+    : await createSyncTask({ ...taskForm.value })
+  alert(res.message)
+  if (res.ok) { resetTaskForm(); await loadSyncData() }
+}
+
+async function removeTask(id: number) {
+  if (!confirm('确定删除该同步任务？')) return
+  if (await deleteSyncTask(id)) { await loadSyncData() }
+}
+
+async function startTask(id: number) {
+  const res = await startSyncTask(id)
+  alert(res.message)
+  await loadSyncData()
+}
+
+async function stopTask(id: number) {
+  const res = await stopSyncTask(id)
+  alert(res.message)
+  await loadSyncData()
+}
+
+async function runFullSync(id: number) {
+  if (!confirm('全量初始化会把整表（经联表）写入索引，可能较慢，确定继续？')) return
+  const res = await fullSyncTask(id)
+  alert(res.ok ? `完成，共 ${res.data?.count ?? 0} 条` : res.message)
+  await loadSyncData()
+}
+
 // 搜索配置相关
 const selectedSearchIndex = ref('')
 const subTab = ref('searchable')
@@ -1860,6 +1973,7 @@ async function loadAdminData() {
     }
     loadSmtpConfig()
     loadSystemSettings()
+    loadSyncData()
   } catch (e) {
     console.error('Admin Data Load Error:', e)
   }
@@ -2384,6 +2498,27 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* 数据同步 */
+.sync-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.sync-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-secondary, rgba(0,0,0,0.2));
+  border-radius: 8px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.sync-item .btn-sm { margin-left: 6px; }
+.sync-task { align-items: flex-start; }
+.sync-task-main { display: flex; flex-direction: column; gap: 3px; }
+.sync-meta { color: var(--text-muted, #94a3b8); font-size: 12px; }
+.sync-err { color: #f87171; font-size: 12px; word-break: break-all; }
+.sync-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.sync-item .status-badge { margin-left: 8px; }
 
 /* 主内容区 */
 .admin-main { flex: 1; margin-left: 260px; padding: 48px 64px; }
